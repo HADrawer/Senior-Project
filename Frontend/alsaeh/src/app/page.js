@@ -1,65 +1,166 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useState } from "react";
+import Link from "next/link";
+import styles from "./page.module.css";
+
+export default function HomePage() {
+  const [lang, setLang] = useState("en");
+
+  const content = {
+    en: {
+      brand: "Alsaeh.bh",
+      heroTitle: "Discover Bahrain Your Way",
+      heroText:
+        "A smart tourism platform that helps you explore Bahrain with personalized recommendations and AI-generated travel plans based on your interests, budget, and time.",
+      getStarted: "Get Started",
+      login: "Login",
+      register: "Register",
+      featuresTitle: "Why Alsaeh.bh?",
+      feature1Title: "Personalized Plans",
+      feature1Text:
+        "Create travel plans based on your preferences, interests, and available days.",
+      feature2Title: "AI Assistance",
+      feature2Text:
+        "Get smart suggestions for places, restaurants, cafes, and activities in Bahrain.",
+      feature3Title: "Easy Planning",
+      feature3Text:
+        "Organize your trip in a simple and modern way through one platform.",
+      aboutTitle: "About the Platform",
+      aboutText:
+        "Alsaeh.bh is designed to make tourism in Bahrain easier and more enjoyable. It combines modern web technologies with AI to help users discover places and build better travel experiences.",
+      exploreTitle: "Experience Bahrain",
+      exploreText:
+        "From heritage sites and museums to beaches, cafes, and local attractions, Alsaeh.bh helps you find what matches your style.",
+      footer: "Alsaeh.bh | Tourism Recommender System for Bahrain",
+      switchLabel: "العربية",
+    },
+    ar: {
+      brand: "السائح.البحرين",
+      heroTitle: "اكتشف البحرين بطريقتك",
+      heroText:
+        "منصة سياحية ذكية تساعدك على استكشاف البحرين من خلال توصيات مخصصة وخطط سياحية مولدة بالذكاء الاصطناعي حسب اهتماماتك وميزانيتك ووقتك.",
+      getStarted: "ابدأ الآن",
+      login: "تسجيل الدخول",
+      register: "إنشاء حساب",
+      featuresTitle: "لماذا السائح.البحرين؟",
+      feature1Title: "خطط مخصصة",
+      feature1Text:
+        "أنشئ خططًا سياحية حسب تفضيلاتك واهتماماتك وعدد الأيام المتاحة لك.",
+      feature2Title: "مساعدة ذكية",
+      feature2Text:
+        "احصل على اقتراحات ذكية للأماكن والمطاعم والمقاهي والأنشطة في البحرين.",
+      feature3Title: "تخطيط سهل",
+      feature3Text:
+        "نظم رحلتك بطريقة بسيطة وحديثة من خلال منصة واحدة.",
+      aboutTitle: "عن المنصة",
+      aboutText:
+        "تم تصميم السائح.البحرين لتسهيل السياحة في البحرين وجعلها أكثر متعة. تجمع المنصة بين تقنيات الويب الحديثة والذكاء الاصطناعي لمساعدة المستخدمين على اكتشاف الأماكن وبناء تجارب سفر أفضل.",
+      exploreTitle: "عِش تجربة البحرين",
+      exploreText:
+        "من المواقع التراثية والمتاحف إلى الشواطئ والمقاهي والمعالم المحلية، تساعدك المنصة في العثور على ما يناسب أسلوبك.",
+      footer: "السائح.البحرين | نظام توصية سياحي للبحرين",
+      switchLabel: "English",
+    },
+  };
+
+  const t = content[lang];
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.js file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main
+      className={styles.page}
+      dir={lang === "ar" ? "rtl" : "ltr"}
+    >
+      <header className={styles.navbar}>
+        <div className={styles.logoSection}>
+          <div className={styles.logoMark}></div>
+          <h1 className={styles.logoText}>{t.brand}</h1>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+
+        <div className={styles.navActions}>
+          <button
+            className={styles.langBtn}
+            onClick={() => setLang(lang === "en" ? "ar" : "en")}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            {t.switchLabel}
+          </button>
+
+          <Link href="/login" className={styles.loginBtn}>
+            {t.login}
+          </Link>
+
+          <Link href="/register" className={styles.registerBtn}>
+            {t.register}
+          </Link>
         </div>
-      </main>
-    </div>
+      </header>
+
+      <section className={styles.hero}>
+        <div className={styles.heroContent}>
+          <span className={styles.badge}>Bahrain Inspired</span>
+          <h2 className={styles.heroTitle}>{t.heroTitle}</h2>
+          <p className={styles.heroText}>{t.heroText}</p>
+
+          <div className={styles.heroButtons}>
+            <Link href="/register" className={styles.primaryBtn}>
+              {t.getStarted}
+            </Link>
+
+            <Link href="/login" className={styles.secondaryBtn}>
+              {t.login}
+            </Link>
+          </div>
+        </div>
+
+        <div className={styles.heroVisual}>
+          <div className={styles.cardLarge}>
+            <div className={styles.cardTop}></div>
+            <div className={styles.cardCircle}></div>
+            <div className={styles.cardLine}></div>
+            <div className={styles.cardLineSmall}></div>
+          </div>
+
+          <div className={styles.floatingBoxOne}></div>
+          <div className={styles.floatingBoxTwo}></div>
+        </div>
+      </section>
+
+      <section className={styles.features}>
+        <h3 className={styles.sectionTitle}>{t.featuresTitle}</h3>
+
+        <div className={styles.featureGrid}>
+          <div className={styles.featureCard}>
+            <h4>{t.feature1Title}</h4>
+            <p>{t.feature1Text}</p>
+          </div>
+
+          <div className={styles.featureCard}>
+            <h4>{t.feature2Title}</h4>
+            <p>{t.feature2Text}</p>
+          </div>
+
+          <div className={styles.featureCard}>
+            <h4>{t.feature3Title}</h4>
+            <p>{t.feature3Text}</p>
+          </div>
+        </div>
+      </section>
+
+      <section className={styles.about}>
+        <div className={styles.aboutCard}>
+          <h3>{t.aboutTitle}</h3>
+          <p>{t.aboutText}</p>
+        </div>
+
+        <div className={styles.aboutCard}>
+          <h3>{t.exploreTitle}</h3>
+          <p>{t.exploreText}</p>
+        </div>
+      </section>
+
+      <footer className={styles.footer}>
+        <p>{t.footer}</p>
+      </footer>
+    </main>
   );
 }

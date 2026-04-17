@@ -1,0 +1,347 @@
+.page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top, rgba(186, 12, 47, 0.12), transparent 35%),
+    linear-gradient(180deg, #fff8f8 0%, #ffffff 45%, #fffafa 100%);
+  color: #1f1f1f;
+  font-family: Arial, sans-serif;
+}
+
+.navbar {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logoSection {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logoMark {
+  width: 18px;
+  height: 42px;
+  background: linear-gradient(180deg, #ce1126, #a70d20);
+  border-radius: 6px;
+  box-shadow: 0 8px 20px rgba(206, 17, 38, 0.25);
+}
+
+.logoText {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.navActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.langBtn,
+.loginBtn,
+.registerBtn,
+.primaryBtn,
+.secondaryBtn {
+  text-decoration: none;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: 0.25s ease;
+  font-size: 0.95rem;
+}
+
+.langBtn {
+  background: white;
+  color: #ce1126;
+  border: 1px solid #f0cfd5;
+  padding: 10px 14px;
+}
+
+.loginBtn {
+  background: white;
+  color: #ce1126;
+  border: 1px solid #f0cfd5;
+  padding: 10px 16px;
+}
+
+.registerBtn {
+  background: #ce1126;
+  color: white;
+  padding: 10px 16px;
+}
+
+.hero {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 20px 80px;
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 40px;
+  align-items: center;
+}
+
+.heroContent {
+  max-width: 600px;
+}
+
+.badge {
+  display: inline-block;
+  background: rgba(206, 17, 38, 0.08);
+  color: #b30f24;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+.heroTitle {
+  font-size: 3rem;
+  line-height: 1.15;
+  margin: 0 0 18px;
+}
+
+.heroText {
+  font-size: 1.08rem;
+  line-height: 1.8;
+  color: #555;
+  margin-bottom: 28px;
+}
+
+.heroButtons {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.primaryBtn {
+  background: #ce1126;
+  color: white;
+  padding: 14px 22px;
+  font-weight: 600;
+}
+
+.secondaryBtn {
+  background: white;
+  color: #ce1126;
+  border: 1px solid #f0cfd5;
+  padding: 14px 22px;
+  font-weight: 600;
+}
+
+.heroVisual {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+}
+
+.cardLarge {
+  width: 320px;
+  height: 360px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid #f1d9dd;
+  border-radius: 28px;
+  box-shadow: 0 20px 50px rgba(148, 44, 58, 0.12);
+  padding: 28px;
+  backdrop-filter: blur(8px);
+  position: relative;
+}
+
+.cardTop {
+  width: 100%;
+  height: 90px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #ce1126, #f3c1c8);
+  margin-bottom: 22px;
+}
+
+.cardCircle {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: rgba(206, 17, 38, 0.12);
+  margin-bottom: 20px;
+}
+
+.cardLine {
+  width: 100%;
+  height: 16px;
+  border-radius: 8px;
+  background: #f2d7db;
+  margin-bottom: 14px;
+}
+
+.cardLineSmall {
+  width: 65%;
+  height: 16px;
+  border-radius: 8px;
+  background: #f7e7ea;
+}
+
+.floatingBoxOne,
+.floatingBoxTwo {
+  position: absolute;
+  border-radius: 22px;
+  background: rgba(206, 17, 38, 0.08);
+  border: 1px solid #f1d9dd;
+}
+
+.floatingBoxOne {
+  width: 90px;
+  height: 90px;
+  top: 30px;
+  right: 20px;
+}
+
+.floatingBoxTwo {
+  width: 120px;
+  height: 120px;
+  bottom: 10px;
+  left: 10px;
+}
+
+.features {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px 20px 70px;
+}
+
+.sectionTitle {
+  text-align: center;
+  font-size: 2rem;
+  margin-bottom: 30px;
+}
+
+.featureGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+}
+
+.featureCard {
+  background: white;
+  border: 1px solid #f1d9dd;
+  border-radius: 22px;
+  padding: 26px;
+  box-shadow: 0 10px 30px rgba(148, 44, 58, 0.08);
+}
+
+.featureCard h4 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  color: #b30f24;
+}
+
+.featureCard p {
+  margin: 0;
+  line-height: 1.7;
+  color: #555;
+}
+
+.about {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px 70px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 22px;
+}
+
+.aboutCard {
+  background: white;
+  border: 1px solid #f1d9dd;
+  border-radius: 22px;
+  padding: 28px;
+  box-shadow: 0 10px 30px rgba(148, 44, 58, 0.08);
+}
+
+.aboutCard h3 {
+  margin-top: 0;
+  color: #b30f24;
+}
+
+.aboutCard p {
+  line-height: 1.8;
+  color: #555;
+}
+
+.footer {
+  text-align: center;
+  padding: 30px 20px 40px;
+  color: #666;
+  border-top: 1px solid #f4e3e6;
+}
+
+.langBtn:hover,
+.loginBtn:hover,
+.secondaryBtn:hover {
+  background: #fff4f5;
+}
+
+.registerBtn:hover,
+.primaryBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(206, 17, 38, 0.18);
+}
+
+@media (max-width: 900px) {
+  .hero {
+    grid-template-columns: 1fr;
+    padding-top: 20px;
+  }
+
+  .heroTitle {
+    font-size: 2.2rem;
+  }
+
+  .featureGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .about {
+    grid-template-columns: 1fr;
+  }
+
+  .heroVisual {
+    min-height: 280px;
+  }
+
+  .cardLarge {
+    width: 100%;
+    max-width: 320px;
+    height: 320px;
+  }
+}
+
+@media (max-width: 600px) {
+  .navbar {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .navActions {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .heroButtons {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .primaryBtn,
+  .secondaryBtn {
+    text-align: center;
+  }
+}
