@@ -3,8 +3,11 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import FastAPI, HTTPException, Response, Cookie
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import Depends
 from dotenv import load_dotenv
 
+
+from app.dependencies import get_current_user
 from app.db import get_conn
 from app.security import hash_password, verify_password, generate_session_token
 from app.schemas import RegisterRequest, LoginRequest
@@ -130,47 +133,15 @@ def login(data: LoginRequest, response: Response):
     }
 
 @app.get("/auth/me")
-def me(session_token: str | None = Cookie(default=None, alias=COOKIE_NAME)):
-    if not session_token:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-
-    with get_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT u.id, u.full_name, u.email, u.phone_number, r.name AS role
-                FROM user_sessions s
-                JOIN users u ON u.id = s.user_id
-                JOIN roles r ON r.id = u.role_id
-                WHERE s.session_token = %s
-                  AND s.is_active = TRUE
-                  AND s.expires_at > NOW()
-                  AND u.is_active = TRUE
-                """,
-                (session_token,)
-            )
-            user = cur.fetchone()
-
-            if not user:
-                raise HTTPException(status_code=401, detail="Session expired or invalid")
-
-            cur.execute(
-                """
-                UPDATE user_sessions
-                SET last_used_at = NOW()
-                WHERE session_token = %s
-                """,
-                (session_token,)
-            )
-            conn.commit()
-
+def me(current_user = Depends(get_current_user)):
     return {
-        "id": user["id"],
-        "full_name": user["full_name"],
-        "email": user["email"],
-        "phone_number": user["phone_number"],
-        "role": user["role"],
+        "id": current_user["id"],
+        "full_name": current_user["full_name"],
+        "email": current_user["email"],
+        "phone_number": current_user["phone_number"],
+        "role": current_user["role"],
     }
+
 
 @app.post("/auth/logout")
 def logout(response: Response, session_token: str | None = Cookie(default=None, alias=COOKIE_NAME)):
@@ -189,3 +160,35 @@ def logout(response: Response, session_token: str | None = Cookie(default=None, 
 
     response.delete_cookie(key=COOKIE_NAME, path="/")
     return {"message": "Logged out successfully"}
+
+
+@app.get("/plans/my-plans")
+def get_my_plans(current_user = Depends(get_current_user)):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                    id,
+                    title,
+                    budget,
+                    days,
+                    preferences,
+                    user_interests,
+                    travel_styles,
+                    category,
+                    place,
+                    status,
+                    generated_by_ai,
+                    created_at,
+                    updated_at
+                FROM plans
+                WHERE user_id = %s
+                  AND status != 'deleted'
+                ORDER BY created_at DESC
+                """,
+                (current_user["id"],)
+            )
+            plans = cur.fetchall()
+
+    return plans

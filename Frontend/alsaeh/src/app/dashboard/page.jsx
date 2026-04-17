@@ -5,39 +5,41 @@ import styles from "./dashboard.module.css";
 
 export default function DashboardHomePage() {
   const [lang, setLang] = useState("en");
-
-  const [plans] = useState([
-    {
-      id: 1,
-      title: "Weekend in Bahrain",
-      days: 2,
-      budget: 40,
-      status: "saved",
-      description: "A short weekend plan including cafes, seaside spots, and local attractions.",
-    },
-    {
-      id: 2,
-      title: "Cultural Bahrain Trip",
-      days: 3,
-      budget: 75,
-      status: "saved",
-      description: "A cultural plan focused on museums, heritage places, and historical sites.",
-    },
-    {
-      id: 3,
-      title: "Family Fun Plan",
-      days: 1,
-      budget: 30,
-      status: "draft",
-      description: "A simple family-friendly day with restaurants, activities, and shopping.",
-    },
-  ]);
+  const [plans, setPlans] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const savedLang = localStorage.getItem("site_lang");
     if (savedLang === "ar" || savedLang === "en") {
       setLang(savedLang);
     }
+  }, []);
+
+  useEffect(() => {
+    async function loadPlans() {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/plans/my-plans`, {
+          credentials: "include",
+        });
+
+        if (!res.ok) {
+          setError("Failed to load plans");
+          setLoading(false);
+          return;
+        }
+
+        const data = await res.json();
+        setPlans(data);
+      } catch (error) {
+        console.error("Load plans error:", error);
+        setError("Unable to connect to server");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadPlans();
   }, []);
 
   const content = {
@@ -50,6 +52,9 @@ export default function DashboardHomePage() {
       status: "Status",
       noPlans: "No plans found yet.",
       viewPlan: "View Plan",
+      loading: "Loading plans...",
+      fallbackTitle: "Untitled Plan",
+      serverError: "Something went wrong while loading your plans.",
     },
     ar: {
       title: "خططك السياحية",
@@ -60,10 +65,21 @@ export default function DashboardHomePage() {
       status: "الحالة",
       noPlans: "لا توجد خطط حتى الآن.",
       viewPlan: "عرض الخطة",
+      loading: "جاري تحميل الخطط...",
+      fallbackTitle: "خطة بدون عنوان",
+      serverError: "حدث خطأ أثناء تحميل خططك.",
     },
   };
 
   const t = content[lang];
+
+  if (loading) {
+    return <div className={styles.emptyState}>{t.loading}</div>;
+  }
+
+  if (error) {
+    return <div className={styles.emptyState}>{t.serverError}</div>;
+  }
 
   return (
     <div className={styles.pageContent}>
@@ -86,18 +102,22 @@ export default function DashboardHomePage() {
           {plans.map((plan) => (
             <div key={plan.id} className={styles.planCard}>
               <div className={styles.planTop}>
-                <h3 className={styles.planTitle}>{plan.title}</h3>
+                <h3 className={styles.planTitle}>
+                  {plan.title || t.fallbackTitle}
+                </h3>
                 <span className={styles.planStatus}>{plan.status}</span>
               </div>
 
-              <p className={styles.planDescription}>{plan.description}</p>
+              <p className={styles.planDescription}>
+                {plan.preferences || plan.user_interests || plan.travel_styles || "-"}
+              </p>
 
               <div className={styles.planMeta}>
                 <span>
                   {t.days}: {plan.days}
                 </span>
                 <span>
-                  {t.budget}: {plan.budget} BHD
+                  {t.budget}: {plan.budget ?? 0} BHD
                 </span>
               </div>
 
