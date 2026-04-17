@@ -38,3 +38,23 @@ class PlanResponse(BaseModel):
     generated_by_ai: bool
     created_at: datetime
     updated_at: datetime
+
+
+class CreatePlanRequest(BaseModel):
+    title: str
+    days: int
+    budget: float | None = None
+    preferences: str | None = None
+    user_interests: str | None = None
+    travel_styles: str | None = None
+
+
+class UpdatePlanRequest(BaseModel):
+    title: str
+    days: int
+    budget: float | None = None
+    preferences: str | None = None
+    user_interests: str | None = None
+    travel_styles: str | None = None
+    category: str | None = None
+    place: str | None = None

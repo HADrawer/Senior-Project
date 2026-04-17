@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import styles from "./dashboard.module.css";
+import { useRouter } from "next/navigation";
+
+const router = useRouter();
 
 export default function DashboardHomePage() {
   const [lang, setLang] = useState("en");
@@ -121,7 +124,12 @@ export default function DashboardHomePage() {
                 </span>
               </div>
 
-              <button className={styles.viewButton}>{t.viewPlan}</button>
+              <button
+                  className={styles.viewButton}
+                  onClick={() => router.push(`/dashboard/plans/${plan.id}`)}
+                >
+                  {t.viewPlan}
+              </button>
             </div>
           ))}
         </div>

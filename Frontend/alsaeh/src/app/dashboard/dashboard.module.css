@@ -274,3 +274,135 @@
     padding: 24px 16px;
   }
 }
+
+.detailsHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.detailsActions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.detailsCard {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #f1d9dd;
+  border-radius: 24px;
+  padding: 24px;
+  box-shadow: 0 12px 34px rgba(148, 44, 58, 0.08);
+}
+
+.detailsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 18px;
+  margin-bottom: 24px;
+}
+
+.detailItem {
+  background: #fffafb;
+  border: 1px solid #f4dde1;
+  border-radius: 18px;
+  padding: 16px;
+}
+
+.detailLabel {
+  display: block;
+  font-size: 0.88rem;
+  color: #777;
+  margin-bottom: 8px;
+}
+
+.detailBlock {
+  margin-top: 22px;
+  padding-top: 22px;
+  border-top: 1px solid #f1d9dd;
+}
+
+.blockTitle {
+  margin: 0 0 12px;
+  color: #7c1b29;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.textarea {
+  width: 100%;
+  min-height: 120px;
+  border: 1px solid #ead2d7;
+  border-radius: 14px;
+  padding: 14px 16px;
+  font-size: 0.98rem;
+  outline: none;
+  background: #fff;
+  transition: 0.25s ease;
+  box-sizing: border-box;
+  resize: vertical;
+  font-family: Arial, sans-serif;
+}
+
+.textarea:focus {
+  border-color: #ce1126;
+  box-shadow: 0 0 0 4px rgba(206, 17, 38, 0.08);
+}
+
+.secondaryActionButton {
+  background: white;
+  color: #ce1126;
+  border: 1px solid #f0cfd5;
+  border-radius: 14px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: 0.25s ease;
+  font-weight: 600;
+}
+
+.secondaryActionButton:hover,
+.cancelButton:hover {
+  background: #fff4f5;
+}
+
+.cancelButton {
+  background: white;
+  color: #ce1126;
+  border: 1px solid #f0cfd5;
+  border-radius: 14px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: 0.25s ease;
+  font-weight: 600;
+}
+
+.deleteButton {
+  background: #8f1222;
+  color: white;
+  border: none;
+  border-radius: 14px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: 0.25s ease;
+  font-weight: 600;
+}
+
+.deleteButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(143, 18, 34, 0.18);
+}
+
+.deleteButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}

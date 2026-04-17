@@ -192,3 +192,157 @@ def get_my_plans(current_user = Depends(get_current_user)):
             plans = cur.fetchall()
 
     return plans
+
+@app.post("/plans")
+def create_plan(data: CreatePlanRequest, current_user = Depends(get_current_user)):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO plans (
+                    user_id,
+                    title,
+                    budget,
+                    days,
+                    preferences,
+                    user_interests,
+                    travel_styles,
+                    status,
+                    generated_by_ai
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, 'saved', FALSE)
+                RETURNING id
+                """,
+                (
+                    current_user["id"],
+                    data.title,
+                    data.budget,
+                    data.days,
+                    data.preferences,
+                    data.user_interests,
+                    data.travel_styles,
+                )
+            )
+
+            plan = cur.fetchone()
+            conn.commit()
+
+    return {
+        "message": "Plan created",
+        "plan_id": plan["id"]
+    }
+
+
+@app.get("/plans/{plan_id}")
+def get_plan(plan_id: int, current_user = Depends(get_current_user)):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT *
+                FROM plans
+                WHERE id = %s
+                  AND user_id = %s
+                  AND status != 'deleted'
+                """,
+                (plan_id, current_user["id"])
+            )
+
+            plan = cur.fetchone()
+
+            if not plan:
+                raise HTTPException(status_code=404, detail="Plan not found")
+
+    return plan
+
+@app.put("/plans/{plan_id}")
+def update_plan(plan_id: int, data: UpdatePlanRequest, current_user = Depends(get_current_user)):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id
+                FROM plans
+                WHERE id = %s
+                  AND user_id = %s
+                  AND status != 'deleted'
+                """,
+                (plan_id, current_user["id"])
+            )
+            existing_plan = cur.fetchone()
+
+            if not existing_plan:
+                raise HTTPException(status_code=404, detail="Plan not found")
+
+            cur.execute(
+                """
+                UPDATE plans
+                SET
+                    title = %s,
+                    days = %s,
+                    budget = %s,
+                    preferences = %s,
+                    user_interests = %s,
+                    travel_styles = %s,
+                    category = %s,
+                    place = %s,
+                    updated_at = NOW()
+                WHERE id = %s
+                  AND user_id = %s
+                RETURNING id
+                """,
+                (
+                    data.title,
+                    data.days,
+                    data.budget,
+                    data.preferences,
+                    data.user_interests,
+                    data.travel_styles,
+                    data.category,
+                    data.place,
+                    plan_id,
+                    current_user["id"],
+                )
+            )
+            updated_plan = cur.fetchone()
+            conn.commit()
+
+    return {
+        "message": "Plan updated successfully",
+        "plan_id": updated_plan["id"],
+    }
+
+
+@app.delete("/plans/{plan_id}")
+def delete_plan(plan_id: int, current_user = Depends(get_current_user)):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id
+                FROM plans
+                WHERE id = %s
+                  AND user_id = %s
+                  AND status != 'deleted'
+                """,
+                (plan_id, current_user["id"])
+            )
+            existing_plan = cur.fetchone()
+
+            if not existing_plan:
+                raise HTTPException(status_code=404, detail="Plan not found")
+
+            cur.execute(
+                """
+                UPDATE plans
+                SET
+                    status = 'deleted',
+                    updated_at = NOW()
+                WHERE id = %s
+                  AND user_id = %s
+                """,
+                (plan_id, current_user["id"])
+            )
+            conn.commit()
+
+    return {"message": "Plan deleted successfully"}
