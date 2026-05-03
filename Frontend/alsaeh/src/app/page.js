@@ -146,6 +146,7 @@ export default function HomePage() {
         </div>
       </section>
 
+
       <section className={styles.about}>
         <div className={styles.aboutCard}>
           <h3>{t.aboutTitle}</h3>
