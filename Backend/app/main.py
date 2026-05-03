@@ -438,6 +438,12 @@ def build_plan_prompt(data: GenerateAIPlanRequest) -> str:
     - For google_maps_query, write a search query using this format: place name + area + Bahrain.
     - Do not invent coordinates.
     - Do not invent Google Maps URLs.
+    - Do not give generic suggestions such as "a local restaurant", "a nearby cafe", "a hotel", or "a beach".
+    - Always provide exact real place names in Bahrain.
+    - If recommending a restaurant, cafe, hotel, museum, attraction, mall, or beach, use its exact known name.
+    - Each activity name must be a specific real place or activity location.
+    - location_name must match the exact place name.
+    - google_maps_query must include the exact place name, area, and Bahrain.
 
     Return this exact JSON structure:
     {{
@@ -663,6 +669,13 @@ def build_plan_chat_prompt(plan, user_message: str, language: str) -> str:
     - If a changed field affects the itinerary, include a full updated plan_details_json in update.
     - If the user changes people count, you MUST update people_count and regenerate the full plan_details_json.
     - Costs must be adjusted based on the number of people.
+
+
+    Place naming rules:
+    - Never use generic place names.
+    - Always use exact real place names in Bahrain.
+    - If adding or replacing restaurants, cafes, hotels, attractions, museums, beaches, or malls, provide the exact name.
+    - Each updated activity must include name, location_name, location_area, and google_maps_query.
     """
 
 
