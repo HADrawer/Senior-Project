@@ -12,8 +12,8 @@ from google import genai
 from app.dependencies import get_current_user
 from app.db import get_conn
 from app.security import hash_password, verify_password, generate_session_token
-from app.schemas import RegisterRequest, LoginRequest , UpdatePlanRequest ,CreatePlanRequest 
-from app.schemas import GenerateAIPlanRequest
+from app.schemas import RegisterRequest, LoginRequest , UpdatePlanRequest ,CreatePlanRequest , PlanChatRequest , GenerateAIPlanRequest
+
 
 
 
@@ -293,6 +293,7 @@ def update_plan(plan_id: int, data: UpdatePlanRequest, current_user = Depends(ge
                     travel_styles = %s,
                     category = %s,
                     place = %s,
+                    people_count = %s,
                     updated_at = NOW()
                 WHERE id = %s
                   AND user_id = %s
@@ -307,6 +308,7 @@ def update_plan(plan_id: int, data: UpdatePlanRequest, current_user = Depends(ge
                     data.travel_styles,
                     data.category,
                     data.place,
+                    data.people_count,
                     plan_id,
                     current_user["id"],
                 )
@@ -377,6 +379,7 @@ def build_plan_prompt(data: GenerateAIPlanRequest) -> str:
     Travel style: {data.travel_style}
     Preferences: {data.preferences}
     Constraints: {constraints_text}
+    People count: {data.people_count}
 
     Language rule:
     {language_instruction}
@@ -392,6 +395,8 @@ def build_plan_prompt(data: GenerateAIPlanRequest) -> str:
     - Do not use ```json.
     - Do not add text outside JSON.
     - All user-facing text inside the JSON must follow the language rule.
+    - Consider the number of people when estimating costs.
+    - Budget is for the whole group, not one person.
 
     Return this exact JSON structure:
     {{
@@ -471,9 +476,10 @@ def generate_ai_plan(data: GenerateAIPlanRequest, current_user=Depends(get_curre
                         travel_styles,
                         status,
                         generated_by_ai,
-                        plan_details_json
+                        plan_details_json,
+                        people_count
                     )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, 'saved', TRUE, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, 'saved', TRUE, %s , %s)
                     RETURNING id
                     """,
                     (
@@ -485,6 +491,7 @@ def generate_ai_plan(data: GenerateAIPlanRequest, current_user=Depends(get_curre
                         ", ".join(data.interests),
                         data.travel_style,
                         json.dumps(generated_plan),
+                        data.people_count,
                     )
                 )
 
@@ -515,3 +522,259 @@ def get_place_categories():
             categories = cur.fetchall()
 
     return categories
+
+
+
+
+
+
+def build_plan_chat_prompt(plan, user_message: str, language: str) -> str:
+    plan_json = json.dumps(plan.get("plan_details_json") or {}, ensure_ascii=False)
+
+    language_instruction = (
+        "Detect the user's language and reply in the same language."
+        if language == "auto"
+        else f"Reply in this language: {language}."
+    )
+
+    return f"""
+    You are Alsaeh.bh AI trip assistant.
+
+    You are allowed to help ONLY with the current Bahrain tourism trip plan.
+
+    You can do only these things:
+    1. Give advice about the current trip.
+    2. Explain the current trip.
+    3. Modify the current trip ONLY if the user clearly asks for a change.
+    4. Update trip fields such as title, days, budget, preferences, interests, travel style, category, place, and itinerary details.
+
+    You must refuse anything unrelated to the current trip.
+    Examples of forbidden topics:
+    - coding
+    - homework
+    - politics
+    - general questions
+    - jokes
+    - poetry
+    - unrelated travel outside Bahrain
+    - anything not related to this plan
+
+    Language rule:
+    {language_instruction}
+
+    Current database plan:
+    - id: {plan["id"]}
+    - title: {plan.get("title")}
+    - days: {plan.get("days")}
+    - budget: {plan.get("budget")}
+    - preferences: {plan.get("preferences")}
+    - interests: {plan.get("user_interests")}
+    - travel style: {plan.get("travel_styles")}
+    - category: {plan.get("category")}
+    - place: {plan.get("place")}
+    - people count: {plan.get("people_count")}
+
+    Current itinerary JSON:
+    {plan_json}
+
+    User message:
+    {user_message}
+
+    Return ONLY valid JSON.
+    Do not return markdown.
+    Do not return ```json.
+    Do not add text outside JSON.
+
+    Important update rules:
+    - If the user changes budget, days, interests, travel style, preferences, category, or place, you MUST regenerate and return the full updated plan_details_json.
+    - The updated plan_details_json must match the new budget, days, interests, travel style, and preferences.
+    - Do not update only the database field if the itinerary itself should also change.
+    - If the budget is changed, adjust activities and estimated costs to fit the new budget.
+    - If the number of days is changed, update the itinerary days array to match exactly the new number of days.
+    - If interests or travel style change, update the activities to match them.
+
+    Return this exact structure:
+    {{
+    "refused": false,
+    "action": "advice_or_update",
+    "reply": "string",
+    "update": {{
+        "title": null,
+        "days": null,
+        "budget": null,
+        "preferences": null,
+        "user_interests": null,
+        "travel_styles": null,
+        "category": null,
+        "place": null,
+        "plan_details_json": null,
+        "people_count": null,
+    }}
+    }}
+
+    Rules for action:
+    - If user asks for advice only, use action: "advice"
+    - If user asks to change the plan, use action: "update"
+    - If user asks unrelated topic, use refused: true and action: "refuse"
+    - Only put changed fields inside update.
+    - For unchanged fields, keep null.
+    - If a changed field affects the itinerary, include a full updated plan_details_json in update.
+    - If the user changes people count, you MUST update people_count and regenerate the full plan_details_json.
+    - Costs must be adjusted based on the number of people.
+    """
+
+
+
+
+@app.post("/ai/plan-chat")
+def plan_chat(data: PlanChatRequest, current_user=Depends(get_current_user)):
+    # 1. Get user plan
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT *
+                FROM plans
+                WHERE id = %s
+                  AND user_id = %s
+                  AND status != 'deleted'
+                """,
+                (data.plan_id, current_user["id"])
+            )
+            plan = cur.fetchone()
+
+            if not plan:
+                raise HTTPException(status_code=404, detail="Plan not found")
+
+    # 2. Ask Gemini
+    try:
+        prompt = build_plan_chat_prompt(plan, data.message, data.language)
+
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt
+        )
+
+        raw_text = response.text.strip()
+
+        if raw_text.startswith("```json"):
+            raw_text = raw_text.replace("```json", "", 1).strip()
+        if raw_text.startswith("```"):
+            raw_text = raw_text.replace("```", "", 1).strip()
+        if raw_text.endswith("```"):
+            raw_text = raw_text[:-3].strip()
+
+        ai_result = json.loads(raw_text)
+
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=500, detail="AI returned invalid JSON")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI chat failed: {str(e)}")
+
+    # 3. Refuse unrelated topics
+    if ai_result.get("refused") is True or ai_result.get("action") == "refuse":
+        return {
+            "message": ai_result.get(
+                "reply",
+                "I can only help with this Bahrain trip plan."
+            ),
+            "updated": False,
+            "plan_id": data.plan_id,
+        }
+
+    # 4. Save chat messages
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO chat_sessions (user_id, plan_id, status)
+                VALUES (%s, %s, 'active')
+                RETURNING id
+                """,
+                (current_user["id"], data.plan_id)
+            )
+            chat_session = cur.fetchone()
+
+            cur.execute(
+                """
+                INSERT INTO messages (chat_session_id, sender_type, message_text)
+                VALUES (%s, 'user', %s)
+                """,
+                (chat_session["id"], data.message)
+            )
+
+            cur.execute(
+                """
+                INSERT INTO messages (chat_session_id, sender_type, message_text)
+                VALUES (%s, 'assistant', %s)
+                """,
+                (chat_session["id"], ai_result.get("reply", ""))
+            )
+
+            conn.commit()
+
+    # 5. If advice only, return without update
+    if ai_result.get("action") != "update":
+        return {
+            "message": ai_result.get("reply", ""),
+            "updated": False,
+            "plan_id": data.plan_id,
+        }
+
+    # 6. Apply update if requested
+    update = ai_result.get("update") or {}
+
+    new_title = update.get("title")
+    new_days = update.get("days")
+    new_budget = update.get("budget")
+    new_preferences = update.get("preferences")
+    new_interests = update.get("user_interests")
+    new_travel_styles = update.get("travel_styles")
+    new_category = update.get("category")
+    new_place = update.get("place")
+    new_plan_details = update.get("plan_details_json")
+    new_people_count = update.get("people_count")
+
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE plans
+                SET
+                    title = COALESCE(%s, title),
+                    days = COALESCE(%s, days),
+                    budget = COALESCE(%s, budget),
+                    preferences = COALESCE(%s, preferences),
+                    user_interests = COALESCE(%s, user_interests),
+                    travel_styles = COALESCE(%s, travel_styles),
+                    category = COALESCE(%s, category),
+                    place = COALESCE(%s, place),
+                    plan_details_json = COALESCE(%s, plan_details_json),
+                    people_count = COALESCE(%s, people_count),
+                    updated_at = NOW()
+                WHERE id = %s
+                  AND user_id = %s
+                  AND status != 'deleted'
+                """,
+                (
+                    new_title,
+                    new_days,
+                    new_budget,
+                    new_preferences,
+                    new_interests,
+                    new_travel_styles,
+                    new_category,
+                    new_place,
+                    json.dumps(new_plan_details) if new_plan_details is not None else None,
+                    new_people_count,
+                    data.plan_id,
+                    current_user["id"],
+                )
+            )
+            conn.commit()
+
+    return {
+        "message": ai_result.get("reply", "Plan updated successfully."),
+        "updated": True,
+        "plan_id": data.plan_id,
+    }

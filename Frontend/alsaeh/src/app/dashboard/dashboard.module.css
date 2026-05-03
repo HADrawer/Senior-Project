@@ -558,3 +558,149 @@
     width: 100%;
   }
 }
+
+
+
+.planDetailsLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 22px;
+  align-items: start;
+}
+
+.planDetailsMain {
+  min-width: 0;
+}
+
+.aiChatPanel {
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid #f1d9dd;
+  border-radius: 24px;
+  box-shadow: 0 12px 34px rgba(148, 44, 58, 0.08);
+  overflow: hidden;
+  position: sticky;
+  top: 24px;
+}
+
+.aiChatHeader {
+  padding: 20px;
+  border-bottom: 1px solid #f1d9dd;
+  background: #fffafb;
+}
+
+.aiChatHeader h3 {
+  margin: 0 0 8px;
+  color: #7c1b29;
+}
+
+.aiChatHeader p {
+  margin: 0;
+  color: #666;
+  line-height: 1.6;
+  font-size: 0.92rem;
+}
+
+.aiChatMessages {
+  height: 420px;
+  overflow-y: auto;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.aiChatEmpty {
+  color: #777;
+  background: #fff4f5;
+  border: 1px dashed #e8bdc5;
+  border-radius: 16px;
+  padding: 16px;
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+.userChatBubble,
+.assistantChatBubble {
+  padding: 12px 14px;
+  border-radius: 16px;
+  line-height: 1.6;
+  font-size: 0.95rem;
+  max-width: 92%;
+  word-break: break-word;
+}
+
+.userChatBubble {
+  align-self: flex-end;
+  background: #ce1126;
+  color: white;
+  border-bottom-right-radius: 6px;
+}
+
+.assistantChatBubble {
+  align-self: flex-start;
+  background: #fff4f5;
+  color: #333;
+  border: 1px solid #f1d9dd;
+  border-bottom-left-radius: 6px;
+}
+
+.aiChatForm {
+  border-top: 1px solid #f1d9dd;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: white;
+}
+
+.aiChatForm textarea {
+  width: 100%;
+  min-height: 90px;
+  border: 1px solid #ead2d7;
+  border-radius: 16px;
+  padding: 12px 14px;
+  resize: vertical;
+  outline: none;
+  font-family: Arial, sans-serif;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  box-sizing: border-box;
+}
+
+.aiChatForm textarea:focus {
+  border-color: #ce1126;
+  box-shadow: 0 0 0 4px rgba(206, 17, 38, 0.08);
+}
+
+.aiChatForm button {
+  height: 46px;
+  border: none;
+  border-radius: 14px;
+  background: #ce1126;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.25s ease;
+}
+
+.aiChatForm button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(206, 17, 38, 0.18);
+}
+
+.aiChatForm button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+@media (max-width: 1100px) {
+  .planDetailsLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .aiChatPanel {
+    position: static;
+  }
+}

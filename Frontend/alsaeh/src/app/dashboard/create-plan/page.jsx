@@ -23,6 +23,7 @@ export default function CreatePlanPage() {
     preferences: "",
     constraints: "",
     category: "",
+    people_count: "",
   });
 
   const [categories, setCategories] = useState([]);
@@ -177,6 +178,7 @@ export default function CreatePlanPage() {
           preferences: finalPreferences || null,
           constraints: constraintsList,
           language: "auto",
+          people_count: Number(form.people_count),
         }),
       });
 
@@ -238,6 +240,20 @@ export default function CreatePlanPage() {
               placeholder={t.budgetPlaceholder}
               onChange={(e) => setForm({ ...form, budget: e.target.value })}
             />
+          </div>
+
+
+          <div className={styles.aiField}>
+              <label>{lang === "ar" ? "عدد الأفراد" : "Number of People"}</label>
+              <input
+                type="number"
+                min="1"
+                max="50"
+                value={form.people_count}
+                placeholder="2"
+                onChange={(e) => setForm({ ...form, people_count: e.target.value })}
+                required
+              />
           </div>
 
           <div className={styles.aiField}>

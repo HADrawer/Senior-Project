@@ -58,6 +58,7 @@ class UpdatePlanRequest(BaseModel):
     travel_styles: str | None = None
     category: str | None = None
     place: str | None = None
+    people_count: int | None = None
 
 
 class GenerateAIPlanRequest(BaseModel):
@@ -69,3 +70,9 @@ class GenerateAIPlanRequest(BaseModel):
     preferences: Optional[str] = None
     constraints: Optional[List[str]] = None
     language: str = Field(default="auto", max_length=30)
+    people_count: int = Field(default=1, gt=0, le=50)
+
+class PlanChatRequest(BaseModel):
+    plan_id: int
+    message: str = Field(min_length=1, max_length=2000)
+    language: str = "auto"
