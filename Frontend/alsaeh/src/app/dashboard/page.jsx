@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import styles from "./dashboard.module.css";
 import { useRouter } from "next/navigation";
 
-const router = useRouter();
 
 export default function DashboardHomePage() {
+  const router = useRouter();
   const [lang, setLang] = useState("en");
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);

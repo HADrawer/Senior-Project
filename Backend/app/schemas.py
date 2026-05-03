@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field
-from typing import Optional
+from typing import List ,Optional
 from datetime import datetime
 
 class RegisterRequest(BaseModel):
@@ -58,3 +58,14 @@ class UpdatePlanRequest(BaseModel):
     travel_styles: str | None = None
     category: str | None = None
     place: str | None = None
+
+
+class GenerateAIPlanRequest(BaseModel):
+    title: str = Field(min_length=2, max_length=200)
+    days: int = Field(gt=0, le=14)
+    budget: Optional[float] = Field(default=None, ge=0)
+    interests: List[str] = Field(min_length=1)
+    travel_style: Optional[str] = None
+    preferences: Optional[str] = None
+    constraints: Optional[List[str]] = None
+    language: str = Field(default="auto", max_length=30)
