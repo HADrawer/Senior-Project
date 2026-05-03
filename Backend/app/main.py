@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi import Depends
 from dotenv import load_dotenv
 from google import genai
+from urllib.parse import quote_plus
 
 
 from app.dependencies import get_current_user
@@ -33,6 +34,41 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+GEMINI_MODELS = [
+    "gemini-2.5-flash",
+    "gemini-flash-latest",
+    "gemini-flash-lite-latest",
+]
+
+def generate_with_retry(prompt: str):
+    last_error = None
+
+    for model in GEMINI_MODELS:
+        for attempt in range(3):
+            try:
+                response = client.models.generate_content(
+                    model=model,
+                    contents=prompt
+                )
+                return response
+
+            except errors.ClientError as e:
+                last_error = e
+
+                if e.status_code == 503:
+                    time.sleep(1.5 * (attempt + 1))
+                    continue
+
+                if e.status_code == 429:
+                    time.sleep(2 * (attempt + 1))
+                    continue
+
+                raise e
+
+    raise HTTPException(
+        status_code=503,
+        detail="AI service is busy right now. Please try again in a moment."
+    )
 
 COOKIE_NAME = "session_token"
 
@@ -397,6 +433,11 @@ def build_plan_prompt(data: GenerateAIPlanRequest) -> str:
     - All user-facing text inside the JSON must follow the language rule.
     - Consider the number of people when estimating costs.
     - Budget is for the whole group, not one person.
+    - For each activity, include a real Bahrain location name.
+    - For each activity, include location_area such as Manama, Muharraq, Seef, Riffa, Zallaq, etc.
+    - For google_maps_query, write a search query using this format: place name + area + Bahrain.
+    - Do not invent coordinates.
+    - Do not invent Google Maps URLs.
 
     Return this exact JSON structure:
     {{
@@ -413,6 +454,9 @@ def build_plan_prompt(data: GenerateAIPlanRequest) -> str:
             "time": "string",
             "name": "string",
             "type": "string",
+            "location_name": "string",
+            "location_area": "string",
+            "google_maps_query": "string",
             "estimated_cost_bhd": 0,
             "notes": "string"
             }}
@@ -428,10 +472,7 @@ def generate_ai_plan(data: GenerateAIPlanRequest, current_user=Depends(get_curre
     try:
         prompt = build_plan_prompt(data)
 
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt
-        )
+        response = generate_with_retry(prompt)
 
         raw_text = response.text.strip()
 
@@ -445,6 +486,7 @@ def generate_ai_plan(data: GenerateAIPlanRequest, current_user=Depends(get_curre
             raw_text = raw_text[:-3].strip()
 
         generated_plan = json.loads(raw_text)
+        generated_plan = add_google_maps_links(generated_plan)
 
         if generated_plan.get("refused") is True:
             raise HTTPException(
@@ -650,10 +692,7 @@ def plan_chat(data: PlanChatRequest, current_user=Depends(get_current_user)):
     try:
         prompt = build_plan_chat_prompt(plan, data.message, data.language)
 
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt
-        )
+        response = generate_with_retry(prompt)
 
         raw_text = response.text.strip()
 
@@ -778,3 +817,22 @@ def plan_chat(data: PlanChatRequest, current_user=Depends(get_current_user)):
         "updated": True,
         "plan_id": data.plan_id,
     }
+
+
+
+def add_google_maps_links(plan_json):
+    for day in plan_json.get("days", []):
+        for activity in day.get("activities", []):
+            query = activity.get("google_maps_query")
+
+            if not query:
+                name = activity.get("name", "")
+                area = activity.get("location_area", "")
+                query = f"{name} {area} Bahrain"
+
+            activity["google_maps_url"] = (
+                "https://www.google.com/maps/search/?api=1&query="
+                + quote_plus(query)
+            )
+
+    return plan_json

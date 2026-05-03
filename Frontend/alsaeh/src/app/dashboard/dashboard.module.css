@@ -704,3 +704,32 @@
     position: static;
   }
 }
+
+.locationText {
+  margin: 12px 0 0;
+  color: #666;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.mapButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 14px;
+  width: 100%;
+  min-height: 42px;
+  border-radius: 14px;
+  background: #fff;
+  color: #ce1126;
+  border: 1px solid #f0cfd5;
+  text-decoration: none;
+  font-weight: 700;
+  transition: 0.25s ease;
+}
+
+.mapButton:hover {
+  background: #fff4f5;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(206, 17, 38, 0.12);
+}

@@ -192,7 +192,8 @@ export default function PlanDetailsPage() {
       if (!res.ok) {
         setChatMessages((prev) => [
           ...prev,
-          { sender: "assistant", text: data.detail || "Failed to send message" },
+          { sender: "assistant",
+            text : typeof data.detail === "string" ? data.detail : "AI service is busy. Please try again.", },
         ]);
         return;
       }
@@ -481,6 +482,22 @@ export default function PlanDetailsPage() {
                                     {activity.estimated_cost_bhd ?? 0} BHD
                                   </span>
                                 </div>
+                                {activity.location_area && (
+                                  <p className={styles.locationText}>
+                                    {activity.location_name || activity.name} · {activity.location_area}
+                                  </p>
+                                )}
+
+                                {activity.google_maps_url && (
+                                  <a
+                                    href={activity.google_maps_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={styles.mapButton}
+                                  >
+                                    Open in Google Maps
+                                  </a>
+                                )}
                               </div>
                             ))}
                           </div>

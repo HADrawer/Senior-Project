@@ -185,7 +185,13 @@ export default function CreatePlanPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(getErrorMessage(data.detail, t.failed));
+        setError(
+          typeof data.detail === "string"
+            ? data.detail.includes("busy")
+              ? "AI is under heavy load, try again in a few seconds."
+              : data.detail
+            : "AI service is busy. Please try again."
+        );
         setGenerating(false);
         return;
       }
