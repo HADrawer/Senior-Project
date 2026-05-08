@@ -14,9 +14,8 @@ from app.dependencies import get_current_user
 from app.db import get_conn
 from app.security import hash_password, verify_password, generate_session_token
 from app.schemas import RegisterRequest, LoginRequest , UpdatePlanRequest ,CreatePlanRequest , PlanChatRequest , GenerateAIPlanRequest
-
-
-
+from app.schemas import UpdateSettingsRequest, ChangePasswordRequest, ChangeEmailRequest
+from app.logger import create_log
 
 load_dotenv()
 
@@ -112,6 +111,17 @@ def register(data: RegisterRequest):
             user = cur.fetchone()
             conn.commit()
 
+        create_log(
+            user_id=user["id"],
+            action_type="register",
+            entity_type="user",
+            entity_id=user["id"],
+            metadata={
+                "email": data.email,
+                "message": "New user registered"
+            },
+        )
+
     return {
         "message": "Registered successfully",
         "user": {
@@ -139,6 +149,16 @@ def login(data: LoginRequest, response: Response):
             user = cur.fetchone()
 
             if not user or not verify_password(data.password, user["password_hash"]):
+                create_log(
+                    user_id=current_user["id"],
+                    action_type="ai_rejected_prompt",
+                    entity_type="plan",
+                    entity_id=None,
+                    metadata={
+                        "title": data.title,
+                        "message": "AI rejected request outside Bahrain tourism planning"
+                    },
+                )
                 raise HTTPException(status_code=401, detail="Invalid email or password")
 
             token = generate_session_token()
@@ -162,6 +182,16 @@ def login(data: LoginRequest, response: Response):
         samesite="lax",
         max_age=SESSION_HOURS * 3600,
         path="/",
+    )
+    create_log(
+        user_id=user["id"],
+        action_type="login_success",
+        entity_type="user",
+        entity_id=user["id"],
+        metadata={
+            "email": user["email"],
+            "message": "User logged in successfully"
+        },
     )
 
     return {
@@ -352,6 +382,15 @@ def update_plan(plan_id: int, data: UpdatePlanRequest, current_user = Depends(ge
             updated_plan = cur.fetchone()
             conn.commit()
 
+    create_log(
+        user_id=current_user["id"],
+        action_type="edit_plan",
+        entity_type="plan",
+        entity_id=plan_id,
+        metadata={
+            "message": "User edited a plan"
+        },
+    )
     return {
         "message": "Plan updated successfully",
         "plan_id": updated_plan["id"],
@@ -389,6 +428,17 @@ def delete_plan(plan_id: int, current_user = Depends(get_current_user)):
                 (plan_id, current_user["id"])
             )
             conn.commit()
+    
+
+    create_log(
+        user_id=current_user["id"],
+        action_type="delete_plan",
+        entity_type="plan",
+        entity_id=plan_id,
+        metadata={
+            "message": "User deleted a plan"
+        },
+    )
 
     return {"message": "Plan deleted successfully"}
 
@@ -507,6 +557,16 @@ def generate_ai_plan(data: GenerateAIPlanRequest, current_user=Depends(get_curre
         raise
 
     except Exception as e:
+        create_log(
+            user_id=current_user["id"] if current_user else None,
+            action_type="ai_generation_error",
+            entity_type="plan",
+            entity_id=None,
+            metadata={
+                "error": str(e),
+                "title": getattr(data, "title", None)
+            },
+        )
         raise HTTPException(status_code=500, detail=f"AI generation failed: {str(e)}")
 
     try:
@@ -721,6 +781,16 @@ def plan_chat(data: PlanChatRequest, current_user=Depends(get_current_user)):
     except json.JSONDecodeError:
         raise HTTPException(status_code=500, detail="AI returned invalid JSON")
     except Exception as e:
+        create_log(
+            user_id=current_user["id"] if current_user else None,
+            action_type="ai_chat_error",
+            entity_type="plan",
+            entity_id=data.plan_id,
+            metadata={
+                "error": str(e),
+                "message": data.message,
+            },
+        )
         raise HTTPException(status_code=500, detail=f"AI chat failed: {str(e)}")
 
     # 3. Refuse unrelated topics
@@ -824,6 +894,17 @@ def plan_chat(data: PlanChatRequest, current_user=Depends(get_current_user)):
                 )
             )
             conn.commit()
+
+    create_log(
+        user_id=current_user["id"],
+        action_type="ai_plan_chat",
+        entity_type="plan",
+        entity_id=plan_id,
+        metadata={
+            "message": data.message,
+            "updated_plan": True
+        },
+    )
 
     return {
         "message": ai_result.get("reply", "Plan updated successfully."),
@@ -963,6 +1044,15 @@ def admin_update_user(user_id: int, data: dict, current_user=Depends(get_current
                 raise HTTPException(status_code=404, detail="User not found")
 
             conn.commit()
+    create_log(
+        user_id=current_user["id"],
+        action_type="admin_update_user",
+        entity_type="user",
+        entity_id=user_id,
+        metadata={
+            "message": "Admin updated user information"
+        },
+    )
 
     return {"message": "User updated successfully"}
 
@@ -992,6 +1082,16 @@ def admin_delete_user(user_id: int, current_user=Depends(get_current_user)):
                 raise HTTPException(status_code=404, detail="User not found")
 
             conn.commit()
+
+    create_log(
+        user_id=current_user["id"],
+        action_type="admin_disable_user",
+        entity_type="user",
+        entity_id=user_id,
+        metadata={
+            "message": "Admin disabled user account"
+        },
+    )
 
     return {"message": "User disabled successfully"}
 
@@ -1062,6 +1162,16 @@ def admin_update_plan(plan_id: int, data: dict, current_user=Depends(get_current
 
             conn.commit()
 
+    create_log(
+        user_id=current_user["id"],
+        action_type="admin_update_plan",
+        entity_type="plan",
+        entity_id=plan_id,
+        metadata={
+            "message": "Admin updated plan"
+        },
+    )
+
     return {"message": "Plan updated successfully"}
 
 @app.delete("/admin/plans/{plan_id}")
@@ -1086,6 +1196,16 @@ def admin_delete_plan(plan_id: int, current_user=Depends(get_current_user)):
                 raise HTTPException(status_code=404, detail="Plan not found")
 
             conn.commit()
+
+    create_log(
+        user_id=current_user["id"],
+        action_type="admin_delete_plan",
+        entity_type="plan",
+        entity_id=plan_id,
+        metadata={
+            "message": "Admin deleted plan"
+        },
+    )
 
     return {"message": "Plan deleted successfully"}
 
@@ -1117,3 +1237,213 @@ def admin_get_logs(current_user=Depends(get_current_user)):
 
     return logs
 
+@app.get("/settings/me")
+def get_my_settings(current_user=Depends(get_current_user)):
+    return {
+        "id": current_user["id"],
+        "full_name": current_user["full_name"],
+        "email": current_user["email"],
+        "phone_number": current_user["phone_number"],
+        "preferred_language": current_user.get("preferred_language", "en"),
+    }
+
+
+@app.put("/settings/me")
+def update_my_settings(data: UpdateSettingsRequest, current_user=Depends(get_current_user)):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE users
+                SET
+                    full_name = COALESCE(%s, full_name),
+                    phone_number = COALESCE(%s, phone_number),
+                    preferred_language = COALESCE(%s, preferred_language),
+                    updated_at = NOW()
+                WHERE id = %s
+                RETURNING id, full_name, email, phone_number, preferred_language
+                """,
+                (
+                    data.full_name,
+                    data.phone_number,
+                    data.preferred_language,
+                    current_user["id"],
+                )
+            )
+
+            user = cur.fetchone()
+            conn.commit()
+    create_log(
+        user_id=current_user["id"],
+        action_type="update_profile",
+        entity_type="user",
+        entity_id=current_user["id"],
+        metadata={
+            "full_name": data.full_name,
+            "phone_number": data.phone_number,
+            "preferred_language": data.preferred_language
+        },
+    )
+
+    return {"message": "Settings updated successfully", "user": user}
+
+
+@app.put("/settings/change-password")
+def change_password(data: ChangePasswordRequest, current_user=Depends(get_current_user)):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT password_hash FROM users WHERE id = %s",
+                (current_user["id"],)
+            )
+            user = cur.fetchone()
+
+            if not user or not verify_password(data.current_password, user["password_hash"]):
+                raise HTTPException(status_code=400, detail="Current password is incorrect")
+
+            cur.execute(
+                """
+                UPDATE users
+                SET password_hash = %s, updated_at = NOW()
+                WHERE id = %s
+                """,
+                (hash_password(data.new_password), current_user["id"])
+            )
+
+            conn.commit()
+
+    create_log(
+        user_id=current_user["id"],
+        action_type="change_password",
+        entity_type="user",
+        entity_id=current_user["id"],
+        metadata={
+            "message": "User changed password"
+        },
+    )
+
+    return {"message": "Password changed successfully"}
+
+
+@app.put("/settings/change-email")
+def change_email(data: ChangeEmailRequest, current_user=Depends(get_current_user)):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT password_hash FROM users WHERE id = %s",
+                (current_user["id"],)
+            )
+            user = cur.fetchone()
+
+            if not user or not verify_password(data.current_password, user["password_hash"]):
+                raise HTTPException(status_code=400, detail="Current password is incorrect")
+
+            cur.execute(
+                "SELECT id FROM users WHERE email = %s AND id != %s",
+                (data.new_email, current_user["id"])
+            )
+            existing = cur.fetchone()
+
+            if existing:
+                raise HTTPException(status_code=400, detail="Email is already used")
+
+            cur.execute(
+                """
+                UPDATE users
+                SET email = %s, updated_at = NOW()
+                WHERE id = %s
+                """,
+                (data.new_email, current_user["id"])
+            )
+
+            conn.commit()
+
+    create_log(
+        user_id=current_user["id"],
+        action_type="change_email",
+        entity_type="user",
+        entity_id=current_user["id"],
+        metadata={
+            "old_email": current_user["email"],
+            "new_email": data.new_email
+        },
+    )
+
+    return {"message": "Email changed successfully"}
+
+
+@app.get("/settings/export-data")
+def export_my_data(current_user=Depends(get_current_user)):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, full_name, email, phone_number, preferred_language, created_at
+                FROM users
+                WHERE id = %s
+                """,
+                (current_user["id"],)
+            )
+            user = cur.fetchone()
+
+            cur.execute(
+                """
+                SELECT *
+                FROM plans
+                WHERE user_id = %s
+                ORDER BY created_at DESC
+                """,
+                (current_user["id"],)
+            )
+            plans = cur.fetchall()
+    
+    create_log(
+        user_id=current_user["id"],
+        action_type="export_data",
+        entity_type="user",
+        entity_id=current_user["id"],
+        metadata={
+            "message": "User exported account data"
+        },
+    )
+
+    return {
+        "user": user,
+        "plans": plans,
+    }
+
+
+@app.delete("/settings/delete-account")
+def delete_my_account(current_user=Depends(get_current_user)):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE users
+                SET is_active = FALSE, updated_at = NOW()
+                WHERE id = %s
+                """,
+                (current_user["id"],)
+            )
+
+            cur.execute(
+                """
+                DELETE FROM user_sessions
+                WHERE user_id = %s
+                """,
+                (current_user["id"],)
+            )
+
+            conn.commit()
+
+    create_log(
+        user_id=current_user["id"],
+        action_type="delete_account",
+        entity_type="user",
+        entity_id=current_user["id"],
+        metadata={
+            "message": "User disabled account"
+        },
+    )
+
+    return {"message": "Account disabled successfully"}

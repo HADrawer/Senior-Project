@@ -4,14 +4,14 @@
   grid-template-columns: 290px 1fr;
   background:
     radial-gradient(circle at top, rgba(186, 12, 47, 0.08), transparent 30%),
-    linear-gradient(180deg, #fff8f8 0%, #ffffff 45%, #fffafa 100%);
+    linear-gradient(180deg, var(--bg-main) 0%, var(--bg-secondary) 100%);
   font-family: Arial, sans-serif;
-  color: #1f1f1f;
+  color: var(--text-main);
 }
 
 .sidebar {
-  border-right: 1px solid #f1d9dd;
-  background: rgba(255, 255, 255, 0.85);
+  border-right: 1px solid var(--border-soft);
+  background: var(--bg-card);
   backdrop-filter: blur(8px);
   padding: 28px 20px;
   display: flex;
@@ -24,7 +24,7 @@
   align-items: center;
   gap: 12px;
   text-decoration: none;
-  color: #1f1f1f;
+  color: var(--text-main);
   font-weight: 700;
   font-size: 1.2rem;
   margin-bottom: 28px;
@@ -33,34 +33,57 @@
 .logoMark {
   width: 18px;
   height: 42px;
-  background: linear-gradient(180deg, #ce1126, #a70d20);
+  background: linear-gradient(180deg, var(--primary), var(--primary-hover));
   border-radius: 6px;
   box-shadow: 0 8px 20px rgba(206, 17, 38, 0.25);
 }
 
+.userBox,
+.statsCard,
+.planCard,
+.detailsCard,
+.aiCreateCard,
+.aiChatPanel,
+.settingsSection,
+.emptyState {
+  background: var(--bg-card);
+  color: var(--text-main);
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-soft);
+}
+
 .userBox {
-  background: white;
-  border: 1px solid #f1d9dd;
   border-radius: 20px;
   padding: 18px;
   margin-bottom: 26px;
-  box-shadow: 0 10px 30px rgba(148, 44, 58, 0.08);
+}
+
+.userLabel,
+.userEmail,
+.pageSubtitle,
+.planDescription,
+.detailLabel,
+.settingsText,
+.passwordStrength,
+.aiField small,
+.locationText,
+.planMeta {
+  color: var(--text-muted);
 }
 
 .userLabel {
   margin: 0 0 8px;
-  color: #777;
   font-size: 0.9rem;
 }
 
 .userName {
   margin: 0 0 6px;
   font-size: 1.05rem;
+  color: var(--text-main);
 }
 
 .userEmail {
   margin: 0;
-  color: #666;
   font-size: 0.92rem;
   word-break: break-word;
 }
@@ -73,9 +96,9 @@
 
 .navItem {
   text-decoration: none;
-  color: #6d2230;
-  background: white;
-  border: 1px solid #f1d9dd;
+  color: var(--text-main);
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
   padding: 14px 16px;
   border-radius: 14px;
   transition: 0.25s ease;
@@ -83,13 +106,13 @@
 }
 
 .navItem:hover {
-  background: #fff4f5;
+  background: var(--bg-hover);
 }
 
 .activeNavItem {
-  background: #ce1126;
+  background: var(--primary);
   color: white;
-  border-color: #ce1126;
+  border-color: var(--primary);
 }
 
 .sidebarBottom {
@@ -100,33 +123,54 @@
 
 .langBtn,
 .logoutBtn,
-.viewButton {
-  border: none;
+.viewButton,
+.secondaryActionButton,
+.cancelButton,
+.mapButton,
+.supportLink {
   border-radius: 14px;
   cursor: pointer;
   transition: 0.25s ease;
   font-weight: 600;
 }
 
+.langBtn,
+.secondaryActionButton,
+.cancelButton,
+.mapButton,
+.supportLink {
+  background: var(--bg-card);
+  color: var(--primary);
+  border: 1px solid var(--border-soft);
+}
+
 .langBtn {
-  background: white;
-  color: #ce1126;
-  border: 1px solid #f0cfd5;
   padding: 12px 14px;
 }
 
-.langBtn:hover {
-  background: #fff4f5;
+.langBtn:hover,
+.secondaryActionButton:hover,
+.cancelButton:hover,
+.mapButton:hover,
+.supportLink:hover {
+  background: var(--bg-hover);
+}
+
+.logoutBtn,
+.viewButton,
+.aiGenerateButton {
+  background: var(--primary);
+  color: white;
+  border: none;
 }
 
 .logoutBtn {
-  background: #ce1126;
-  color: white;
   padding: 12px 14px;
 }
 
 .logoutBtn:hover,
-.viewButton:hover {
+.viewButton:hover,
+.aiGenerateButton:hover {
   transform: translateY(-2px);
   box-shadow: 0 12px 24px rgba(206, 17, 38, 0.18);
 }
@@ -139,7 +183,8 @@
   width: 100%;
 }
 
-.pageHeader {
+.pageHeader,
+.detailsHeader {
   display: flex;
   justify-content: space-between;
   gap: 20px;
@@ -151,33 +196,30 @@
 .pageTitle {
   margin: 0 0 10px;
   font-size: 2rem;
+  color: var(--text-main);
 }
 
 .pageSubtitle {
   margin: 0;
-  color: #666;
   line-height: 1.7;
 }
 
 .statsCard {
   min-width: 160px;
-  background: white;
-  border: 1px solid #f1d9dd;
   border-radius: 20px;
   padding: 18px 20px;
-  box-shadow: 0 10px 30px rgba(148, 44, 58, 0.08);
 }
 
 .statsLabel {
   display: block;
-  color: #777;
+  color: var(--text-muted);
   margin-bottom: 8px;
   font-size: 0.9rem;
 }
 
 .statsValue {
   font-size: 1.8rem;
-  color: #b30f24;
+  color: var(--primary);
 }
 
 .planGrid {
@@ -187,11 +229,8 @@
 }
 
 .planCard {
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid #f1d9dd;
   border-radius: 24px;
   padding: 22px;
-  box-shadow: 0 12px 34px rgba(148, 44, 58, 0.08);
 }
 
 .planTop {
@@ -205,11 +244,12 @@
 .planTitle {
   margin: 0;
   font-size: 1.15rem;
+  color: var(--text-main);
 }
 
 .planStatus {
-  background: rgba(206, 17, 38, 0.1);
-  color: #b30f24;
+  background: rgba(206, 17, 38, 0.12);
+  color: var(--primary);
   padding: 6px 10px;
   border-radius: 999px;
   font-size: 0.82rem;
@@ -219,7 +259,6 @@
 
 .planDescription {
   margin: 0 0 18px;
-  color: #555;
   line-height: 1.7;
 }
 
@@ -228,25 +267,20 @@
   justify-content: space-between;
   gap: 14px;
   flex-wrap: wrap;
-  color: #6b6b6b;
   font-size: 0.95rem;
   margin-bottom: 18px;
 }
 
 .viewButton {
   width: 100%;
-  background: #ce1126;
-  color: white;
   padding: 12px 14px;
 }
 
 .emptyState {
-  background: white;
-  border: 1px dashed #e4b8c1;
+  border-style: dashed;
   border-radius: 20px;
   padding: 40px 24px;
   text-align: center;
-  color: #666;
 }
 
 .loadingText {
@@ -254,34 +288,10 @@
   display: grid;
   place-items: center;
   font-family: Arial, sans-serif;
-  color: #666;
+  color: var(--text-muted);
   background:
-    radial-gradient(circle at top, rgba(186, 12, 47, 0.12), transparent 35%),
-    linear-gradient(180deg, #fff8f8 0%, #ffffff 45%, #fffafa 100%);
-}
-
-@media (max-width: 920px) {
-  .dashboardPage {
-    grid-template-columns: 1fr;
-  }
-
-  .sidebar {
-    border-right: none;
-    border-bottom: 1px solid #f1d9dd;
-  }
-
-  .contentArea {
-    padding: 24px 16px;
-  }
-}
-
-.detailsHeader {
-  display: flex;
-  justify-content: space-between;
-  gap: 18px;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  margin-bottom: 24px;
+    radial-gradient(circle at top, rgba(186, 12, 47, 0.08), transparent 35%),
+    linear-gradient(180deg, var(--bg-main) 0%, var(--bg-secondary) 100%);
 }
 
 .detailsActions {
@@ -291,11 +301,8 @@
 }
 
 .detailsCard {
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid #f1d9dd;
   border-radius: 24px;
   padding: 24px;
-  box-shadow: 0 12px 34px rgba(148, 44, 58, 0.08);
 }
 
 .detailsGrid {
@@ -306,8 +313,8 @@
 }
 
 .detailItem {
-  background: #fffafb;
-  border: 1px solid #f4dde1;
+  background: var(--bg-hover);
+  border: 1px solid var(--border-soft);
   border-radius: 18px;
   padding: 16px;
 }
@@ -315,73 +322,96 @@
 .detailLabel {
   display: block;
   font-size: 0.88rem;
-  color: #777;
   margin-bottom: 8px;
 }
 
 .detailBlock {
   margin-top: 22px;
   padding-top: 22px;
-  border-top: 1px solid #f1d9dd;
+  border-top: 1px solid var(--border-soft);
+}
+
+.blockTitle,
+.settingsSection h2,
+.aiField label,
+.aiChatHeader h3 {
+  color: var(--primary);
 }
 
 .blockTitle {
   margin: 0 0 12px;
-  color: #7c1b29;
 }
 
-.formGrid {
+.formGrid,
+.aiFormGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 18px;
-  margin-bottom: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
 }
 
-.textarea {
+.textarea,
+.input,
+.aiField input,
+.aiField select,
+.aiField textarea,
+.aiChatForm textarea,
+.deleteAccountBox input {
   width: 100%;
-  min-height: 120px;
-  border: 1px solid #ead2d7;
-  border-radius: 14px;
-  padding: 14px 16px;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-hover);
+  color: var(--text-main);
+  border-radius: 16px;
+  padding: 0 16px;
   font-size: 0.98rem;
   outline: none;
-  background: #fff;
-  transition: 0.25s ease;
   box-sizing: border-box;
+  transition: 0.2s ease;
+  box-shadow: none;
+}
+
+.aiField input,
+.aiField select {
+  height: 54px;
+}
+
+.aiField textarea,
+.textarea {
+  min-height: 130px;
+  padding-top: 16px;
   resize: vertical;
   font-family: Arial, sans-serif;
+  line-height: 1.7;
 }
 
-.textarea:focus {
-  border-color: #ce1126;
-  box-shadow: 0 0 0 4px rgba(206, 17, 38, 0.08);
+.aiChatForm textarea {
+  min-height: 90px;
+  padding: 12px 14px;
+  resize: vertical;
+  font-family: Arial, sans-serif;
+  line-height: 1.6;
 }
 
-.secondaryActionButton {
-  background: white;
-  color: #ce1126;
-  border: 1px solid #f0cfd5;
-  border-radius: 14px;
-  padding: 12px 16px;
-  cursor: pointer;
-  transition: 0.25s ease;
-  font-weight: 600;
+.textarea:focus,
+.input:focus,
+.aiField input:focus,
+.aiField select:focus,
+.aiField textarea:focus,
+.aiChatForm textarea:focus,
+.deleteAccountBox input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(206, 17, 38, 0.1);
 }
 
-.secondaryActionButton:hover,
-.cancelButton:hover {
-  background: #fff4f5;
+.aiField input::placeholder,
+.aiField textarea::placeholder,
+.aiChatForm textarea::placeholder,
+.deleteAccountBox input::placeholder {
+  color: var(--text-muted);
 }
 
+.secondaryActionButton,
 .cancelButton {
-  background: white;
-  color: #ce1126;
-  border: 1px solid #f0cfd5;
-  border-radius: 14px;
   padding: 12px 16px;
-  cursor: pointer;
-  transition: 0.25s ease;
-  font-weight: 600;
 }
 
 .deleteButton {
@@ -400,7 +430,9 @@
   box-shadow: 0 12px 24px rgba(143, 18, 34, 0.18);
 }
 
-.deleteButton:disabled {
+.deleteButton:disabled,
+.aiGenerateButton:disabled,
+.aiChatForm button:disabled {
   opacity: 0.7;
   cursor: not-allowed;
   transform: none;
@@ -410,18 +442,18 @@
 .createHeader {
   background:
     radial-gradient(circle at top right, rgba(206, 17, 38, 0.14), transparent 35%),
-    rgba(255, 255, 255, 0.94);
-  border: 1px solid #f1d9dd;
+    var(--bg-card);
+  border: 1px solid var(--border-soft);
   border-radius: 28px;
   padding: 30px;
-  box-shadow: 0 12px 34px rgba(148, 44, 58, 0.08);
+  box-shadow: var(--shadow-soft);
   margin-bottom: 24px;
 }
 
 .createBadge {
   display: inline-block;
-  background: rgba(206, 17, 38, 0.08);
-  color: #b30f24;
+  background: rgba(206, 17, 38, 0.1);
+  color: var(--primary);
   padding: 8px 14px;
   border-radius: 999px;
   font-size: 0.85rem;
@@ -430,20 +462,11 @@
 }
 
 .aiCreateCard {
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid #f1d9dd;
   border-radius: 28px;
   padding: 28px;
-  box-shadow: 0 12px 34px rgba(148, 44, 58, 0.08);
   display: flex;
   flex-direction: column;
   gap: 22px;
-}
-
-.aiFormGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px;
 }
 
 .aiField {
@@ -455,54 +478,6 @@
 .aiField label {
   font-size: 0.95rem;
   font-weight: 700;
-  color: #7c1b29;
-}
-
-.aiField input,
-.aiField select,
-.aiField textarea {
-  width: 100%;
-  border: 1px solid #ead2d7;
-  background: #ffffff;
-  color: #1f1f1f;
-  border-radius: 16px;
-  padding: 0 16px;
-  font-size: 0.98rem;
-  outline: none;
-  box-sizing: border-box;
-  transition: 0.2s ease;
-  box-shadow: 0 6px 18px rgba(148, 44, 58, 0.04);
-}
-
-.aiField input,
-.aiField select {
-  height: 54px;
-}
-
-.aiField textarea {
-  min-height: 130px;
-  padding-top: 16px;
-  resize: vertical;
-  font-family: Arial, sans-serif;
-  line-height: 1.7;
-}
-
-.aiField input:focus,
-.aiField select:focus,
-.aiField textarea:focus {
-  border-color: #ce1126;
-  box-shadow: 0 0 0 4px rgba(206, 17, 38, 0.08);
-}
-
-.aiField input::placeholder,
-.aiField textarea::placeholder {
-  color: #b9a1a6;
-}
-
-.aiField small {
-  color: #777;
-  font-size: 0.86rem;
-  line-height: 1.5;
 }
 
 .aiActions {
@@ -517,49 +492,12 @@
 .aiGenerateButton {
   min-width: 190px;
   height: 52px;
-  border: none;
   border-radius: 16px;
-  background: #ce1126;
-  color: white;
   cursor: pointer;
   font-weight: 700;
   font-size: 0.98rem;
   transition: 0.25s ease;
 }
-
-.aiGenerateButton:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 24px rgba(206, 17, 38, 0.18);
-}
-
-.aiGenerateButton:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-@media (max-width: 780px) {
-  .aiFormGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .createHeader,
-  .aiCreateCard {
-    padding: 22px;
-    border-radius: 24px;
-  }
-
-  .aiActions {
-    justify-content: stretch;
-  }
-
-  .aiActions button {
-    width: 100%;
-  }
-}
-
-
 
 .planDetailsLayout {
   display: grid;
@@ -573,10 +511,7 @@
 }
 
 .aiChatPanel {
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid #f1d9dd;
   border-radius: 24px;
-  box-shadow: 0 12px 34px rgba(148, 44, 58, 0.08);
   overflow: hidden;
   position: sticky;
   top: 24px;
@@ -584,18 +519,17 @@
 
 .aiChatHeader {
   padding: 20px;
-  border-bottom: 1px solid #f1d9dd;
-  background: #fffafb;
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--bg-hover);
 }
 
 .aiChatHeader h3 {
   margin: 0 0 8px;
-  color: #7c1b29;
 }
 
 .aiChatHeader p {
   margin: 0;
-  color: #666;
+  color: var(--text-muted);
   line-height: 1.6;
   font-size: 0.92rem;
 }
@@ -610,9 +544,9 @@
 }
 
 .aiChatEmpty {
-  color: #777;
-  background: #fff4f5;
-  border: 1px dashed #e8bdc5;
+  color: var(--text-muted);
+  background: var(--bg-hover);
+  border: 1px dashed var(--border-soft);
   border-radius: 16px;
   padding: 16px;
   line-height: 1.6;
@@ -631,83 +565,41 @@
 
 .userChatBubble {
   align-self: flex-end;
-  background: #ce1126;
+  background: var(--primary);
   color: white;
   border-bottom-right-radius: 6px;
 }
 
 .assistantChatBubble {
   align-self: flex-start;
-  background: #fff4f5;
-  color: #333;
-  border: 1px solid #f1d9dd;
+  background: var(--bg-hover);
+  color: var(--text-main);
+  border: 1px solid var(--border-soft);
   border-bottom-left-radius: 6px;
 }
 
 .aiChatForm {
-  border-top: 1px solid #f1d9dd;
+  border-top: 1px solid var(--border-soft);
   padding: 14px;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  background: white;
-}
-
-.aiChatForm textarea {
-  width: 100%;
-  min-height: 90px;
-  border: 1px solid #ead2d7;
-  border-radius: 16px;
-  padding: 12px 14px;
-  resize: vertical;
-  outline: none;
-  font-family: Arial, sans-serif;
-  font-size: 0.95rem;
-  line-height: 1.6;
-  box-sizing: border-box;
-}
-
-.aiChatForm textarea:focus {
-  border-color: #ce1126;
-  box-shadow: 0 0 0 4px rgba(206, 17, 38, 0.08);
+  background: var(--bg-card);
 }
 
 .aiChatForm button {
   height: 46px;
   border: none;
   border-radius: 14px;
-  background: #ce1126;
+  background: var(--primary);
   color: white;
   font-weight: 700;
   cursor: pointer;
   transition: 0.25s ease;
 }
 
-.aiChatForm button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 24px rgba(206, 17, 38, 0.18);
-}
-
-.aiChatForm button:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-@media (max-width: 1100px) {
-  .planDetailsLayout {
-    grid-template-columns: 1fr;
-  }
-
-  .aiChatPanel {
-    position: static;
-  }
-}
-
 .locationText {
   margin: 12px 0 0;
-  color: #666;
   font-size: 0.92rem;
   line-height: 1.5;
 }
@@ -719,17 +611,305 @@
   margin-top: 14px;
   width: 100%;
   min-height: 42px;
-  border-radius: 14px;
-  background: #fff;
-  color: #ce1126;
-  border: 1px solid #f0cfd5;
   text-decoration: none;
+}
+
+.settingsSection {
+  border-radius: 26px;
+  padding: 26px;
+  margin-bottom: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.settingsSection h2 {
+  margin: 0;
+}
+
+.settingsSubForm {
+  border-top: 1px solid var(--border-soft);
+  padding-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.settingsSubForm h3 {
+  margin: 0;
+  color: var(--text-main);
+}
+
+.passwordHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.passwordHeader button,
+.smallSecondary {
+  background: var(--bg-hover);
+  color: var(--primary);
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  padding: 8px 12px;
   font-weight: 700;
+  cursor: pointer;
   transition: 0.25s ease;
 }
 
-.mapButton:hover {
-  background: #fff4f5;
-  transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(206, 17, 38, 0.12);
+.passwordHeader button:hover,
+.smallSecondary:hover {
+  background: var(--bg-card);
+}
+
+.passwordStrength {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.strengthTrack {
+  width: 100%;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--bg-hover);
+  overflow: hidden;
+}
+
+.strengthFill {
+  height: 100%;
+  border-radius: 999px;
+  transition: 0.25s ease;
+}
+
+.weak {
+  width: 33%;
+  background: #dc2626;
+}
+
+.medium {
+  width: 66%;
+  background: #f59e0b;
+}
+
+.strong {
+  width: 100%;
+  background: #16a34a;
+}
+
+.settingsText {
+  line-height: 1.7;
+  margin: 0;
+}
+
+.successMessage {
+  background: #f0fff4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  font-weight: 700;
+}
+
+.deleteAccountBox {
+  border: 1px solid var(--border-soft);
+  background: var(--bg-hover);
+  border-radius: 20px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.deleteAccountBox h3 {
+  margin: 0;
+  color: #8f1222;
+}
+
+.deleteAccountBox p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.supportLink {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  text-decoration: none;
+  padding: 12px 16px;
+}
+
+/* Dark mode polish */
+html[data-theme="dark"] .dashboardPage {
+  background:
+    radial-gradient(circle at top, rgba(255, 75, 95, 0.08), transparent 32%),
+    linear-gradient(180deg, #121212 0%, #171717 55%, #111111 100%);
+}
+
+html[data-theme="dark"] .sidebar {
+  background: #181818;
+  border-color: #333;
+}
+
+html[data-theme="dark"] .settingsSection,
+html[data-theme="dark"] .aiCreateCard,
+html[data-theme="dark"] .detailsCard,
+html[data-theme="dark"] .planCard,
+html[data-theme="dark"] .userBox,
+html[data-theme="dark"] .statsCard,
+html[data-theme="dark"] .emptyState,
+html[data-theme="dark"] .aiChatPanel {
+  background: #1f1f1f;
+  color: #f5f5f5;
+  border-color: #343434;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.35);
+}
+
+html[data-theme="dark"] .detailItem,
+html[data-theme="dark"] .deleteAccountBox,
+html[data-theme="dark"] .aiChatHeader,
+html[data-theme="dark"] .aiChatEmpty,
+html[data-theme="dark"] .assistantChatBubble {
+  background: #292929;
+  color: #f5f5f5;
+  border-color: #444;
+}
+
+html[data-theme="dark"] .aiField input,
+html[data-theme="dark"] .aiField select,
+html[data-theme="dark"] .aiField textarea,
+html[data-theme="dark"] .input,
+html[data-theme="dark"] .textarea,
+html[data-theme="dark"] .aiChatForm textarea,
+html[data-theme="dark"] .deleteAccountBox input {
+  background: #292929;
+  color: #f5f5f5;
+  border-color: #444;
+}
+
+html[data-theme="dark"] .aiField input::placeholder,
+html[data-theme="dark"] .aiField textarea::placeholder,
+html[data-theme="dark"] .aiChatForm textarea::placeholder {
+  color: #9ca3af;
+}
+
+html[data-theme="dark"] .secondaryActionButton,
+html[data-theme="dark"] .cancelButton,
+html[data-theme="dark"] .langBtn,
+html[data-theme="dark"] .mapButton,
+html[data-theme="dark"] .supportLink,
+html[data-theme="dark"] .passwordHeader button,
+html[data-theme="dark"] .smallSecondary {
+  background: #292929;
+  color: #ff4b5f;
+  border-color: #444;
+}
+
+html[data-theme="dark"] .secondaryActionButton:hover,
+html[data-theme="dark"] .cancelButton:hover,
+html[data-theme="dark"] .langBtn:hover,
+html[data-theme="dark"] .mapButton:hover,
+html[data-theme="dark"] .supportLink:hover,
+html[data-theme="dark"] .passwordHeader button:hover,
+html[data-theme="dark"] .smallSecondary:hover {
+  background: #333;
+}
+
+html[data-theme="dark"] .aiGenerateButton,
+html[data-theme="dark"] .viewButton,
+html[data-theme="dark"] .logoutBtn,
+html[data-theme="dark"] .activeNavItem {
+  background: #d9142d;
+  color: white;
+  border-color: #d9142d;
+}
+
+html[data-theme="dark"] .aiGenerateButton:hover,
+html[data-theme="dark"] .viewButton:hover,
+html[data-theme="dark"] .logoutBtn:hover {
+  background: #ff4b5f;
+}
+
+html[data-theme="dark"] .settingsSection h2,
+html[data-theme="dark"] .blockTitle,
+html[data-theme="dark"] .aiField label,
+html[data-theme="dark"] .aiChatHeader h3 {
+  color: #ff4b5f;
+}
+
+html[data-theme="dark"] .settingsSubForm h3,
+html[data-theme="dark"] .pageTitle,
+html[data-theme="dark"] .planTitle,
+html[data-theme="dark"] .userName,
+html[data-theme="dark"] .brand {
+  color: #f5f5f5;
+}
+
+html[data-theme="dark"] .settingsText,
+html[data-theme="dark"] .pageSubtitle,
+html[data-theme="dark"] .planDescription,
+html[data-theme="dark"] .planMeta,
+html[data-theme="dark"] .detailLabel,
+html[data-theme="dark"] .userLabel,
+html[data-theme="dark"] .userEmail {
+  color: #b8b8b8;
+}
+
+html[data-theme="dark"] .navItem {
+  background: #202020;
+  color: #f5f5f5;
+  border-color: #333;
+}
+
+html[data-theme="dark"] .navItem:hover {
+  background: #292929;
+}
+
+@media (max-width: 920px) {
+  .dashboardPage {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--border-soft);
+  }
+
+  .contentArea {
+    padding: 24px 16px;
+  }
+}
+
+@media (max-width: 780px) {
+  .aiFormGrid,
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .createHeader,
+  .aiCreateCard {
+    padding: 22px;
+    border-radius: 24px;
+  }
+
+  .aiActions {
+    justify-content: stretch;
+  }
+
+  .aiActions button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 1100px) {
+  .planDetailsLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .aiChatPanel {
+    position: static;
+  }
 }

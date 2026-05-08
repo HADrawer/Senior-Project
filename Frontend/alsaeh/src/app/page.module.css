@@ -2,8 +2,8 @@
   min-height: 100vh;
   background:
     radial-gradient(circle at top, rgba(186, 12, 47, 0.12), transparent 35%),
-    linear-gradient(180deg, #fff8f8 0%, #ffffff 45%, #fffafa 100%);
-  color: #1f1f1f;
+    linear-gradient(180deg, var(--bg-main) 0%, var(--bg-secondary) 100%);
+  color: var(--text-main);
   font-family: Arial, sans-serif;
 }
 
@@ -26,7 +26,7 @@
 .logoMark {
   width: 18px;
   height: 42px;
-  background: linear-gradient(180deg, #ce1126, #a70d20);
+  background: linear-gradient(180deg, var(--primary), var(--primary-hover));
   border-radius: 6px;
   box-shadow: 0 8px 20px rgba(206, 17, 38, 0.25);
 }
@@ -35,6 +35,7 @@
   margin: 0;
   font-size: 1.3rem;
   font-weight: 700;
+  color: var(--text-main);
 }
 
 .navActions {
@@ -50,29 +51,36 @@
 .secondaryBtn {
   text-decoration: none;
   border: none;
-  border-radius: 12px;
+  border-radius: 14px;
   cursor: pointer;
   transition: 0.25s ease;
   font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.langBtn,
+.loginBtn,
+.secondaryBtn {
+  background: var(--bg-card);
+  color: var(--primary);
+  border: 1px solid var(--border-soft);
 }
 
 .langBtn {
-  background: white;
-  color: #ce1126;
-  border: 1px solid #f0cfd5;
   padding: 10px 14px;
 }
 
 .loginBtn {
-  background: white;
-  color: #ce1126;
-  border: 1px solid #f0cfd5;
   padding: 10px 16px;
 }
 
-.registerBtn {
-  background: #ce1126;
+.registerBtn,
+.primaryBtn {
+  background: var(--primary);
   color: white;
+}
+
+.registerBtn {
   padding: 10px 16px;
 }
 
@@ -93,12 +101,12 @@
 
 .badge {
   display: inline-block;
-  background: rgba(206, 17, 38, 0.08);
-  color: #b30f24;
+  background: rgba(206, 17, 38, 0.1);
+  color: var(--primary);
   padding: 8px 14px;
   border-radius: 999px;
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 700;
   margin-bottom: 20px;
 }
 
@@ -106,12 +114,13 @@
   font-size: 3rem;
   line-height: 1.15;
   margin: 0 0 18px;
+  color: var(--text-main);
 }
 
 .heroText {
   font-size: 1.08rem;
   line-height: 1.8;
-  color: #555;
+  color: var(--text-muted);
   margin-bottom: 28px;
 }
 
@@ -122,18 +131,11 @@
 }
 
 .primaryBtn {
-  background: #ce1126;
-  color: white;
   padding: 14px 22px;
-  font-weight: 600;
 }
 
 .secondaryBtn {
-  background: white;
-  color: #ce1126;
-  border: 1px solid #f0cfd5;
   padding: 14px 22px;
-  font-weight: 600;
 }
 
 .heroVisual {
@@ -147,10 +149,10 @@
 .cardLarge {
   width: 320px;
   height: 360px;
-  background: rgba(255, 255, 255, 0.85);
-  border: 1px solid #f1d9dd;
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
   border-radius: 28px;
-  box-shadow: 0 20px 50px rgba(148, 44, 58, 0.12);
+  box-shadow: var(--shadow-soft);
   padding: 28px;
   backdrop-filter: blur(8px);
   position: relative;
@@ -160,7 +162,7 @@
   width: 100%;
   height: 90px;
   border-radius: 20px;
-  background: linear-gradient(135deg, #ce1126, #f3c1c8);
+  background: linear-gradient(135deg, var(--primary), #f3c1c8);
   margin-bottom: 22px;
 }
 
@@ -176,7 +178,7 @@
   width: 100%;
   height: 16px;
   border-radius: 8px;
-  background: #f2d7db;
+  background: var(--bg-hover);
   margin-bottom: 14px;
 }
 
@@ -184,7 +186,7 @@
   width: 65%;
   height: 16px;
   border-radius: 8px;
-  background: #f7e7ea;
+  background: var(--border-soft);
 }
 
 .floatingBoxOne,
@@ -192,7 +194,7 @@
   position: absolute;
   border-radius: 22px;
   background: rgba(206, 17, 38, 0.08);
-  border: 1px solid #f1d9dd;
+  border: 1px solid var(--border-soft);
 }
 
 .floatingBoxOne {
@@ -220,6 +222,7 @@
   text-align: center;
   font-size: 2rem;
   margin-bottom: 30px;
+  color: var(--text-main);
 }
 
 .featureGrid {
@@ -229,23 +232,23 @@
 }
 
 .featureCard {
-  background: white;
-  border: 1px solid #f1d9dd;
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
   border-radius: 22px;
   padding: 26px;
-  box-shadow: 0 10px 30px rgba(148, 44, 58, 0.08);
+  box-shadow: var(--shadow-soft);
 }
 
 .featureCard h4 {
   margin-top: 0;
   margin-bottom: 12px;
-  color: #b30f24;
+  color: var(--primary);
 }
 
 .featureCard p {
   margin: 0;
   line-height: 1.7;
-  color: #555;
+  color: var(--text-muted);
 }
 
 .about {
@@ -259,40 +262,88 @@
 }
 
 .aboutCard {
-  background: white;
-  border: 1px solid #f1d9dd;
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
   border-radius: 22px;
   padding: 28px;
-  box-shadow: 0 10px 30px rgba(148, 44, 58, 0.08);
+  box-shadow: var(--shadow-soft);
 }
 
 .aboutCard h3 {
   margin-top: 0;
-  color: #b30f24;
+  color: var(--primary);
 }
 
 .aboutCard p {
   line-height: 1.8;
-  color: #555;
+  color: var(--text-muted);
 }
 
 .footer {
   text-align: center;
   padding: 30px 20px 40px;
-  color: #666;
-  border-top: 1px solid #f4e3e6;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border-soft);
 }
 
 .langBtn:hover,
 .loginBtn:hover,
 .secondaryBtn:hover {
-  background: #fff4f5;
+  background: var(--bg-hover);
 }
 
 .registerBtn:hover,
 .primaryBtn:hover {
   transform: translateY(-2px);
   box-shadow: 0 10px 20px rgba(206, 17, 38, 0.18);
+}
+
+html[data-theme="dark"] .cardTop {
+  background: linear-gradient(135deg, #ff4b5f, #54252b);
+}
+
+html[data-theme="dark"] .floatingBoxOne,
+html[data-theme="dark"] .floatingBoxTwo {
+  background: rgba(255, 75, 95, 0.08);
+}
+
+html[data-theme="dark"] .featureCard,
+html[data-theme="dark"] .aboutCard,
+html[data-theme="dark"] .cardLarge {
+  background: #1f1f1f;
+  border-color: #343434;
+}
+
+html[data-theme="dark"] .cardLine {
+  background: #2d2d2d;
+}
+
+html[data-theme="dark"] .cardLineSmall {
+  background: #3a3a3a;
+}
+
+html[data-theme="dark"] .langBtn,
+html[data-theme="dark"] .loginBtn,
+html[data-theme="dark"] .secondaryBtn {
+  background: #292929;
+  border-color: #444;
+  color: #ff4b5f;
+}
+
+html[data-theme="dark"] .langBtn:hover,
+html[data-theme="dark"] .loginBtn:hover,
+html[data-theme="dark"] .secondaryBtn:hover {
+  background: #333;
+}
+
+html[data-theme="dark"] .registerBtn,
+html[data-theme="dark"] .primaryBtn {
+  background: #d9142d;
+}
+
+html[data-theme="dark"] .registerBtn:hover,
+html[data-theme="dark"] .primaryBtn:hover {
+  background: #ff4b5f;
 }
 
 @media (max-width: 900px) {

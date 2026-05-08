@@ -2,12 +2,13 @@
   min-height: 100vh;
   background:
     radial-gradient(circle at top, rgba(186, 12, 47, 0.12), transparent 35%),
-    linear-gradient(180deg, #fff8f8 0%, #ffffff 45%, #fffafa 100%);
+    linear-gradient(180deg, var(--bg-main) 0%, var(--bg-secondary) 100%);
   position: relative;
   overflow: hidden;
   font-family: Arial, sans-serif;
-  color: #1f1f1f;
+  color: var(--text-main);
 }
+
 .topBar {
   display: flex;
   justify-content: space-between;
@@ -18,9 +19,9 @@
 }
 
 .langBtn {
-  background: white;
-  color: #ce1126;
-  border: 1px solid #f0cfd5;
+  background: var(--bg-card);
+  color: var(--primary);
+  border: 1px solid var(--border-soft);
   padding: 10px 14px;
   border-radius: 12px;
   cursor: pointer;
@@ -30,7 +31,7 @@
 }
 
 .langBtn:hover {
-  background: #fff4f5;
+  background: var(--bg-hover);
 }
 
 .backgroundGlowTop {
@@ -88,7 +89,7 @@
 .logoMark {
   width: 18px;
   height: 42px;
-  background: linear-gradient(180deg, #ce1126, #a70d20);
+  background: linear-gradient(180deg, var(--primary), var(--primary-hover));
   border-radius: 6px;
   box-shadow: 0 8px 20px rgba(206, 17, 38, 0.25);
 }
@@ -97,16 +98,17 @@
   margin: 0;
   font-size: 1.3rem;
   font-weight: 700;
+  color: var(--text-main);
 }
 
 .badge {
   display: inline-block;
-  background: rgba(206, 17, 38, 0.08);
-  color: #b30f24;
+  background: rgba(206, 17, 38, 0.1);
+  color: var(--primary);
   padding: 8px 14px;
   border-radius: 999px;
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 700;
   margin-bottom: 22px;
 }
 
@@ -114,12 +116,13 @@
   font-size: 3rem;
   line-height: 1.1;
   margin: 0 0 18px;
+  color: var(--text-main);
 }
 
 .heroText {
   font-size: 1.05rem;
   line-height: 1.9;
-  color: #555;
+  color: var(--text-muted);
   max-width: 560px;
   margin-bottom: 28px;
 }
@@ -128,10 +131,10 @@
   width: 100%;
   max-width: 350px;
   height: 260px;
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid #f1d9dd;
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
   border-radius: 28px;
-  box-shadow: 0 20px 50px rgba(148, 44, 58, 0.12);
+  box-shadow: var(--shadow-soft);
   padding: 24px;
   backdrop-filter: blur(8px);
 }
@@ -140,7 +143,7 @@
   width: 100%;
   height: 74px;
   border-radius: 18px;
-  background: linear-gradient(135deg, #ce1126, #f3c1c8);
+  background: linear-gradient(135deg, var(--primary), #f3c1c8);
   margin-bottom: 20px;
 }
 
@@ -156,7 +159,7 @@
   width: 100%;
   height: 14px;
   border-radius: 8px;
-  background: #f2d7db;
+  background: var(--bg-hover);
   margin-bottom: 12px;
 }
 
@@ -164,7 +167,7 @@
   width: 64%;
   height: 14px;
   border-radius: 8px;
-  background: #f7e7ea;
+  background: var(--border-soft);
 }
 
 .formSide {
@@ -174,10 +177,10 @@
 
 .formCard {
   width: 100%;
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid #f1d9dd;
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
   border-radius: 30px;
-  box-shadow: 0 20px 60px rgba(148, 44, 58, 0.12);
+  box-shadow: var(--shadow-soft);
   backdrop-filter: blur(10px);
   padding: 34px;
 }
@@ -185,12 +188,12 @@
 .formTitle {
   font-size: 2rem;
   margin: 0 0 10px;
-  color: #1f1f1f;
+  color: var(--text-main);
 }
 
 .formSubtitle {
   margin: 0 0 28px;
-  color: #666;
+  color: var(--text-muted);
   line-height: 1.7;
 }
 
@@ -208,36 +211,41 @@
 
 .label {
   font-size: 0.95rem;
-  font-weight: 600;
-  color: #7c1b29;
+  font-weight: 700;
+  color: var(--primary);
 }
 
 .input {
   width: 100%;
   height: 52px;
-  border: 1px solid #ead2d7;
+  border: 1px solid var(--border-soft);
   border-radius: 14px;
   padding: 0 16px;
   font-size: 0.98rem;
   outline: none;
-  background: #fff;
+  background: var(--bg-hover);
+  color: var(--text-main);
   transition: 0.25s ease;
   box-sizing: border-box;
 }
 
+.input::placeholder {
+  color: var(--text-muted);
+}
+
 .input:focus {
-  border-color: #ce1126;
-  box-shadow: 0 0 0 4px rgba(206, 17, 38, 0.08);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(206, 17, 38, 0.1);
 }
 
 .primaryButton {
   height: 52px;
   border: none;
   border-radius: 14px;
-  background: #ce1126;
+  background: var(--primary);
   color: white;
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: 0.25s ease;
   margin-top: 6px;
@@ -246,6 +254,7 @@
 .primaryButton:hover {
   transform: translateY(-2px);
   box-shadow: 0 12px 24px rgba(206, 17, 38, 0.18);
+  background: var(--primary-hover);
 }
 
 .primaryButton:disabled {
@@ -257,9 +266,9 @@
 
 .error {
   margin: 0;
-  background: #fff0f2;
-  color: #b11226;
-  border: 1px solid #f3c7cf;
+  background: rgba(206, 17, 38, 0.1);
+  color: var(--primary);
+  border: 1px solid var(--border-soft);
   padding: 12px 14px;
   border-radius: 12px;
   font-size: 0.94rem;
@@ -268,12 +277,12 @@
 .switchText {
   margin: 24px 0 0;
   text-align: center;
-  color: #666;
+  color: var(--text-muted);
   line-height: 1.7;
 }
 
 .switchLink {
-  color: #ce1126;
+  color: var(--primary);
   font-weight: 700;
   text-decoration: none;
 }
@@ -287,10 +296,56 @@
   display: grid;
   place-items: center;
   font-family: Arial, sans-serif;
-  color: #666;
+  color: var(--text-muted);
   background:
     radial-gradient(circle at top, rgba(186, 12, 47, 0.12), transparent 35%),
-    linear-gradient(180deg, #fff8f8 0%, #ffffff 45%, #fffafa 100%);
+    linear-gradient(180deg, var(--bg-main) 0%, var(--bg-secondary) 100%);
+}
+
+html[data-theme="dark"] .formCard,
+html[data-theme="dark"] .infoCard {
+  background: #1f1f1f;
+  border-color: #343434;
+}
+
+html[data-theme="dark"] .input {
+  background: #292929;
+  color: #f5f5f5;
+  border-color: #444;
+}
+
+html[data-theme="dark"] .input::placeholder {
+  color: #9ca3af;
+}
+
+html[data-theme="dark"] .langBtn {
+  background: #292929;
+  border-color: #444;
+  color: #ff4b5f;
+}
+
+html[data-theme="dark"] .langBtn:hover {
+  background: #333;
+}
+
+html[data-theme="dark"] .primaryButton {
+  background: #d9142d;
+}
+
+html[data-theme="dark"] .primaryButton:hover {
+  background: #ff4b5f;
+}
+
+html[data-theme="dark"] .infoTop {
+  background: linear-gradient(135deg, #ff4b5f, #54252b);
+}
+
+html[data-theme="dark"] .infoLine {
+  background: #2d2d2d;
+}
+
+html[data-theme="dark"] .infoLineSmall {
+  background: #3a3a3a;
 }
 
 @media (max-width: 980px) {

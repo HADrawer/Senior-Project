@@ -1,35 +1,645 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import styles from "../dashboard.module.css";
 
+function getErrorMessage(detail, fallback) {
+  if (Array.isArray(detail)) return detail[0]?.msg || fallback;
+  if (typeof detail === "string") return detail;
+  return fallback;
+}
+
+function getPasswordStrength(password) {
+  let score = 0;
+
+  if (password.length >= 8) score++;
+  if (/[A-Z]/.test(password)) score++;
+  if (/[0-9]/.test(password)) score++;
+  if (/[^A-Za-z0-9]/.test(password)) score++;
+
+  if (!password) return { label: "", className: "" };
+  if (score <= 1) return { label: "Weak", className: "weak" };
+  if (score <= 3) return { label: "Medium", className: "medium" };
+  return { label: "Strong", className: "strong" };
+}
+
 export default function SettingsPage() {
+  const router = useRouter();
+
   const [lang, setLang] = useState("en");
+  const [theme, setTheme] = useState("system");
 
-  useEffect(() => {
-    const savedLang = localStorage.getItem("site_lang");
-    if (savedLang === "ar" || savedLang === "en") {
-      setLang(savedLang);
-    }
-  }, []);
+  const [profile, setProfile] = useState({
+    full_name: "",
+    email: "",
+    phone_number: "",
+    preferred_language: "en",
+  });
 
-  const content = {
+  const [emailForm, setEmailForm] = useState({
+    current_password: "",
+    new_email: "",
+  });
+
+  const [passwordForm, setPasswordForm] = useState({
+    current_password: "",
+    new_password: "",
+    confirm_password: "",
+  });
+
+  const [showPasswords, setShowPasswords] = useState(false);
+  const [deleteText, setDeleteText] = useState("");
+
+  const [loading, setLoading] = useState(true);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [savingEmail, setSavingEmail] = useState(false);
+  const [savingPassword, setSavingPassword] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const t = {
     en: {
       title: "Settings",
-      subtitle: "This page will contain user settings later.",
+      subtitle: "Manage your account, security, preferences, and privacy.",
+      profile: "Profile Information",
+      fullName: "Full Name",
+      phone: "Phone Number",
+      email: "Email",
+      save: "Save Changes",
+      security: "Security",
+      changeEmail: "Change Email",
+      newEmail: "New Email",
+      currentPassword: "Current Password",
+      changePassword: "Change Password",
+      newPassword: "New Password",
+      confirmPassword: "Confirm New Password",
+      passwordsDoNotMatch: "New password and confirmation do not match.",
+      strength: "Password Strength",
+      preferences: "Preferences",
+      language: "Language",
+      theme: "Theme",
+      light: "Light",
+      dark: "Dark",
+      sessions: "Sessions & Devices",
+      sessionsText:
+        "Session management will be improved after Supabase Auth integration.",
+      logoutOtherSessions: "Logout Other Sessions",
+      dataPrivacy: "Data & Privacy",
+      exportData: "Export My Data",
+      deleteAccount: "Delete Account",
+      deleteWarning:
+        "This will disable your account. Type DELETE to confirm.",
+      support: "Support / Contact Us",
+      supportText:
+        "For support, contact the project team or your system administrator.",
+      about: "About",
+      aboutText:
+        "Alsaeh.bh v1.0, University of Bahrain Senior Project, Tourism Recommender System for Bahrain.",
+      show: "Show",
+      hide: "Hide",
     },
     ar: {
       title: "الإعدادات",
-      subtitle: "هذه الصفحة ستحتوي على إعدادات المستخدم لاحقًا.",
+      subtitle: "إدارة الحساب، الأمان، التفضيلات، والخصوصية.",
+      profile: "معلومات الحساب",
+      fullName: "الاسم الكامل",
+      phone: "رقم الهاتف",
+      email: "البريد الإلكتروني",
+      save: "حفظ التغييرات",
+      security: "الأمان",
+      changeEmail: "تغيير البريد الإلكتروني",
+      newEmail: "البريد الإلكتروني الجديد",
+      currentPassword: "كلمة المرور الحالية",
+      changePassword: "تغيير كلمة المرور",
+      newPassword: "كلمة المرور الجديدة",
+      confirmPassword: "تأكيد كلمة المرور الجديدة",
+      passwordsDoNotMatch: "كلمة المرور الجديدة والتأكيد غير متطابقين.",
+      strength: "قوة كلمة المرور",
+      preferences: "التفضيلات",
+      language: "اللغة",
+      theme: "المظهر",
+      light: "فاتح",
+      dark: "داكن",
+      sessions: "الجلسات والأجهزة",
+      sessionsText:
+        "سيتم تحسين إدارة الجلسات بعد ربط Supabase Auth.",
+      logoutOtherSessions: "تسجيل الخروج من الجلسات الأخرى",
+      dataPrivacy: "البيانات والخصوصية",
+      exportData: "تنزيل بياناتي",
+      deleteAccount: "حذف الحساب",
+      deleteWarning:
+        "سيتم تعطيل حسابك. اكتب DELETE للتأكيد.",
+      support: "الدعم / تواصل معنا",
+      supportText:
+        "للدعم، تواصل مع فريق المشروع أو مسؤول النظام.",
+      about: "حول التطبيق",
+      aboutText:
+        "Alsaeh.bh v1.0، مشروع تخرج جامعة البحرين، نظام توصية سياحي للبحرين.",
+      show: "إظهار",
+      hide: "إخفاء",
     },
-  };
+  }[lang];
 
-  const t = content[lang];
+  const passwordStrength = useMemo(
+    () => getPasswordStrength(passwordForm.new_password),
+    [passwordForm.new_password]
+  );
+
+  useEffect(() => {
+  const savedLang = localStorage.getItem("site_lang");
+  const savedTheme = localStorage.getItem("theme") || "system";
+
+  if (savedLang === "ar" || savedLang === "en") {
+    setLang(savedLang);
+  }
+
+  setTheme(savedTheme);
+  document.documentElement.setAttribute("data-theme", savedTheme);
+  }, []);
+
+  
+
+  useEffect(() => {
+    async function loadSettings() {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/settings/me`, {
+          credentials: "include",
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          setError(getErrorMessage(data.detail, "Failed to load settings"));
+          return;
+        }
+
+        setProfile({
+          full_name: data.full_name || "",
+          email: data.email || "",
+          phone_number: data.phone_number || "",
+          preferred_language: data.preferred_language || "en",
+        });
+      } catch (error) {
+        console.error(error);
+        setError("Failed to load settings");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadSettings();
+  }, []);
+
+  function resetMessages() {
+    setError("");
+    setSuccess("");
+  }
+  
+  function handleThemeChange(value) {
+    setTheme(value);
+
+    localStorage.setItem("theme", value);
+
+    document.documentElement.setAttribute(
+      "data-theme",
+      value
+    );
+  }
+
+  async function handleProfileSubmit(e) {
+    e.preventDefault();
+    resetMessages();
+    setSavingProfile(true);
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/settings/me`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          full_name: profile.full_name,
+          phone_number: profile.phone_number,
+          preferred_language: profile.preferred_language,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(getErrorMessage(data.detail, "Failed to update profile"));
+        return;
+      }
+
+      localStorage.setItem("site_lang", profile.preferred_language);
+      setLang(profile.preferred_language);
+      setSuccess("Profile updated successfully.");
+    } catch (error) {
+      console.error(error);
+      setError("Unable to connect to server");
+    } finally {
+      setSavingProfile(false);
+    }
+  }
+
+  async function handleEmailSubmit(e) {
+    e.preventDefault();
+    resetMessages();
+    setSavingEmail(true);
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/settings/change-email`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(emailForm),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(getErrorMessage(data.detail, "Failed to change email"));
+        return;
+      }
+
+      setProfile({ ...profile, email: emailForm.new_email });
+      setEmailForm({ current_password: "", new_email: "" });
+      setSuccess("Email changed successfully.");
+    } catch (error) {
+      console.error(error);
+      setError("Unable to connect to server");
+    } finally {
+      setSavingEmail(false);
+    }
+  }
+
+  async function handlePasswordSubmit(e) {
+    e.preventDefault();
+    resetMessages();
+
+    if (passwordForm.new_password !== passwordForm.confirm_password) {
+      setError(t.passwordsDoNotMatch);
+      return;
+    }
+
+    setSavingPassword(true);
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/settings/change-password`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          current_password: passwordForm.current_password,
+          new_password: passwordForm.new_password,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(getErrorMessage(data.detail, "Failed to change password"));
+        return;
+      }
+
+      setPasswordForm({
+        current_password: "",
+        new_password: "",
+        confirm_password: "",
+      });
+
+      setSuccess("Password changed successfully.");
+    } catch (error) {
+      console.error(error);
+      setError("Unable to connect to server");
+    } finally {
+      setSavingPassword(false);
+    }
+  }
+
+  async function handleExportData() {
+    resetMessages();
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/settings/export-data`, {
+        credentials: "include",
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(getErrorMessage(data.detail, "Failed to export data"));
+        return;
+      }
+
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: "application/json",
+      });
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "alsaeh-my-data.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error(error);
+      setError("Unable to export data");
+    }
+  }
+
+  async function handleDeleteAccount() {
+    resetMessages();
+
+    if (deleteText !== "DELETE") {
+      setError("Type DELETE to confirm account deletion.");
+      return;
+    }
+
+    const confirmed = window.confirm("Are you sure you want to delete your account?");
+    if (!confirmed) return;
+
+    setDeleting(true);
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/settings/delete-account`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(getErrorMessage(data.detail, "Failed to delete account"));
+        return;
+      }
+
+      router.replace("/login");
+    } catch (error) {
+      console.error(error);
+      setError("Unable to connect to server");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  if (loading) {
+    return <div className={styles.emptyState}>Loading...</div>;
+  }
 
   return (
-    <div className={styles.pageContent}>
-      <h1 className={styles.pageTitle}>{t.title}</h1>
-      <p className={styles.pageSubtitle}>{t.subtitle}</p>
+    <div className={styles.pageContent} dir={lang === "ar" ? "rtl" : "ltr"}>
+      <div className={styles.createHeader}>
+        <span className={styles.createBadge}>{t.profile}</span>
+        <h1 className={styles.pageTitle}>{t.title}</h1>
+        <p className={styles.pageSubtitle}>{t.subtitle}</p>
+      </div>
+
+      {error && <p className={styles.error}>{error}</p>}
+      {success && <p className={styles.successMessage}>{success}</p>}
+
+      <form onSubmit={handleProfileSubmit} className={styles.settingsSection}>
+        <h2>{t.profile}</h2>
+
+        <div className={styles.aiFormGrid}>
+          <div className={styles.aiField}>
+            <label>{t.fullName}</label>
+            <input
+              value={profile.full_name}
+              onChange={(e) =>
+                setProfile({ ...profile, full_name: e.target.value })
+              }
+              required
+            />
+          </div>
+
+          <div className={styles.aiField}>
+            <label>{t.phone}</label>
+            <input
+              value={profile.phone_number}
+              onChange={(e) =>
+                setProfile({ ...profile, phone_number: e.target.value })
+              }
+              required
+            />
+          </div>
+
+          <div className={styles.aiField}>
+            <label>{t.email}</label>
+            <input value={profile.email} disabled />
+          </div>
+
+          <div className={styles.aiField}>
+            <label>{t.language}</label>
+            <select
+              value={profile.preferred_language}
+              onChange={(e) =>
+                setProfile({ ...profile, preferred_language: e.target.value })
+              }
+            >
+              <option value="en">English</option>
+              <option value="ar">العربية</option>
+            </select>
+          </div>
+        </div>
+
+        <button className={styles.aiGenerateButton} disabled={savingProfile}>
+          {savingProfile ? "Saving..." : t.save}
+        </button>
+      </form>
+
+      <section className={styles.settingsSection}>
+        <h2>{t.security}</h2>
+
+        <form onSubmit={handleEmailSubmit} className={styles.settingsSubForm}>
+          <h3>{t.changeEmail}</h3>
+
+          <div className={styles.aiFormGrid}>
+            <div className={styles.aiField}>
+              <label>{t.currentPassword}</label>
+              <input
+                type={showPasswords ? "text" : "password"}
+                value={emailForm.current_password}
+                onChange={(e) =>
+                  setEmailForm({
+                    ...emailForm,
+                    current_password: e.target.value,
+                  })
+                }
+                required
+              />
+            </div>
+
+            <div className={styles.aiField}>
+              <label>{t.newEmail}</label>
+              <input
+                type="email"
+                value={emailForm.new_email}
+                onChange={(e) =>
+                  setEmailForm({ ...emailForm, new_email: e.target.value })
+                }
+                required
+              />
+            </div>
+          </div>
+
+          <button className={styles.aiGenerateButton} disabled={savingEmail}>
+            {savingEmail ? "Saving..." : t.changeEmail}
+          </button>
+        </form>
+
+        <form onSubmit={handlePasswordSubmit} className={styles.settingsSubForm}>
+          <div className={styles.passwordHeader}>
+            <h3>{t.changePassword}</h3>
+
+            <button
+              type="button"
+              className={styles.smallSecondary}
+              onClick={() => setShowPasswords(!showPasswords)}
+            >
+              {showPasswords ? t.hide : t.show}
+            </button>
+          </div>
+
+          <div className={styles.aiFormGrid}>
+            <div className={styles.aiField}>
+              <label>{t.currentPassword}</label>
+              <input
+                type={showPasswords ? "text" : "password"}
+                value={passwordForm.current_password}
+                onChange={(e) =>
+                  setPasswordForm({
+                    ...passwordForm,
+                    current_password: e.target.value,
+                  })
+                }
+                required
+              />
+            </div>
+
+            <div className={styles.aiField}>
+              <label>{t.newPassword}</label>
+              <input
+                type={showPasswords ? "text" : "password"}
+                value={passwordForm.new_password}
+                onChange={(e) =>
+                  setPasswordForm({
+                    ...passwordForm,
+                    new_password: e.target.value,
+                  })
+                }
+                required
+              />
+            </div>
+
+            <div className={styles.aiField}>
+              <label>{t.confirmPassword}</label>
+              <input
+                type={showPasswords ? "text" : "password"}
+                value={passwordForm.confirm_password}
+                onChange={(e) =>
+                  setPasswordForm({
+                    ...passwordForm,
+                    confirm_password: e.target.value,
+                  })
+                }
+                required
+              />
+            </div>
+          </div>
+
+          {passwordForm.new_password && (
+            <div className={styles.passwordStrength}>
+              <span>{t.strength}: {passwordStrength.label}</span>
+              <div className={styles.strengthTrack}>
+                <div
+                  className={`${styles.strengthFill} ${
+                    passwordStrength.className === "weak"
+                      ? styles.weak
+                      : passwordStrength.className === "medium"
+                      ? styles.medium
+                      : styles.strong
+                  }`}
+                />
+              </div>
+            </div>
+          )}
+
+          <button className={styles.aiGenerateButton} disabled={savingPassword}>
+            {savingPassword ? "Saving..." : t.changePassword}
+          </button>
+        </form>
+      </section>
+
+      <section className={styles.settingsSection}>
+        <h2>{t.preferences}</h2>
+
+        <div className={styles.aiField}>
+          <label>{t.theme}</label>
+          <select value={theme} onChange={(e) => handleThemeChange(e.target.value)}>
+              <option value="light">{t.light}</option>
+              <option value="dark">{t.dark}</option>
+              <option value="system">System</option>
+          </select>
+        </div>
+      </section>
+
+      <section className={styles.settingsSection}>
+        <h2>{t.sessions}</h2>
+        <p className={styles.settingsText}>{t.sessionsText}</p>
+        <button className={styles.cancelButton} disabled>
+          {t.logoutOtherSessions}
+        </button>
+      </section>
+
+      <section className={styles.settingsSection}>
+        <h2>{t.dataPrivacy}</h2>
+
+        <button className={styles.secondaryActionButton} onClick={handleExportData}>
+          {t.exportData}
+        </button>
+
+        <div className={styles.deleteAccountBox}>
+          <h3>{t.deleteAccount}</h3>
+          <p>{t.deleteWarning}</p>
+
+          <input
+            className={styles.input}
+            value={deleteText}
+            placeholder="DELETE"
+            onChange={(e) => setDeleteText(e.target.value)}
+          />
+
+          <button
+            className={styles.deleteButton}
+            onClick={handleDeleteAccount}
+            disabled={deleting}
+          >
+            {deleting ? "Deleting..." : t.deleteAccount}
+          </button>
+        </div>
+      </section>
+
+      <section className={styles.settingsSection}>
+        <h2>{t.support}</h2>
+        <p className={styles.settingsText}>
+          {t.supportText}
+        </p>
+
+        <a
+          href="mailto:info@alsaeh.net"
+          className={styles.supportLink}
+        >
+          info@alsaeh.net
+        </a>
+      </section>
+
+      <section className={styles.settingsSection}>
+        <h2>{t.about}</h2>
+        <p className={styles.settingsText}>{t.aboutText}</p>
+      </section>
     </div>
   );
 }

@@ -4,9 +4,9 @@
 [] settings
 [done] create plan
 [done] good response from gemini
-[] add a location url
-[] admin page
-[] error handler pages
+[done] add a location url
+[done] admin page
+[done] error handler pages
 [] link with supabase
 [] logs
 

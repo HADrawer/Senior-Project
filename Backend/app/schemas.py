@@ -76,3 +76,17 @@ class PlanChatRequest(BaseModel):
     plan_id: int
     message: str = Field(min_length=1, max_length=2000)
     language: str = "auto"
+
+
+class UpdateSettingsRequest(BaseModel):
+    full_name: str | None = None
+    phone_number: str | None = None
+    preferred_language: str | None = None
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=6)
+
+class ChangeEmailRequest(BaseModel):
+    current_password: str
+    new_email: EmailStr
