@@ -849,3 +849,271 @@ def add_google_maps_links(plan_json):
             )
 
     return plan_json
+
+
+@app.get("/admin/overview")
+def admin_overview(current_user=Depends(get_current_user)):
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) AS total FROM users")
+            total_users = cur.fetchone()["total"]
+
+            cur.execute("SELECT COUNT(*) AS total FROM plans WHERE status != 'deleted'")
+            total_plans = cur.fetchone()["total"]
+
+            cur.execute("""
+                SELECT COUNT(*) AS total
+                FROM plans
+                WHERE generated_by_ai = TRUE
+                  AND status != 'deleted'
+            """)
+            ai_plans = cur.fetchone()["total"]
+
+            cur.execute("SELECT COUNT(*) AS total FROM messages")
+            total_messages = cur.fetchone()["total"]
+
+            cur.execute("SELECT COUNT(*) AS total FROM usage_logs")
+            total_logs = cur.fetchone()["total"]
+
+            cur.execute("""
+                SELECT category, COUNT(*) AS total
+                FROM plans
+                WHERE category IS NOT NULL
+                  AND status != 'deleted'
+                GROUP BY category
+                ORDER BY total DESC
+                LIMIT 5
+            """)
+            popular_categories = cur.fetchall()
+
+    return {
+        "total_users": total_users,
+        "total_plans": total_plans,
+        "ai_plans": ai_plans,
+        "total_messages": total_messages,
+        "total_logs": total_logs,
+        "popular_categories": popular_categories,
+    }
+
+def require_admin(current_user):
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+
+@app.get("/admin/users")
+def admin_get_users(current_user=Depends(get_current_user)):
+    require_admin(current_user)
+
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                    u.id,
+                    u.full_name,
+                    u.email,
+                    u.phone_number,
+                    u.preferred_language,
+                    u.is_active,
+                    u.created_at,
+                    r.name AS role
+                FROM users u
+                JOIN roles r ON r.id = u.role_id
+                ORDER BY u.created_at DESC
+                """
+            )
+            users = cur.fetchall()
+
+    return users
+
+
+@app.put("/admin/users/{user_id}")
+def admin_update_user(user_id: int, data: dict, current_user=Depends(get_current_user)):
+    require_admin(current_user)
+
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE users
+                SET
+                    full_name = COALESCE(%s, full_name),
+                    phone_number = COALESCE(%s, phone_number),
+                    preferred_language = COALESCE(%s, preferred_language),
+                    is_active = COALESCE(%s, is_active),
+                    updated_at = NOW()
+                WHERE id = %s
+                RETURNING id
+                """,
+                (
+                    data.get("full_name"),
+                    data.get("phone_number"),
+                    data.get("preferred_language"),
+                    data.get("is_active"),
+                    user_id,
+                )
+            )
+
+            updated = cur.fetchone()
+
+            if not updated:
+                raise HTTPException(status_code=404, detail="User not found")
+
+            conn.commit()
+
+    return {"message": "User updated successfully"}
+
+
+@app.delete("/admin/users/{user_id}")
+def admin_delete_user(user_id: int, current_user=Depends(get_current_user)):
+    require_admin(current_user)
+
+    if user_id == current_user["id"]:
+        raise HTTPException(status_code=400, detail="Admin cannot delete own account")
+
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE users
+                SET is_active = FALSE, updated_at = NOW()
+                WHERE id = %s
+                RETURNING id
+                """,
+                (user_id,)
+            )
+
+            deleted = cur.fetchone()
+
+            if not deleted:
+                raise HTTPException(status_code=404, detail="User not found")
+
+            conn.commit()
+
+    return {"message": "User disabled successfully"}
+
+
+@app.get("/admin/plans")
+def admin_get_plans(current_user=Depends(get_current_user)):
+    require_admin(current_user)
+
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                    p.id,
+                    p.title,
+                    p.budget,
+                    p.days,
+                    p.people_count,
+                    p.status,
+                    p.generated_by_ai,
+                    p.created_at,
+                    p.updated_at,
+                    u.full_name AS user_name,
+                    u.email AS user_email
+                FROM plans p
+                JOIN users u ON u.id = p.user_id
+                ORDER BY p.created_at DESC
+                """
+            )
+            plans = cur.fetchall()
+
+    return plans
+
+
+@app.put("/admin/plans/{plan_id}")
+def admin_update_plan(plan_id: int, data: dict, current_user=Depends(get_current_user)):
+    require_admin(current_user)
+
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE plans
+                SET
+                    title = COALESCE(%s, title),
+                    budget = COALESCE(%s, budget),
+                    days = COALESCE(%s, days),
+                    people_count = COALESCE(%s, people_count),
+                    status = COALESCE(%s, status),
+                    updated_at = NOW()
+                WHERE id = %s
+                RETURNING id
+                """,
+                (
+                    data.get("title"),
+                    data.get("budget"),
+                    data.get("days"),
+                    data.get("people_count"),
+                    data.get("status"),
+                    plan_id,
+                )
+            )
+
+            updated = cur.fetchone()
+
+            if not updated:
+                raise HTTPException(status_code=404, detail="Plan not found")
+
+            conn.commit()
+
+    return {"message": "Plan updated successfully"}
+
+@app.delete("/admin/plans/{plan_id}")
+def admin_delete_plan(plan_id: int, current_user=Depends(get_current_user)):
+    require_admin(current_user)
+
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE plans
+                SET status = 'deleted', updated_at = NOW()
+                WHERE id = %s
+                RETURNING id
+                """,
+                (plan_id,)
+            )
+
+            deleted = cur.fetchone()
+
+            if not deleted:
+                raise HTTPException(status_code=404, detail="Plan not found")
+
+            conn.commit()
+
+    return {"message": "Plan deleted successfully"}
+
+@app.get("/admin/logs")
+def admin_get_logs(current_user=Depends(get_current_user)):
+    require_admin(current_user)
+
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                    l.id,
+                    l.user_id,
+                    u.full_name AS user_name,
+                    u.email AS user_email,
+                    l.action_type,
+                    l.entity_type,
+                    l.entity_id,
+                    l.metadata_json,
+                    l.created_at
+                FROM usage_logs l
+                LEFT JOIN users u ON u.id = l.user_id
+                ORDER BY l.created_at DESC
+                LIMIT 200
+                """
+            )
+            logs = cur.fetchall()
+
+    return logs
+
