@@ -27,12 +27,19 @@ app = FastAPI()
 
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+FRONTEND_URL = os.getenv("FRONTEND_URL" )
 SESSION_HOURS = int(os.getenv("SESSION_HOURS", "24"))
+
+
+origins = [
+    "https://senior-project-flame.vercel.app",  
+    "http://localhost:3000",                   
+    "http://localhost:5173",                  
+]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_URL],
+    allow_origins=origins,        
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
