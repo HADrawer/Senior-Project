@@ -3,11 +3,17 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "../dashboard.module.css";
+import { supabase } from "@/lib/supabase";
 
 function getErrorMessage(detail, fallback) {
   if (Array.isArray(detail)) return detail[0]?.msg || fallback;
   if (typeof detail === "string") return detail;
   return fallback;
+}
+
+async function getAccessToken() {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.access_token || null;
 }
 
 export default function CreatePlanPage() {
@@ -36,13 +42,14 @@ export default function CreatePlanPage() {
       badge: "AI Tourism Planner",
       title: "Create Your Bahrain Plan",
       subtitle:
-        "Fill in your preferences and let us to generate a personalized tourism itinerary for Bahrain.",
+        "Fill in your preferences and let us generate a personalized tourism itinerary for Bahrain.",
       planTitle: "Plan Title",
       planTitlePlaceholder: "Relaxed Bahrain Weekend",
       days: "Number of Days",
       daysPlaceholder: "2",
       budget: "Budget in BHD",
       budgetPlaceholder: "35",
+      people: "Number of People",
       category: "Preferred Category",
       anyCategory: "Any category",
       loadingCategories: "Loading categories...",
@@ -67,7 +74,6 @@ export default function CreatePlanPage() {
       cancel: "Cancel",
       generate: "Generate AI Plan",
       generating: "Generating plan...",
-      failed: "Failed to generate plan",
       serverError: "Unable to connect to server",
     },
     ar: {
@@ -81,6 +87,7 @@ export default function CreatePlanPage() {
       daysPlaceholder: "2",
       budget: "الميزانية بالدينار البحريني",
       budgetPlaceholder: "35",
+      people: "عدد الأفراد",
       category: "التصنيف المفضل",
       anyCategory: "أي تصنيف",
       loadingCategories: "جاري تحميل التصنيفات...",
@@ -99,13 +106,11 @@ export default function CreatePlanPage() {
       preferencesPlaceholder:
         "مثال: مشي قليل، أماكن داخلية، مناسبة للعائلة",
       constraints: "القيود",
-      constraintsPlaceholder:
-        "مثال: أماكن داخلية، بدون مطاعم غالية",
+      constraintsPlaceholder: "مثال: أماكن داخلية، بدون مطاعم غالية",
       constraintsHint: "افصل بين القيود باستخدام الفواصل.",
       cancel: "إلغاء",
       generate: "إنشاء الخطة بالذكاء الاصطناعي",
       generating: "جاري إنشاء الخطة...",
-      failed: "فشل إنشاء الخطة",
       serverError: "تعذر الاتصال بالخادم",
     },
   };
@@ -120,25 +125,48 @@ export default function CreatePlanPage() {
   }, []);
 
   useEffect(() => {
-    async function loadCategories() {
-      try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/place-categories`, {
-          credentials: "include",
-        });
+    async function initPage() {
+      const token = await getAccessToken();
 
-        if (res.ok) {
-          const data = await res.json();
-          setCategories(data);
-        }
-      } catch (error) {
-        console.error("Load categories error:", error);
-      } finally {
-        setLoadingCategories(false);
+      if (!token) {
+        router.replace("/login");
+        return;
       }
+
+      await loadCategories(token);
     }
 
-    loadCategories();
-  }, []);
+    initPage();
+  }, [router]);
+
+  async function loadCategories(tokenFromInit = null) {
+    try {
+      const token = tokenFromInit || (await getAccessToken());
+
+      if (!token) {
+        router.replace("/login");
+        return;
+      }
+
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/place-categories`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (res.ok) {
+        const data = await res.json();
+        setCategories(data);
+      }
+    } catch (error) {
+      console.error("Load categories error:", error);
+    } finally {
+      setLoadingCategories(false);
+    }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -146,6 +174,13 @@ export default function CreatePlanPage() {
     setGenerating(true);
 
     try {
+      const token = await getAccessToken();
+
+      if (!token) {
+        router.replace("/login");
+        return;
+      }
+
       const interestsList = form.interests
         .split(",")
         .map((item) => item.trim())
@@ -163,24 +198,27 @@ export default function CreatePlanPage() {
         .filter(Boolean)
         .join(". ");
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ai/generate-plan`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          title: form.title,
-          days: Number(form.days),
-          budget: form.budget ? Number(form.budget) : null,
-          interests: interestsList,
-          travel_style: form.travel_style || null,
-          preferences: finalPreferences || null,
-          constraints: constraintsList,
-          language: "auto",
-          people_count: Number(form.people_count),
-        }),
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/ai/generate-plan`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            title: form.title,
+            days: Number(form.days),
+            budget: form.budget ? Number(form.budget) : null,
+            interests: interestsList,
+            travel_style: form.travel_style || null,
+            preferences: finalPreferences || null,
+            constraints: constraintsList,
+            language: "auto",
+            people_count: Number(form.people_count),
+          }),
+        }
+      );
 
       const data = await res.json();
 
@@ -192,7 +230,6 @@ export default function CreatePlanPage() {
               : data.detail
             : "AI service is busy. Please try again."
         );
-        setGenerating(false);
         return;
       }
 
@@ -200,6 +237,7 @@ export default function CreatePlanPage() {
     } catch (error) {
       console.error("Generate plan error:", error);
       setError(t.serverError);
+    } finally {
       setGenerating(false);
     }
   }
@@ -248,18 +286,19 @@ export default function CreatePlanPage() {
             />
           </div>
 
-
           <div className={styles.aiField}>
-              <label>{lang === "ar" ? "عدد الأفراد" : "Number of People"}</label>
-              <input
-                type="number"
-                min="1"
-                max="50"
-                value={form.people_count}
-                placeholder="2"
-                onChange={(e) => setForm({ ...form, people_count: e.target.value })}
-                required
-              />
+            <label>{t.people}</label>
+            <input
+              type="number"
+              min="1"
+              max="50"
+              value={form.people_count}
+              placeholder="2"
+              onChange={(e) =>
+                setForm({ ...form, people_count: e.target.value })
+              }
+              required
+            />
           </div>
 
           <div className={styles.aiField}>
@@ -279,6 +318,24 @@ export default function CreatePlanPage() {
               ))}
             </select>
           </div>
+
+          <div className={styles.aiField}>
+            <label>{t.travelStyle}</label>
+            <select
+              value={form.travel_style}
+              onChange={(e) =>
+                setForm({ ...form, travel_style: e.target.value })
+              }
+            >
+              <option value="">{t.selectStyle}</option>
+              <option value="relaxed">{t.relaxed}</option>
+              <option value="adventure">{t.adventure}</option>
+              <option value="family-friendly">{t.family}</option>
+              <option value="cultural">{t.cultural}</option>
+              <option value="budget-friendly">{t.budgetFriendly}</option>
+              <option value="luxury">{t.luxury}</option>
+            </select>
+          </div>
         </div>
 
         <div className={styles.aiField}>
@@ -290,22 +347,6 @@ export default function CreatePlanPage() {
             required
           />
           <small>{t.interestsHint}</small>
-        </div>
-
-        <div className={styles.aiField}>
-          <label>{t.travelStyle}</label>
-          <select
-            value={form.travel_style}
-            onChange={(e) => setForm({ ...form, travel_style: e.target.value })}
-          >
-            <option value="">{t.selectStyle}</option>
-            <option value="relaxed">{t.relaxed}</option>
-            <option value="adventure">{t.adventure}</option>
-            <option value="family-friendly">{t.family}</option>
-            <option value="cultural">{t.cultural}</option>
-            <option value="budget-friendly">{t.budgetFriendly}</option>
-            <option value="luxury">{t.luxury}</option>
-          </select>
         </div>
 
         <div className={styles.aiField}>

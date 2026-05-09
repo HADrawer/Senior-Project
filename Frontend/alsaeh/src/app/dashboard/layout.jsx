@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import styles from "./dashboard.module.css";
+import { supabase } from "@/lib/supabase";
 
 export default function DashboardLayout({ children }) {
   const pathname = usePathname();
@@ -41,9 +42,11 @@ export default function DashboardLayout({ children }) {
 
   useEffect(() => {
     const savedLang = localStorage.getItem("site_lang");
+
     if (savedLang === "ar" || savedLang === "en") {
       setLang(savedLang);
     }
+
     setMounted(true);
   }, []);
 
@@ -53,37 +56,56 @@ export default function DashboardLayout({ children }) {
     localStorage.setItem("site_lang", newLang);
   }
 
-  useEffect(() => {
-    async function loadUser() {
+ // dashboard/layout.jsx — replace the loadUser useEffect
+useEffect(() => {
+  async function loadUser() {
+    // Check cache first
+    const cached = sessionStorage.getItem("auth_user");
+    if (cached) {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
-          credentials: "include",
-        });
-
-        if (!res.ok) {
-          router.replace("/login");
-          return;
-        }
-
-        const data = await res.json();
-        setUser(data);
-      } catch (error) {
-        console.error("Auth check failed:", error);
-        router.replace("/login");
-      } finally {
+        setUser(JSON.parse(cached));
         setCheckingAuth(false);
+        return;
+      } catch {
+        sessionStorage.removeItem("auth_user");
       }
     }
 
-    loadUser();
-  }, [router]);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
+        credentials: "include",
+      });
+      if (!res.ok) {
+        router.replace("/login");
+        return;
+      }
+      const data = await res.json();
+      sessionStorage.setItem("auth_user", JSON.stringify(data));
+      setUser(data);
+    } catch (error) {
+      router.replace("/login");
+    } finally {
+      setCheckingAuth(false);
+    }
+  }
+  loadUser();
+}, [router]);
+
+// Also clear the cache on logout:
+async function logout() {
+  sessionStorage.removeItem("auth_user");
+  try {
+    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/logout`, {
+      method: "POST",
+      credentials: "include",
+    });
+  } catch {}
+  router.replace("/login");
+}
 
   async function logout() {
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/logout`, {
-        method: "POST",
-        credentials: "include",
-      });
+      await supabase.auth.signOut();
     } catch (error) {
       console.error("Logout failed:", error);
     }
@@ -106,8 +128,8 @@ export default function DashboardLayout({ children }) {
 
           <div className={styles.userBox}>
             <p className={styles.userLabel}>{t.welcome}</p>
-            <h3 className={styles.userName}>{user?.full_name}</h3>
-            <p className={styles.userEmail}>{user?.email}</p>
+            <h3 className={styles.userName}>{user?.full_name || "-"}</h3>
+            <p className={styles.userEmail}>{user?.email || "-"}</p>
           </div>
 
           <nav className={styles.nav}>
@@ -123,7 +145,9 @@ export default function DashboardLayout({ children }) {
             <Link
               href="/dashboard/create-plan"
               className={`${styles.navItem} ${
-                pathname === "/dashboard/create-plan" ? styles.activeNavItem : ""
+                pathname === "/dashboard/create-plan"
+                  ? styles.activeNavItem
+                  : ""
               }`}
             >
               {t.createPlan}

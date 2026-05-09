@@ -3,47 +3,15 @@
 import { useEffect, useState } from "react";
 import styles from "./dashboard.module.css";
 import { useRouter } from "next/navigation";
-
+import { supabase } from "@/lib/supabase";
 
 export default function DashboardHomePage() {
   const router = useRouter();
+
   const [lang, setLang] = useState("en");
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    const savedLang = localStorage.getItem("site_lang");
-    if (savedLang === "ar" || savedLang === "en") {
-      setLang(savedLang);
-    }
-  }, []);
-
-  useEffect(() => {
-    async function loadPlans() {
-      try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/plans/my-plans`, {
-          credentials: "include",
-        });
-
-        if (!res.ok) {
-          setError("Failed to load plans");
-          setLoading(false);
-          return;
-        }
-
-        const data = await res.json();
-        setPlans(data);
-      } catch (error) {
-        console.error("Load plans error:", error);
-        setError("Unable to connect to server");
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadPlans();
-  }, []);
 
   const content = {
     en: {
@@ -76,6 +44,53 @@ export default function DashboardHomePage() {
 
   const t = content[lang];
 
+  useEffect(() => {
+    const savedLang = localStorage.getItem("site_lang");
+
+    if (savedLang === "ar" || savedLang === "en") {
+      setLang(savedLang);
+    }
+  }, []);
+
+  useEffect(() => {
+    async function initDashboard() {
+      try {
+        const { data } = await supabase.auth.getSession();
+
+        if (!data.session) {
+          router.replace("/login");
+          return;
+        }
+
+        const token = data.session.access_token;
+
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/plans/my-plans`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (!res.ok) {
+          setError("Failed to load plans");
+          return;
+        }
+
+        const result = await res.json();
+        setPlans(result);
+      } catch (error) {
+        console.error("Dashboard error:", error);
+        setError("Unable to connect to server");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    initDashboard();
+  }, [router]);
+
   if (loading) {
     return <div className={styles.emptyState}>{t.loading}</div>;
   }
@@ -85,7 +100,7 @@ export default function DashboardHomePage() {
   }
 
   return (
-    <div className={styles.pageContent}>
+    <div className={styles.pageContent} dir={lang === "ar" ? "rtl" : "ltr"}>
       <div className={styles.pageHeader}>
         <div>
           <h1 className={styles.pageTitle}>{t.title}</h1>
@@ -112,7 +127,10 @@ export default function DashboardHomePage() {
               </div>
 
               <p className={styles.planDescription}>
-                {plan.preferences || plan.user_interests || plan.travel_styles || "-"}
+                {plan.preferences ||
+                  plan.user_interests ||
+                  plan.travel_styles ||
+                  "-"}
               </p>
 
               <div className={styles.planMeta}>
@@ -125,10 +143,10 @@ export default function DashboardHomePage() {
               </div>
 
               <button
-                  className={styles.viewButton}
-                  onClick={() => router.push(`/dashboard/plans/${plan.id}`)}
-                >
-                  {t.viewPlan}
+                className={styles.viewButton}
+                onClick={() => router.push(`/dashboard/plans/${plan.id}`)}
+              >
+                {t.viewPlan}
               </button>
             </div>
           ))}

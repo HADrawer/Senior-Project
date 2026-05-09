@@ -23,12 +23,17 @@ export default function AdminPage() {
   const [sectionLoading, setSectionLoading] = useState(false);
   const [error, setError] = useState("");
 
+
+
   useEffect(() => {
     async function initAdmin() {
       try {
-        const authRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
-          credentials: "include",
-        });
+        const authRes = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/auth/me`,
+          {
+            credentials: "include",
+          }
+        );
 
         if (!authRes.ok) {
           router.replace("/login");
@@ -37,7 +42,8 @@ export default function AdminPage() {
 
         const user = await authRes.json();
 
-        if (user.role !== "admin") {
+        // Prevent logged in users from accessing admin page
+        if (!user || user.role !== "admin") {
           router.replace("/dashboard");
           return;
         }
@@ -53,6 +59,8 @@ export default function AdminPage() {
 
     initAdmin();
   }, [router]);
+
+
 
   async function safeJson(res) {
     try {

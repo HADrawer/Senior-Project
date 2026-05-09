@@ -1,20 +1,24 @@
 import os
 import json
+import time
 
-from datetime import datetime, timedelta, timezone
-from fastapi import FastAPI, HTTPException, Response, Cookie
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import Depends
 from dotenv import load_dotenv
 from google import genai
+from google.genai import errors
 from urllib.parse import quote_plus
-
 
 from app.dependencies import get_current_user
 from app.db import get_conn
-from app.security import hash_password, verify_password, generate_session_token
-from app.schemas import RegisterRequest, LoginRequest , UpdatePlanRequest ,CreatePlanRequest , PlanChatRequest , GenerateAIPlanRequest
-from app.schemas import UpdateSettingsRequest, ChangePasswordRequest, ChangeEmailRequest
+from app.schemas import (
+    UpdatePlanRequest,
+    CreatePlanRequest,
+    PlanChatRequest,
+    GenerateAIPlanRequest,
+    UpdateSettingsRequest,
+)
 from app.logger import create_log
 
 load_dotenv()
@@ -71,168 +75,168 @@ def generate_with_retry(prompt: str):
 
 COOKIE_NAME = "session_token"
 
-@app.post("/auth/register")
-def register(data: RegisterRequest):
-    with get_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT id FROM users WHERE email = %s",
-                (data.email,)
-            )
-            existing_user = cur.fetchone()
+# @app.post("/auth/register")
+# def register(data: RegisterRequest):
+#     with get_conn() as conn:
+#         with conn.cursor() as cur:
+#             cur.execute(
+#                 "SELECT id FROM users WHERE email = %s",
+#                 (data.email,)
+#             )
+#             existing_user = cur.fetchone()
 
-            if existing_user:
-                raise HTTPException(status_code=400, detail="Email already exists")
+#             if existing_user:
+#                 raise HTTPException(status_code=400, detail="Email already exists")
 
-            cur.execute(
-                "SELECT id FROM roles WHERE name = 'user'"
-            )
-            role = cur.fetchone()
+#             cur.execute(
+#                 "SELECT id FROM roles WHERE name = 'user'"
+#             )
+#             role = cur.fetchone()
 
-            if not role:
-                raise HTTPException(status_code=500, detail="Default role not found")
+#             if not role:
+#                 raise HTTPException(status_code=500, detail="Default role not found")
 
-            cur.execute(
-                """
-                INSERT INTO users (
-                    full_name, email, password_hash, phone_number, role_id
-                )
-                VALUES (%s, %s, %s, %s, %s)
-                RETURNING id, full_name, email, phone_number
-                """,
-                (
-                    data.full_name,
-                    data.email,
-                    hash_password(data.password),
-                    data.phone_number,
-                    role["id"],
-                )
-            )
-            user = cur.fetchone()
-            conn.commit()
+#             cur.execute(
+#                 """
+#                 INSERT INTO users (
+#                     full_name, email, password_hash, phone_number, role_id
+#                 )
+#                 VALUES (%s, %s, %s, %s, %s)
+#                 RETURNING id, full_name, email, phone_number
+#                 """,
+#                 (
+#                     data.full_name,
+#                     data.email,
+#                     hash_password(data.password),
+#                     data.phone_number,
+#                     role["id"],
+#                 )
+#             )
+#             user = cur.fetchone()
+#             conn.commit()
 
-        create_log(
-            user_id=user["id"],
-            action_type="register",
-            entity_type="user",
-            entity_id=user["id"],
-            metadata={
-                "email": data.email,
-                "message": "New user registered"
-            },
-        )
+#         create_log(
+#             user_id=user["id"],
+#             action_type="register",
+#             entity_type="user",
+#             entity_id=user["id"],
+#             metadata={
+#                 "email": data.email,
+#                 "message": "New user registered"
+#             },
+#         )
 
-    return {
-        "message": "Registered successfully",
-        "user": {
-            "id": user["id"],
-            "full_name": user["full_name"],
-            "email": user["email"],
-            "phone_number": user["phone_number"],
-            "role": "user",
-        },
-    }
+#     return {
+#         "message": "Registered successfully",
+#         "user": {
+#             "id": user["id"],
+#             "full_name": user["full_name"],
+#             "email": user["email"],
+#             "phone_number": user["phone_number"],
+#             "role": "user",
+#         },
+#     }
 
-@app.post("/auth/login")
-def login(data: LoginRequest, response: Response):
-    with get_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT u.id, u.full_name, u.email, u.phone_number, u.password_hash, r.name AS role
-                FROM users u
-                JOIN roles r ON r.id = u.role_id
-                WHERE u.email = %s AND u.is_active = TRUE
-                """,
-                (data.email,)
-            )
-            user = cur.fetchone()
+# @app.post("/auth/login")
+# def login(data: LoginRequest, response: Response):
+#     with get_conn() as conn:
+#         with conn.cursor() as cur:
+#             cur.execute(
+#                 """
+#                 SELECT u.id, u.full_name, u.email, u.phone_number, u.password_hash, r.name AS role
+#                 FROM users u
+#                 JOIN roles r ON r.id = u.role_id
+#                 WHERE u.email = %s AND u.is_active = TRUE
+#                 """,
+#                 (data.email,)
+#             )
+#             user = cur.fetchone()
 
-            if not user or not verify_password(data.password, user["password_hash"]):
-                create_log(
-                    user_id=current_user["id"],
-                    action_type="ai_rejected_prompt",
-                    entity_type="plan",
-                    entity_id=None,
-                    metadata={
-                        "title": data.title,
-                        "message": "AI rejected request outside Bahrain tourism planning"
-                    },
-                )
-                raise HTTPException(status_code=401, detail="Invalid email or password")
+#             if not user or not verify_password(data.password, user["password_hash"]):
+#                 create_log(
+#                     user_id=current_user["id"],
+#                     action_type="ai_rejected_prompt",
+#                     entity_type="plan",
+#                     entity_id=None,
+#                     metadata={
+#                         "title": data.title,
+#                         "message": "AI rejected request outside Bahrain tourism planning"
+#                     },
+#                 )
+#                 raise HTTPException(status_code=401, detail="Invalid email or password")
 
-            token = generate_session_token()
-            now = datetime.now(timezone.utc)
-            expires_at = now + timedelta(hours=SESSION_HOURS)
+#             token = generate_session_token()
+#             now = datetime.now(timezone.utc)
+#             expires_at = now + timedelta(hours=SESSION_HOURS)
 
-            cur.execute(
-                """
-                INSERT INTO user_sessions (user_id, session_token, expires_at, is_active)
-                VALUES (%s, %s, %s, TRUE)
-                """,
-                (user["id"], token, expires_at)
-            )
-            conn.commit()
+#             cur.execute(
+#                 """
+#                 INSERT INTO user_sessions (user_id, session_token, expires_at, is_active)
+#                 VALUES (%s, %s, %s, TRUE)
+#                 """,
+#                 (user["id"], token, expires_at)
+#             )
+#             conn.commit()
 
-    response.set_cookie(
-        key=COOKIE_NAME,
-        value=token,
-        httponly=True,
-        secure=False,  # True in production with HTTPS
-        samesite="lax",
-        max_age=SESSION_HOURS * 3600,
-        path="/",
-    )
-    create_log(
-        user_id=user["id"],
-        action_type="login_success",
-        entity_type="user",
-        entity_id=user["id"],
-        metadata={
-            "email": user["email"],
-            "message": "User logged in successfully"
-        },
-    )
+#     response.set_cookie(
+#         key=COOKIE_NAME,
+#         value=token,
+#         httponly=True,
+#         secure=False,  # True in production with HTTPS
+#         samesite="lax",
+#         max_age=SESSION_HOURS * 3600,
+#         path="/",
+#     )
+#     create_log(
+#         user_id=user["id"],
+#         action_type="login_success",
+#         entity_type="user",
+#         entity_id=user["id"],
+#         metadata={
+#             "email": user["email"],
+#             "message": "User logged in successfully"
+#         },
+#     )
 
-    return {
-        "message": "Logged in successfully",
-        "user": {
-            "id": user["id"],
-            "full_name": user["full_name"],
-            "email": user["email"],
-            "phone_number": user["phone_number"],
-            "role": user["role"],
-        },
-    }
+#     return {
+#         "message": "Logged in successfully",
+#         "user": {
+#             "id": user["id"],
+#             "full_name": user["full_name"],
+#             "email": user["email"],
+#             "phone_number": user["phone_number"],
+#             "role": user["role"],
+#         },
+#     }
 
 @app.get("/auth/me")
-def me(current_user = Depends(get_current_user)):
+def me(current_user=Depends(get_current_user)):
     return {
         "id": current_user["id"],
         "full_name": current_user["full_name"],
         "email": current_user["email"],
         "phone_number": current_user["phone_number"],
+        "preferred_language": current_user.get("preferred_language", "en"),
         "role": current_user["role"],
     }
 
+# @app.post("/auth/logout")
+# def logout(response: Response, session_token: str | None = Cookie(default=None, alias=COOKIE_NAME)):
+#     if session_token:
+#         with get_conn() as conn:
+#             with conn.cursor() as cur:
+#                 cur.execute(
+#                     """
+#                     UPDATE user_sessions
+#                     SET is_active = FALSE
+#                     WHERE session_token = %s
+#                     """,
+#                     (session_token,)
+#                 )
+#                 conn.commit()
 
-@app.post("/auth/logout")
-def logout(response: Response, session_token: str | None = Cookie(default=None, alias=COOKIE_NAME)):
-    if session_token:
-        with get_conn() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    UPDATE user_sessions
-                    SET is_active = FALSE
-                    WHERE session_token = %s
-                    """,
-                    (session_token,)
-                )
-                conn.commit()
-
-    response.delete_cookie(key=COOKIE_NAME, path="/")
-    return {"message": "Logged out successfully"}
+#     response.delete_cookie(key=COOKIE_NAME, path="/")
+#     return {"message": "Logged out successfully"}
 
 
 @app.get("/plans/my-plans")
@@ -899,7 +903,7 @@ def plan_chat(data: PlanChatRequest, current_user=Depends(get_current_user)):
         user_id=current_user["id"],
         action_type="ai_plan_chat",
         entity_type="plan",
-        entity_id=plan_id,
+        entity_id=data.plan_id,
         metadata={
             "message": data.message,
             "updated_plan": True
@@ -934,12 +938,11 @@ def add_google_maps_links(plan_json):
 
 @app.get("/admin/overview")
 def admin_overview(current_user=Depends(get_current_user)):
-    if current_user["role"] != "admin":
-        raise HTTPException(status_code=403, detail="Admin access required")
+    require_admin(current_user)
 
     with get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT COUNT(*) AS total FROM users")
+            cur.execute("SELECT COUNT(*) AS total FROM profiles WHERE is_active = TRUE")
             total_users = cur.fetchone()["total"]
 
             cur.execute("SELECT COUNT(*) AS total FROM plans WHERE status != 'deleted'")
@@ -993,39 +996,37 @@ def admin_get_users(current_user=Depends(get_current_user)):
             cur.execute(
                 """
                 SELECT
-                    u.id,
-                    u.full_name,
-                    u.email,
-                    u.phone_number,
-                    u.preferred_language,
-                    u.is_active,
-                    u.created_at,
+                    p.id,
+                    p.full_name,
+                    p.email,
+                    p.phone_number,
+                    p.preferred_language,
+                    p.is_active,
+                    p.created_at,
                     r.name AS role
-                FROM users u
-                JOIN roles r ON r.id = u.role_id
-                ORDER BY u.created_at DESC
+                FROM profiles p
+                LEFT JOIN roles r ON r.id = p.role_id
+                ORDER BY p.created_at DESC
                 """
             )
             users = cur.fetchall()
 
     return users
 
-
 @app.put("/admin/users/{user_id}")
-def admin_update_user(user_id: int, data: dict, current_user=Depends(get_current_user)):
+def admin_update_user(user_id: str, data: dict, current_user=Depends(get_current_user)):
     require_admin(current_user)
 
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                UPDATE users
+                UPDATE profiles
                 SET
                     full_name = COALESCE(%s, full_name),
                     phone_number = COALESCE(%s, phone_number),
                     preferred_language = COALESCE(%s, preferred_language),
-                    is_active = COALESCE(%s, is_active),
-                    updated_at = NOW()
+                    is_active = COALESCE(%s, is_active)
                 WHERE id = %s
                 RETURNING id
                 """,
@@ -1044,21 +1045,20 @@ def admin_update_user(user_id: int, data: dict, current_user=Depends(get_current
                 raise HTTPException(status_code=404, detail="User not found")
 
             conn.commit()
+
     create_log(
         user_id=current_user["id"],
         action_type="admin_update_user",
         entity_type="user",
         entity_id=user_id,
-        metadata={
-            "message": "Admin updated user information"
-        },
+        metadata={"message": "Admin updated user information"},
     )
 
     return {"message": "User updated successfully"}
 
 
 @app.delete("/admin/users/{user_id}")
-def admin_delete_user(user_id: int, current_user=Depends(get_current_user)):
+def admin_delete_user(user_id: str, current_user=Depends(get_current_user)):
     require_admin(current_user)
 
     if user_id == current_user["id"]:
@@ -1068,8 +1068,8 @@ def admin_delete_user(user_id: int, current_user=Depends(get_current_user)):
         with conn.cursor() as cur:
             cur.execute(
                 """
-                UPDATE users
-                SET is_active = FALSE, updated_at = NOW()
+                UPDATE profiles
+                SET is_active = FALSE
                 WHERE id = %s
                 RETURNING id
                 """,
@@ -1088,14 +1088,10 @@ def admin_delete_user(user_id: int, current_user=Depends(get_current_user)):
         action_type="admin_disable_user",
         entity_type="user",
         entity_id=user_id,
-        metadata={
-            "message": "Admin disabled user account"
-        },
+        metadata={"message": "Admin disabled user account"},
     )
 
     return {"message": "User disabled successfully"}
-
-
 @app.get("/admin/plans")
 def admin_get_plans(current_user=Depends(get_current_user)):
     require_admin(current_user)
@@ -1114,10 +1110,10 @@ def admin_get_plans(current_user=Depends(get_current_user)):
                     p.generated_by_ai,
                     p.created_at,
                     p.updated_at,
-                    u.full_name AS user_name,
-                    u.email AS user_email
+                    pr.full_name AS user_name,
+                    pr.email AS user_email
                 FROM plans p
-                JOIN users u ON u.id = p.user_id
+                LEFT JOIN profiles pr ON pr.id = p.user_id
                 ORDER BY p.created_at DESC
                 """
             )
@@ -1220,15 +1216,15 @@ def admin_get_logs(current_user=Depends(get_current_user)):
                 SELECT
                     l.id,
                     l.user_id,
-                    u.full_name AS user_name,
-                    u.email AS user_email,
+                    p.full_name AS user_name,
+                    p.email AS user_email,
                     l.action_type,
                     l.entity_type,
                     l.entity_id,
                     l.metadata_json,
                     l.created_at
                 FROM usage_logs l
-                LEFT JOIN users u ON u.id = l.user_id
+                LEFT JOIN profiles p ON p.id = l.user_id
                 ORDER BY l.created_at DESC
                 LIMIT 200
                 """
@@ -1254,12 +1250,11 @@ def update_my_settings(data: UpdateSettingsRequest, current_user=Depends(get_cur
         with conn.cursor() as cur:
             cur.execute(
                 """
-                UPDATE users
+                UPDATE profiles
                 SET
                     full_name = COALESCE(%s, full_name),
                     phone_number = COALESCE(%s, phone_number),
-                    preferred_language = COALESCE(%s, preferred_language),
-                    updated_at = NOW()
+                    preferred_language = COALESCE(%s, preferred_language)
                 WHERE id = %s
                 RETURNING id, full_name, email, phone_number, preferred_language
                 """,
@@ -1273,6 +1268,7 @@ def update_my_settings(data: UpdateSettingsRequest, current_user=Depends(get_cur
 
             user = cur.fetchone()
             conn.commit()
+
     create_log(
         user_id=current_user["id"],
         action_type="update_profile",
@@ -1281,96 +1277,96 @@ def update_my_settings(data: UpdateSettingsRequest, current_user=Depends(get_cur
         metadata={
             "full_name": data.full_name,
             "phone_number": data.phone_number,
-            "preferred_language": data.preferred_language
+            "preferred_language": data.preferred_language,
         },
     )
 
     return {"message": "Settings updated successfully", "user": user}
 
 
-@app.put("/settings/change-password")
-def change_password(data: ChangePasswordRequest, current_user=Depends(get_current_user)):
-    with get_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT password_hash FROM users WHERE id = %s",
-                (current_user["id"],)
-            )
-            user = cur.fetchone()
 
-            if not user or not verify_password(data.current_password, user["password_hash"]):
-                raise HTTPException(status_code=400, detail="Current password is incorrect")
+# @app.put("/settings/change-password")
+# def change_password(data: ChangePasswordRequest, current_user=Depends(get_current_user)):
+#     with get_conn() as conn:
+#         with conn.cursor() as cur:
+#             cur.execute(
+#                 "SELECT password_hash FROM users WHERE id = %s",
+#                 (current_user["id"],)
+#             )
+#             user = cur.fetchone()
 
-            cur.execute(
-                """
-                UPDATE users
-                SET password_hash = %s, updated_at = NOW()
-                WHERE id = %s
-                """,
-                (hash_password(data.new_password), current_user["id"])
-            )
+#             if not user or not verify_password(data.current_password, user["password_hash"]):
+#                 raise HTTPException(status_code=400, detail="Current password is incorrect")
 
-            conn.commit()
+#             cur.execute(
+#                 """
+#                 UPDATE users
+#                 SET password_hash = %s, updated_at = NOW()
+#                 WHERE id = %s
+#                 """,
+#                 (hash_password(data.new_password), current_user["id"])
+#             )
 
-    create_log(
-        user_id=current_user["id"],
-        action_type="change_password",
-        entity_type="user",
-        entity_id=current_user["id"],
-        metadata={
-            "message": "User changed password"
-        },
-    )
+#             conn.commit()
 
-    return {"message": "Password changed successfully"}
+#     create_log(
+#         user_id=current_user["id"],
+#         action_type="change_password",
+#         entity_type="user",
+#         entity_id=current_user["id"],
+#         metadata={
+#             "message": "User changed password"
+#         },
+#     )
+
+#     return {"message": "Password changed successfully"}
 
 
-@app.put("/settings/change-email")
-def change_email(data: ChangeEmailRequest, current_user=Depends(get_current_user)):
-    with get_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT password_hash FROM users WHERE id = %s",
-                (current_user["id"],)
-            )
-            user = cur.fetchone()
+# @app.put("/settings/change-email")
+# def change_email(data: ChangeEmailRequest, current_user=Depends(get_current_user)):
+#     with get_conn() as conn:
+#         with conn.cursor() as cur:
+#             cur.execute(
+#                 "SELECT password_hash FROM users WHERE id = %s",
+#                 (current_user["id"],)
+#             )
+#             user = cur.fetchone()
 
-            if not user or not verify_password(data.current_password, user["password_hash"]):
-                raise HTTPException(status_code=400, detail="Current password is incorrect")
+#             if not user or not verify_password(data.current_password, user["password_hash"]):
+#                 raise HTTPException(status_code=400, detail="Current password is incorrect")
 
-            cur.execute(
-                "SELECT id FROM users WHERE email = %s AND id != %s",
-                (data.new_email, current_user["id"])
-            )
-            existing = cur.fetchone()
+#             cur.execute(
+#                 "SELECT id FROM users WHERE email = %s AND id != %s",
+#                 (data.new_email, current_user["id"])
+#             )
+#             existing = cur.fetchone()
 
-            if existing:
-                raise HTTPException(status_code=400, detail="Email is already used")
+#             if existing:
+#                 raise HTTPException(status_code=400, detail="Email is already used")
 
-            cur.execute(
-                """
-                UPDATE users
-                SET email = %s, updated_at = NOW()
-                WHERE id = %s
-                """,
-                (data.new_email, current_user["id"])
-            )
+#             cur.execute(
+#                 """
+#                 UPDATE users
+#                 SET email = %s, updated_at = NOW()
+#                 WHERE id = %s
+#                 """,
+#                 (data.new_email, current_user["id"])
+#             )
 
-            conn.commit()
+#             conn.commit()
 
-    create_log(
-        user_id=current_user["id"],
-        action_type="change_email",
-        entity_type="user",
-        entity_id=current_user["id"],
-        metadata={
-            "old_email": current_user["email"],
-            "new_email": data.new_email
-        },
-    )
+#     create_log(
+#         user_id=current_user["id"],
+#         action_type="change_email",
+#         entity_type="user",
+#         entity_id=current_user["id"],
+#         metadata={
+#             "old_email": current_user["email"],
+#             "new_email": data.new_email
+#         },
+#     )
 
-    return {"message": "Email changed successfully"}
-
+#     return {"message": "Email changed successfully"}
 
 @app.get("/settings/export-data")
 def export_my_data(current_user=Depends(get_current_user)):
@@ -1379,7 +1375,7 @@ def export_my_data(current_user=Depends(get_current_user)):
             cur.execute(
                 """
                 SELECT id, full_name, email, phone_number, preferred_language, created_at
-                FROM users
+                FROM profiles
                 WHERE id = %s
                 """,
                 (current_user["id"],)
@@ -1396,15 +1392,13 @@ def export_my_data(current_user=Depends(get_current_user)):
                 (current_user["id"],)
             )
             plans = cur.fetchall()
-    
+
     create_log(
         user_id=current_user["id"],
         action_type="export_data",
         entity_type="user",
         entity_id=current_user["id"],
-        metadata={
-            "message": "User exported account data"
-        },
+        metadata={"message": "User exported account data"},
     )
 
     return {
@@ -1419,17 +1413,9 @@ def delete_my_account(current_user=Depends(get_current_user)):
         with conn.cursor() as cur:
             cur.execute(
                 """
-                UPDATE users
-                SET is_active = FALSE, updated_at = NOW()
+                UPDATE profiles
+                SET is_active = FALSE
                 WHERE id = %s
-                """,
-                (current_user["id"],)
-            )
-
-            cur.execute(
-                """
-                DELETE FROM user_sessions
-                WHERE user_id = %s
                 """,
                 (current_user["id"],)
             )
@@ -1441,9 +1427,7 @@ def delete_my_account(current_user=Depends(get_current_user)):
         action_type="delete_account",
         entity_type="user",
         entity_id=current_user["id"],
-        metadata={
-            "message": "User disabled account"
-        },
+        metadata={"message": "User disabled account"},
     )
 
     return {"message": "Account disabled successfully"}

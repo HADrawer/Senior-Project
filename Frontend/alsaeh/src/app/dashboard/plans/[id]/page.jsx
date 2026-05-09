@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import styles from "../../dashboard.module.css";
+import { supabase } from "@/lib/supabase";
 
 function getErrorMessage(detail, fallback) {
   if (Array.isArray(detail)) return detail[0]?.msg || fallback;
@@ -10,12 +11,16 @@ function getErrorMessage(detail, fallback) {
   return fallback;
 }
 
+async function getAccessToken() {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.access_token || null;
+}
+
 export default function PlanDetailsPage() {
   const { id } = useParams();
   const router = useRouter();
 
   const [plan, setPlan] = useState(null);
-
   const [form, setForm] = useState({
     title: "",
     days: "",
@@ -39,13 +44,33 @@ export default function PlanDetailsPage() {
   const [chatMessages, setChatMessages] = useState([]);
 
   useEffect(() => {
-    loadPlan();
-  }, [id]);
+    async function initPage() {
+      const token = await getAccessToken();
 
-  async function loadPlan() {
+      if (!token) {
+        router.replace("/login");
+        return;
+      }
+
+      await loadPlan(token);
+    }
+
+    initPage();
+  }, [id, router]);
+
+  async function loadPlan(tokenFromInit = null) {
     try {
+      const token = tokenFromInit || (await getAccessToken());
+
+      if (!token) {
+        router.replace("/login");
+        return;
+      }
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/plans/${id}`, {
-        credentials: "include",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       if (!res.ok) {
@@ -54,7 +79,6 @@ export default function PlanDetailsPage() {
       }
 
       const data = await res.json();
-
       setPlan(data);
       fillForm(data);
     } catch (error) {
@@ -80,8 +104,17 @@ export default function PlanDetailsPage() {
   }
 
   async function refreshPlan() {
+    const token = await getAccessToken();
+
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
+
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/plans/${id}`, {
-      credentials: "include",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     });
 
     if (res.ok) {
@@ -97,12 +130,19 @@ export default function PlanDetailsPage() {
     setError("");
 
     try {
+      const token = await getAccessToken();
+
+      if (!token) {
+        router.replace("/login");
+        return;
+      }
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/plans/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-        credentials: "include",
         body: JSON.stringify({
           title: form.title,
           days: Number(form.days),
@@ -141,9 +181,18 @@ export default function PlanDetailsPage() {
     setError("");
 
     try {
+      const token = await getAccessToken();
+
+      if (!token) {
+        router.replace("/login");
+        return;
+      }
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/plans/${id}`, {
         method: "DELETE",
-        credentials: "include",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       const data = await res.json();
@@ -174,12 +223,19 @@ export default function PlanDetailsPage() {
     setChatLoading(true);
 
     try {
+      const token = await getAccessToken();
+
+      if (!token) {
+        router.replace("/login");
+        return;
+      }
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ai/plan-chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-        credentials: "include",
         body: JSON.stringify({
           plan_id: Number(id),
           message: userText,
@@ -192,8 +248,13 @@ export default function PlanDetailsPage() {
       if (!res.ok) {
         setChatMessages((prev) => [
           ...prev,
-          { sender: "assistant",
-            text : typeof data.detail === "string" ? data.detail : "AI service is busy. Please try again.", },
+          {
+            sender: "assistant",
+            text:
+              typeof data.detail === "string"
+                ? data.detail
+                : "AI service is busy. Please try again.",
+          },
         ]);
         return;
       }
@@ -434,10 +495,7 @@ export default function PlanDetailsPage() {
                     {aiPlan.summary || "No summary available."}
                   </p>
 
-                  <div
-                    className={styles.detailsGrid}
-                    style={{ marginTop: "20px" }}
-                  >
+                  <div className={styles.detailsGrid} style={{ marginTop: "20px" }}>
                     <div className={styles.detailItem}>
                       <span className={styles.detailLabel}>Estimated Budget</span>
                       <strong>
@@ -482,9 +540,11 @@ export default function PlanDetailsPage() {
                                     {activity.estimated_cost_bhd ?? 0} BHD
                                   </span>
                                 </div>
+
                                 {activity.location_area && (
                                   <p className={styles.locationText}>
-                                    {activity.location_name || activity.name} · {activity.location_area}
+                                    {activity.location_name || activity.name} ·{" "}
+                                    {activity.location_area}
                                   </p>
                                 )}
 

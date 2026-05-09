@@ -4,16 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import styles from "./auth.module.css";
+import { supabase } from "@/lib/supabase";
 
-function getErrorMessage(detail, fallback) {
-  if (Array.isArray(detail)) {
-    return detail[0]?.msg || fallback;
-  }
-
-  if (typeof detail === "string") {
-    return detail;
-  }
-
+function getErrorMessage(error, fallback) {
+  if (error?.message) return error.message;
+  if (typeof error === "string") return error;
   return fallback;
 }
 
@@ -40,8 +35,7 @@ export default function LoginPage() {
       heroText:
         "Continue your journey through Bahrain with smart travel planning, personalized recommendations, and a modern tourism experience.",
       formTitle: "Login",
-      formSubtitle:
-        "Sign in to access your travel plans and recommendations.",
+      formSubtitle: "Sign in to access your travel plans and recommendations.",
       email: "Email",
       emailPlaceholder: "Enter your email",
       password: "Password",
@@ -50,7 +44,6 @@ export default function LoginPage() {
       submitting: "Logging in...",
       switchText: "Don't have an account?",
       switchLink: "Register",
-      connectionError: "Unable to connect to server",
       fallbackError: "Login failed",
       langButton: "العربية",
     },
@@ -61,8 +54,7 @@ export default function LoginPage() {
       heroText:
         "أكمل رحلتك في البحرين مع تخطيط سياحي ذكي وتوصيات مخصصة وتجربة حديثة لاستكشاف الأماكن.",
       formTitle: "تسجيل الدخول",
-      formSubtitle:
-        "سجل دخولك للوصول إلى خططك السياحية وتوصياتك المخصصة.",
+      formSubtitle: "سجل دخولك للوصول إلى خططك السياحية وتوصياتك المخصصة.",
       email: "البريد الإلكتروني",
       emailPlaceholder: "أدخل بريدك الإلكتروني",
       password: "كلمة المرور",
@@ -71,7 +63,6 @@ export default function LoginPage() {
       submitting: "جاري تسجيل الدخول...",
       switchText: "ليس لديك حساب؟",
       switchLink: "إنشاء حساب",
-      connectionError: "تعذر الاتصال بالخادم",
       fallbackError: "فشل تسجيل الدخول",
       langButton: "English",
     },
@@ -81,26 +72,20 @@ export default function LoginPage() {
 
   useEffect(() => {
     const savedLang = localStorage.getItem("site_lang");
+
     if (savedLang === "ar" || savedLang === "en") {
       setLang(savedLang);
     }
+
     setMounted(true);
   }, []);
-
-  function toggleLanguage() {
-    const newLang = lang === "en" ? "ar" : "en";
-    setLang(newLang);
-    localStorage.setItem("site_lang", newLang);
-  }
 
   useEffect(() => {
     async function checkAuth() {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
-          credentials: "include",
-        });
+        const { data } = await supabase.auth.getSession();
 
-        if (res.ok) {
+        if (data.session) {
           router.replace("/dashboard");
           return;
         }
@@ -114,33 +99,33 @@ export default function LoginPage() {
     checkAuth();
   }, [router]);
 
+  function toggleLanguage() {
+    const newLang = lang === "en" ? "ar" : "en";
+    setLang(newLang);
+    localStorage.setItem("site_lang", newLang);
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
     setLoading(true);
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify(form),
+      const { error } = await supabase.auth.signInWithPassword({
+        email: form.email,
+        password: form.password,
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(getErrorMessage(data.detail, t.fallbackError));
-        setLoading(false);
+      if (error) {
+        setError(getErrorMessage(error, t.fallbackError));
         return;
       }
 
       router.replace("/dashboard");
     } catch (error) {
       console.error("Login error:", error);
-      setError(t.connectionError);
+      setError(t.fallbackError);
+    } finally {
       setLoading(false);
     }
   }
@@ -198,6 +183,7 @@ export default function LoginPage() {
                     setForm({ ...form, email: e.target.value })
                   }
                   className={styles.input}
+                  required
                 />
               </div>
 
@@ -211,6 +197,7 @@ export default function LoginPage() {
                     setForm({ ...form, password: e.target.value })
                   }
                   className={styles.input}
+                  required
                 />
               </div>
 

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "../dashboard.module.css";
+import { supabase } from "@/lib/supabase";
 
 function getErrorMessage(detail, fallback) {
   if (Array.isArray(detail)) return detail[0]?.msg || fallback;
@@ -22,6 +23,11 @@ function getPasswordStrength(password) {
   if (score <= 1) return { label: "Weak", className: "weak" };
   if (score <= 3) return { label: "Medium", className: "medium" };
   return { label: "Strong", className: "strong" };
+}
+
+async function getAccessToken() {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.access_token || null;
 }
 
 export default function SettingsPage() {
@@ -83,6 +89,7 @@ export default function SettingsPage() {
       theme: "Theme",
       light: "Light",
       dark: "Dark",
+      system: "System",
       sessions: "Sessions & Devices",
       sessionsText:
         "Session management will be improved after Supabase Auth integration.",
@@ -123,18 +130,16 @@ export default function SettingsPage() {
       theme: "المظهر",
       light: "فاتح",
       dark: "داكن",
+      system: "حسب النظام",
       sessions: "الجلسات والأجهزة",
-      sessionsText:
-        "سيتم تحسين إدارة الجلسات بعد ربط Supabase Auth.",
+      sessionsText: "سيتم تحسين إدارة الجلسات بعد ربط Supabase Auth.",
       logoutOtherSessions: "تسجيل الخروج من الجلسات الأخرى",
       dataPrivacy: "البيانات والخصوصية",
       exportData: "تنزيل بياناتي",
       deleteAccount: "حذف الحساب",
-      deleteWarning:
-        "سيتم تعطيل حسابك. اكتب DELETE للتأكيد.",
+      deleteWarning: "سيتم تعطيل حسابك. اكتب DELETE للتأكيد.",
       support: "الدعم / تواصل معنا",
-      supportText:
-        "للدعم، تواصل مع فريق المشروع أو مسؤول النظام.",
+      supportText: "للدعم، تواصل مع فريق المشروع أو مسؤول النظام.",
       about: "حول التطبيق",
       aboutText:
         "Alsaeh.bh v1.0، مشروع تخرج جامعة البحرين، نظام توصية سياحي للبحرين.",
@@ -149,24 +154,31 @@ export default function SettingsPage() {
   );
 
   useEffect(() => {
-  const savedLang = localStorage.getItem("site_lang");
-  const savedTheme = localStorage.getItem("theme") || "system";
+    const savedLang = localStorage.getItem("site_lang");
+    const savedTheme = localStorage.getItem("theme") || "system";
 
-  if (savedLang === "ar" || savedLang === "en") {
-    setLang(savedLang);
-  }
+    if (savedLang === "ar" || savedLang === "en") {
+      setLang(savedLang);
+    }
 
-  setTheme(savedTheme);
-  document.documentElement.setAttribute("data-theme", savedTheme);
+    setTheme(savedTheme);
+    document.documentElement.setAttribute("data-theme", savedTheme);
   }, []);
-
-  
 
   useEffect(() => {
     async function loadSettings() {
       try {
+        const token = await getAccessToken();
+
+        if (!token) {
+          router.replace("/login");
+          return;
+        }
+
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/settings/me`, {
-          credentials: "include",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         });
 
         const data = await res.json();
@@ -191,22 +203,17 @@ export default function SettingsPage() {
     }
 
     loadSettings();
-  }, []);
+  }, [router]);
 
   function resetMessages() {
     setError("");
     setSuccess("");
   }
-  
+
   function handleThemeChange(value) {
     setTheme(value);
-
     localStorage.setItem("theme", value);
-
-    document.documentElement.setAttribute(
-      "data-theme",
-      value
-    );
+    document.documentElement.setAttribute("data-theme", value);
   }
 
   async function handleProfileSubmit(e) {
@@ -215,10 +222,19 @@ export default function SettingsPage() {
     setSavingProfile(true);
 
     try {
+      const token = await getAccessToken();
+
+      if (!token) {
+        router.replace("/login");
+        return;
+      }
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/settings/me`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           full_name: profile.full_name,
           phone_number: profile.phone_number,
@@ -250,26 +266,21 @@ export default function SettingsPage() {
     setSavingEmail(true);
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/settings/change-email`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(emailForm),
+      const { error } = await supabase.auth.updateUser({
+        email: emailForm.new_email,
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(getErrorMessage(data.detail, "Failed to change email"));
+      if (error) {
+        setError(error.message || "Failed to change email");
         return;
       }
 
       setProfile({ ...profile, email: emailForm.new_email });
       setEmailForm({ current_password: "", new_email: "" });
-      setSuccess("Email changed successfully.");
+      setSuccess("Email update request sent. Check your email to confirm.");
     } catch (error) {
       console.error(error);
-      setError("Unable to connect to server");
+      setError("Unable to update email");
     } finally {
       setSavingEmail(false);
     }
@@ -287,20 +298,12 @@ export default function SettingsPage() {
     setSavingPassword(true);
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/settings/change-password`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          current_password: passwordForm.current_password,
-          new_password: passwordForm.new_password,
-        }),
+      const { error } = await supabase.auth.updateUser({
+        password: passwordForm.new_password,
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(getErrorMessage(data.detail, "Failed to change password"));
+      if (error) {
+        setError(error.message || "Failed to change password");
         return;
       }
 
@@ -313,7 +316,7 @@ export default function SettingsPage() {
       setSuccess("Password changed successfully.");
     } catch (error) {
       console.error(error);
-      setError("Unable to connect to server");
+      setError("Unable to update password");
     } finally {
       setSavingPassword(false);
     }
@@ -323,9 +326,21 @@ export default function SettingsPage() {
     resetMessages();
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/settings/export-data`, {
-        credentials: "include",
-      });
+      const token = await getAccessToken();
+
+      if (!token) {
+        router.replace("/login");
+        return;
+      }
+
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/settings/export-data`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       const data = await res.json();
 
@@ -364,10 +379,22 @@ export default function SettingsPage() {
     setDeleting(true);
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/settings/delete-account`, {
-        method: "DELETE",
-        credentials: "include",
-      });
+      const token = await getAccessToken();
+
+      if (!token) {
+        router.replace("/login");
+        return;
+      }
+
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/settings/delete-account`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       const data = await res.json();
 
@@ -376,6 +403,7 @@ export default function SettingsPage() {
         return;
       }
 
+      await supabase.auth.signOut();
       router.replace("/login");
     } catch (error) {
       console.error(error);
@@ -408,9 +436,7 @@ export default function SettingsPage() {
             <label>{t.fullName}</label>
             <input
               value={profile.full_name}
-              onChange={(e) =>
-                setProfile({ ...profile, full_name: e.target.value })
-              }
+              onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
               required
             />
           </div>
@@ -419,9 +445,7 @@ export default function SettingsPage() {
             <label>{t.phone}</label>
             <input
               value={profile.phone_number}
-              onChange={(e) =>
-                setProfile({ ...profile, phone_number: e.target.value })
-              }
+              onChange={(e) => setProfile({ ...profile, phone_number: e.target.value })}
               required
             />
           </div>
@@ -458,21 +482,6 @@ export default function SettingsPage() {
 
           <div className={styles.aiFormGrid}>
             <div className={styles.aiField}>
-              <label>{t.currentPassword}</label>
-              <input
-                type={showPasswords ? "text" : "password"}
-                value={emailForm.current_password}
-                onChange={(e) =>
-                  setEmailForm({
-                    ...emailForm,
-                    current_password: e.target.value,
-                  })
-                }
-                required
-              />
-            </div>
-
-            <div className={styles.aiField}>
               <label>{t.newEmail}</label>
               <input
                 type="email"
@@ -505,30 +514,12 @@ export default function SettingsPage() {
 
           <div className={styles.aiFormGrid}>
             <div className={styles.aiField}>
-              <label>{t.currentPassword}</label>
-              <input
-                type={showPasswords ? "text" : "password"}
-                value={passwordForm.current_password}
-                onChange={(e) =>
-                  setPasswordForm({
-                    ...passwordForm,
-                    current_password: e.target.value,
-                  })
-                }
-                required
-              />
-            </div>
-
-            <div className={styles.aiField}>
               <label>{t.newPassword}</label>
               <input
                 type={showPasswords ? "text" : "password"}
                 value={passwordForm.new_password}
                 onChange={(e) =>
-                  setPasswordForm({
-                    ...passwordForm,
-                    new_password: e.target.value,
-                  })
+                  setPasswordForm({ ...passwordForm, new_password: e.target.value })
                 }
                 required
               />
@@ -552,7 +543,9 @@ export default function SettingsPage() {
 
           {passwordForm.new_password && (
             <div className={styles.passwordStrength}>
-              <span>{t.strength}: {passwordStrength.label}</span>
+              <span>
+                {t.strength}: {passwordStrength.label}
+              </span>
               <div className={styles.strengthTrack}>
                 <div
                   className={`${styles.strengthFill} ${
@@ -579,9 +572,9 @@ export default function SettingsPage() {
         <div className={styles.aiField}>
           <label>{t.theme}</label>
           <select value={theme} onChange={(e) => handleThemeChange(e.target.value)}>
-              <option value="light">{t.light}</option>
-              <option value="dark">{t.dark}</option>
-              <option value="system">System</option>
+            <option value="light">{t.light}</option>
+            <option value="dark">{t.dark}</option>
+            <option value="system">{t.system}</option>
           </select>
         </div>
       </section>
@@ -624,14 +617,9 @@ export default function SettingsPage() {
 
       <section className={styles.settingsSection}>
         <h2>{t.support}</h2>
-        <p className={styles.settingsText}>
-          {t.supportText}
-        </p>
+        <p className={styles.settingsText}>{t.supportText}</p>
 
-        <a
-          href="mailto:info@alsaeh.net"
-          className={styles.supportLink}
-        >
+        <a href="mailto:info@alsaeh.net" className={styles.supportLink}>
           info@alsaeh.net
         </a>
       </section>

@@ -4,16 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import styles from "../login/auth.module.css";
+import { supabase } from "@/lib/supabase";
 
-function getErrorMessage(detail, fallback) {
-  if (Array.isArray(detail)) {
-    return detail[0]?.msg || fallback;
-  }
-
-  if (typeof detail === "string") {
-    return detail;
-  }
-
+function getErrorMessage(error, fallback) {
+  if (error?.message) return error.message;
+  if (typeof error === "string") return error;
   return fallback;
 }
 
@@ -31,6 +26,7 @@ export default function RegisterPage() {
   });
 
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [loading, setLoading] = useState(false);
 
@@ -56,8 +52,9 @@ export default function RegisterPage() {
       submitting: "Creating account...",
       switchText: "Already have an account?",
       switchLink: "Login",
-      connectionError: "Unable to connect to server",
       fallbackError: "Registration failed",
+      success:
+        "Account created. Please check your email to confirm your account before logging in.",
       langButton: "العربية",
     },
     ar: {
@@ -81,8 +78,9 @@ export default function RegisterPage() {
       submitting: "جاري إنشاء الحساب...",
       switchText: "لديك حساب بالفعل؟",
       switchLink: "تسجيل الدخول",
-      connectionError: "تعذر الاتصال بالخادم",
       fallbackError: "فشل إنشاء الحساب",
+      success:
+        "تم إنشاء الحساب. يرجى التحقق من بريدك الإلكتروني لتأكيد الحساب قبل تسجيل الدخول.",
       langButton: "English",
     },
   };
@@ -91,26 +89,20 @@ export default function RegisterPage() {
 
   useEffect(() => {
     const savedLang = localStorage.getItem("site_lang");
+
     if (savedLang === "ar" || savedLang === "en") {
       setLang(savedLang);
     }
+
     setMounted(true);
   }, []);
-
-  function toggleLanguage() {
-    const newLang = lang === "en" ? "ar" : "en";
-    setLang(newLang);
-    localStorage.setItem("site_lang", newLang);
-  }
 
   useEffect(() => {
     async function checkAuth() {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
-          credentials: "include",
-        });
+        const { data } = await supabase.auth.getSession();
 
-        if (res.ok) {
+        if (data.session) {
           router.replace("/dashboard");
           return;
         }
@@ -124,32 +116,49 @@ export default function RegisterPage() {
     checkAuth();
   }, [router]);
 
+  function toggleLanguage() {
+    const newLang = lang === "en" ? "ar" : "en";
+    setLang(newLang);
+    localStorage.setItem("site_lang", newLang);
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
+    setSuccess("");
     setLoading(true);
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/register`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const { error } = await supabase.auth.signUp({
+        email: form.email,
+        password: form.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/login`,
+          data: {
+            full_name: form.full_name,
+            phone_number: form.phone_number,
+            preferred_language: lang,
+          },
         },
-        body: JSON.stringify(form),
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(getErrorMessage(data.detail, t.fallbackError));
-        setLoading(false);
+      if (error) {
+        setError(getErrorMessage(error, t.fallbackError));
         return;
       }
 
-      router.replace("/login");
+      setSuccess(t.success);
+
+      setForm({
+        full_name: "",
+        email: "",
+        phone_number: "",
+        password: "",
+      });
     } catch (error) {
       console.error("Register error:", error);
-      setError(t.connectionError);
+      setError(t.fallbackError);
+    } finally {
       setLoading(false);
     }
   }
@@ -207,6 +216,7 @@ export default function RegisterPage() {
                     setForm({ ...form, full_name: e.target.value })
                   }
                   className={styles.input}
+                  required
                 />
               </div>
 
@@ -220,6 +230,7 @@ export default function RegisterPage() {
                     setForm({ ...form, email: e.target.value })
                   }
                   className={styles.input}
+                  required
                 />
               </div>
 
@@ -233,6 +244,7 @@ export default function RegisterPage() {
                     setForm({ ...form, phone_number: e.target.value })
                   }
                   className={styles.input}
+                  required
                 />
               </div>
 
@@ -246,10 +258,17 @@ export default function RegisterPage() {
                     setForm({ ...form, password: e.target.value })
                   }
                   className={styles.input}
+                  required
                 />
               </div>
 
               {error && <p className={styles.error}>{error}</p>}
+
+              {success && (
+                <p className={styles.error} style={{ color: "#166534" }}>
+                  {success}
+                </p>
+              )}
 
               <button
                 type="submit"
