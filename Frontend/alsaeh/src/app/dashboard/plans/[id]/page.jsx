@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect ,useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import styles from "../../dashboard.module.css";
 import { supabase } from "@/lib/supabase";
@@ -19,6 +19,7 @@ async function getAccessToken() {
 export default function PlanDetailsPage() {
   const { id } = useParams();
   const router = useRouter();
+  const chatEndRef = useRef(null);
 
   const [plan, setPlan] = useState(null);
   const [form, setForm] = useState({
@@ -57,6 +58,11 @@ export default function PlanDetailsPage() {
 
     initPage();
   }, [id, router]);
+    useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
+
+
 
   async function loadPlan(tokenFromInit = null) {
     try {
@@ -612,6 +618,14 @@ export default function PlanDetailsPage() {
             {chatLoading && (
               <div className={styles.assistantChatBubble}>Thinking...</div>
             )}
+      
+
+              <div className={styles.aiChatMessages}>
+                {chatLoading && (
+                  <div className={styles.assistantChatBubble}>Thinking...</div>
+                )}
+                <div ref={chatEndRef} /> 
+              </div>
           </div>
 
           <form onSubmit={handleChatSubmit} className={styles.aiChatForm}>

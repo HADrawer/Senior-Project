@@ -56,7 +56,6 @@ export default function DashboardLayout({ children }) {
     localStorage.setItem("site_lang", newLang);
   }
 
- // dashboard/layout.jsx — replace the loadUser useEffect
 useEffect(() => {
   async function loadUser() {
     // Check cache first
@@ -65,41 +64,50 @@ useEffect(() => {
       try {
         setUser(JSON.parse(cached));
         setCheckingAuth(false);
-        return;
+        return; // ← early return prevents the fetch entirely
       } catch {
         sessionStorage.removeItem("auth_user");
       }
     }
 
     try {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) {
+        router.replace("/login");
+        return;
+      }
+
+      const token = data.session.access_token;
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
-        credentials: "include",
+        headers: { Authorization: `Bearer ${token}` },
       });
+
       if (!res.ok) {
         router.replace("/login");
         return;
       }
-      const data = await res.json();
-      sessionStorage.setItem("auth_user", JSON.stringify(data));
-      setUser(data);
-    } catch (error) {
+
+      const userData = await res.json();
+      sessionStorage.setItem("auth_user", JSON.stringify(userData));
+      setUser(userData);
+    } catch {
       router.replace("/login");
     } finally {
       setCheckingAuth(false);
     }
   }
+
   loadUser();
 }, [router]);
 
-// Also clear the cache on logout:
+// Single, correct logout function — clears cache too
 async function logout() {
   sessionStorage.removeItem("auth_user");
   try {
-    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/logout`, {
-      method: "POST",
-      credentials: "include",
-    });
-  } catch {}
+    await supabase.auth.signOut();
+  } catch (err) {
+    console.error("Logout failed:", err);
+  }
   router.replace("/login");
 }
 

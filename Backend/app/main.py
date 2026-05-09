@@ -706,23 +706,23 @@ def build_plan_chat_prompt(plan, user_message: str, language: str) -> str:
     - If interests or travel style change, update the activities to match them.
 
     Return this exact structure:
-    {{
-    "refused": false,
-    "action": "advice_or_update",
-    "reply": "string",
-    "update": {{
-        "title": null,
-        "days": null,
-        "budget": null,
-        "preferences": null,
-        "user_interests": null,
-        "travel_styles": null,
-        "category": null,
-        "place": null,
-        "plan_details_json": null,
-        "people_count": null,
-    }}
-    }}
+        {{
+        "refused": false,
+        "action": "advice_or_update",
+        "reply": "string",
+        "update": {{
+            "title": null,
+            "days": null,
+            "budget": null,
+            "preferences": null,
+            "user_interests": null,
+            "travel_styles": null,
+            "category": null,
+            "place": null,
+            "plan_details_json": null,
+            "people_count": null
+        }}
+        }}
 
     Rules for action:
     - If user asks for advice only, use action: "advice"
@@ -811,32 +811,39 @@ def plan_chat(data: PlanChatRequest, current_user=Depends(get_current_user)):
     # 4. Save chat messages
     with get_conn() as conn:
         with conn.cursor() as cur:
+            # Reuse existing active session for this plan
             cur.execute(
                 """
-                INSERT INTO chat_sessions (user_id, plan_id, status)
-                VALUES (%s, %s, 'active')
-                RETURNING id
+                SELECT id FROM chat_sessions
+                WHERE user_id = %s AND plan_id = %s AND status = 'active'
+                ORDER BY started_at DESC
+                LIMIT 1
                 """,
                 (current_user["id"], data.plan_id)
             )
-            chat_session = cur.fetchone()
+            existing = cur.fetchone()
 
+            if existing:
+                session_id = existing["id"]
+            else:
+                cur.execute(
+                    """
+                    INSERT INTO chat_sessions (user_id, plan_id, status)
+                    VALUES (%s, %s, 'active')
+                    RETURNING id
+                    """,
+                    (current_user["id"], data.plan_id)
+                )
+                session_id = cur.fetchone()["id"]
+
+            # Insert both messages using the same session
             cur.execute(
                 """
                 INSERT INTO messages (chat_session_id, sender_type, message_text)
-                VALUES (%s, 'user', %s)
+                VALUES (%s, 'user', %s), (%s, 'assistant', %s)
                 """,
-                (chat_session["id"], data.message)
+                (session_id, data.message, session_id, ai_result.get("reply", ""))
             )
-
-            cur.execute(
-                """
-                INSERT INTO messages (chat_session_id, sender_type, message_text)
-                VALUES (%s, 'assistant', %s)
-                """,
-                (chat_session["id"], ai_result.get("reply", ""))
-            )
-
             conn.commit()
 
     # 5. If advice only, return without update
@@ -1431,3 +1438,11 @@ def delete_my_account(current_user=Depends(get_current_user)):
     )
 
     return {"message": "Account disabled successfully"}
+
+@app.get("/debug/me")
+async def debug_me(current_user=Depends(get_current_user)):
+    return {
+        "id": current_user["id"],
+        "role": current_user["role"],
+        "is_active": current_user["is_active"],
+    }

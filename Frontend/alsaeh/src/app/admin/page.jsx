@@ -3,6 +3,12 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./admin.module.css";
+import { supabase } from "@/lib/supabase";
+
+async function getAdminToken() {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.access_token || null;
+}
 
 function getErrorMessage(detail, fallback) {
   if (Array.isArray(detail)) return detail[0]?.msg || fallback;
@@ -25,13 +31,26 @@ export default function AdminPage() {
 
 
 
-  useEffect(() => {
+ useEffect(() => {
     async function initAdmin() {
       try {
+        // Use Supabase session — same as dashboard pages
+        const { data } = await supabase.auth.getSession();
+
+        if (!data.session) {
+          router.replace("/login");
+          return;
+        }
+
+        const token = data.session.access_token;
+
         const authRes = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/auth/me`,
           {
-            credentials: "include",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            // Remove credentials: "include" — no cookies are used
           }
         );
 
@@ -42,13 +61,12 @@ export default function AdminPage() {
 
         const user = await authRes.json();
 
-        // Prevent logged in users from accessing admin page
         if (!user || user.role !== "admin") {
           router.replace("/dashboard");
           return;
         }
 
-        await loadOverview();
+        await loadOverview(token); // pass token down
       } catch (error) {
         console.error(error);
         router.replace("/login");
@@ -71,29 +89,29 @@ export default function AdminPage() {
   }
 
   async function loadOverview() {
-    setSectionLoading(true);
-    setError("");
+  setSectionLoading(true);
+  setError("");
+  try {
+    const token = await getAdminToken();
+    if (!token) { router.replace("/login"); return; }
 
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/overview`, {
-        credentials: "include",
-      });
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/overview`, {
+      headers: { Authorization: `Bearer ${token}` },
+      // No credentials: "include"
+    });
 
-      const result = await safeJson(res);
-
-      if (!res.ok) {
-        setError(getErrorMessage(result.detail, "Failed to load overview"));
-        return;
-      }
-
-      setOverview(result);
-    } catch (error) {
-      console.error(error);
-      setError("Unable to connect to server");
-    } finally {
-      setSectionLoading(false);
+    const result = await safeJson(res);
+    if (!res.ok) {
+      setError(getErrorMessage(result.detail, "Failed to load overview"));
+      return;
     }
+    setOverview(result);
+  } catch {
+    setError("Unable to connect to server");
+  } finally {
+    setSectionLoading(false);
   }
+}
 
   async function loadUsers() {
     setSectionLoading(true);
