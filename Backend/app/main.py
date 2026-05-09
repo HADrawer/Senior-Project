@@ -30,14 +30,20 @@ client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 FRONTEND_URL = os.getenv("FRONTEND_URL", "https://senior-project-flame.vercel.app")
 SESSION_HOURS = int(os.getenv("SESSION_HOURS", "24"))
 
-
-
+# Build allowed origins list, removing trailing slashes
+allowed_origins = [
+    FRONTEND_URL.rstrip("/"),
+    "https://senior-project-flame.vercel.app",
+    "http://localhost:3000",
+]
+# Remove duplicates while preserving order
+allowed_origins = list(dict.fromkeys(allowed_origins))
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_URL],
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
 )
 GEMINI_MODELS = [
