@@ -29,12 +29,9 @@ export default function AdminPage() {
   const [sectionLoading, setSectionLoading] = useState(false);
   const [error, setError] = useState("");
 
-
-
- useEffect(() => {
+  useEffect(() => {
     async function initAdmin() {
       try {
-        // Use Supabase session — same as dashboard pages
         const { data } = await supabase.auth.getSession();
 
         if (!data.session) {
@@ -50,7 +47,6 @@ export default function AdminPage() {
             headers: {
               Authorization: `Bearer ${token}`,
             },
-            // Remove credentials: "include" — no cookies are used
           }
         );
 
@@ -66,7 +62,7 @@ export default function AdminPage() {
           return;
         }
 
-        await loadOverview(token); // pass token down
+        await loadOverview(token);
       } catch (error) {
         console.error(error);
         router.replace("/login");
@@ -78,8 +74,6 @@ export default function AdminPage() {
     initAdmin();
   }, [router]);
 
-
-
   async function safeJson(res) {
     try {
       return await res.json();
@@ -88,38 +82,48 @@ export default function AdminPage() {
     }
   }
 
-  async function loadOverview() {
-  setSectionLoading(true);
-  setError("");
-  try {
-    const token = await getAdminToken();
-    if (!token) { router.replace("/login"); return; }
+  async function loadOverview(tokenParam) {
+    setSectionLoading(true);
+    setError("");
+    try {
+      const token = tokenParam || await getAdminToken();
+      if (!token) {
+        router.replace("/login");
+        return;
+      }
 
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/overview`, {
-      headers: { Authorization: `Bearer ${token}` },
-      // No credentials: "include"
-    });
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/overview`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-    const result = await safeJson(res);
-    if (!res.ok) {
-      setError(getErrorMessage(result.detail, "Failed to load overview"));
-      return;
+      const result = await safeJson(res);
+      if (!res.ok) {
+        setError(getErrorMessage(result.detail, "Failed to load overview"));
+        return;
+      }
+      setOverview(result);
+    } catch {
+      setError("Unable to connect to server");
+    } finally {
+      setSectionLoading(false);
     }
-    setOverview(result);
-  } catch {
-    setError("Unable to connect to server");
-  } finally {
-    setSectionLoading(false);
   }
-}
 
   async function loadUsers() {
     setSectionLoading(true);
     setError("");
 
     try {
+      const token = await getAdminToken();
+      if (!token) {
+        router.replace("/login");
+        return;
+      }
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/users`, {
-        credentials: "include",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       const result = await safeJson(res);
@@ -143,8 +147,16 @@ export default function AdminPage() {
     setError("");
 
     try {
+      const token = await getAdminToken();
+      if (!token) {
+        router.replace("/login");
+        return;
+      }
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/plans`, {
-        credentials: "include",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       const result = await safeJson(res);
@@ -168,8 +180,16 @@ export default function AdminPage() {
     setError("");
 
     try {
+      const token = await getAdminToken();
+      if (!token) {
+        router.replace("/login");
+        return;
+      }
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/logs`, {
-        credentials: "include",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       const result = await safeJson(res);
@@ -199,12 +219,18 @@ export default function AdminPage() {
 
   async function updateUser(userId, payload) {
     try {
+      const token = await getAdminToken();
+      if (!token) {
+        router.replace("/login");
+        return;
+      }
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/users/${userId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-        credentials: "include",
         body: JSON.stringify(payload),
       });
 
@@ -227,9 +253,17 @@ export default function AdminPage() {
     if (!confirmed) return;
 
     try {
+      const token = await getAdminToken();
+      if (!token) {
+        router.replace("/login");
+        return;
+      }
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/users/${userId}`, {
         method: "DELETE",
-        credentials: "include",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       const result = await safeJson(res);
@@ -248,12 +282,18 @@ export default function AdminPage() {
 
   async function updatePlan(planId, payload) {
     try {
+      const token = await getAdminToken();
+      if (!token) {
+        router.replace("/login");
+        return;
+      }
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/plans/${planId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-        credentials: "include",
         body: JSON.stringify(payload),
       });
 
@@ -276,9 +316,17 @@ export default function AdminPage() {
     if (!confirmed) return;
 
     try {
+      const token = await getAdminToken();
+      if (!token) {
+        router.replace("/login");
+        return;
+      }
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/plans/${planId}`, {
         method: "DELETE",
-        credentials: "include",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       const result = await safeJson(res);
