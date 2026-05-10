@@ -881,7 +881,7 @@ export default function PlanDetailsPage() {
                   className={styles.primaryButton}
                   disabled={saving}
                 >
-                  {saving ? "Saving..." : "Save Changes"}
+                  {saving ? "Rebuilding plan..." : "Save Changes"}
                 </button>
               </div>
             </form>

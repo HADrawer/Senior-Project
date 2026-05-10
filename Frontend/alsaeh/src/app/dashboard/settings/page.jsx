@@ -90,7 +90,8 @@ export default function SettingsPage() {
       dataPrivacy: "Data & Privacy",
       exportData: "Export My Data",
       deleteAccount: "Delete Account",
-      deleteWarning: "This disables your account. Type DELETE to confirm.",
+      deleteWarning:
+        "This permanently deletes your account, plans, logs, and saved profile data. Type DELETE to confirm.",
       support: "Support",
       supportText: "For support, contact the project team or your system administrator.",
       about: "About",
@@ -126,7 +127,7 @@ export default function SettingsPage() {
       dataPrivacy: "البيانات والخصوصية",
       exportData: "تنزيل بياناتي",
       deleteAccount: "حذف الحساب",
-      deleteWarning: "سيتم تعطيل حسابك. اكتب DELETE للتأكيد.",
+      deleteWarning: "سيتم حذف حسابك وخططك وسجلاتك وبياناتك نهائيا. اكتب DELETE للتأكيد.",
       support: "الدعم",
       supportText: "للدعم، تواصل مع فريق المشروع أو مسؤول النظام.",
       about: "حول التطبيق",
@@ -417,8 +418,9 @@ export default function SettingsPage() {
         return;
       }
 
+      sessionStorage.clear();
       await supabase.auth.signOut();
-      router.replace("/login");
+      router.replace("/");
     } catch (error) {
       console.error(error);
       setError("Unable to connect to server");
@@ -665,7 +667,7 @@ export default function SettingsPage() {
               <span className={styles.settingsSectionIcon}>R</span>
               <div>
                 <h2>{t.dataPrivacy}</h2>
-                <p>Download your stored profile and plans, or disable your account.</p>
+                <p>Download your stored profile and plans, or permanently delete your account.</p>
               </div>
             </div>
 

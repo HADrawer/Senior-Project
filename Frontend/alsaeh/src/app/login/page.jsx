@@ -86,7 +86,18 @@ export default function LoginPage() {
     async function checkAuth() {
       try {
         const { data } = await supabase.auth.getSession();
-        if (data.session) router.replace("/dashboard");
+        if (!data.session) return;
+
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
+          headers: { Authorization: `Bearer ${data.session.access_token}` },
+        });
+
+        if (res.ok) {
+          router.replace("/dashboard");
+          return;
+        }
+
+        await supabase.auth.signOut();
       } catch {}
       finally { setCheckingAuth(false); }
     }
@@ -105,7 +116,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: form.email,
         password: form.password,
       });
@@ -114,6 +125,29 @@ export default function LoginPage() {
         setError(getErrorMessage(error, t.fallbackError));
         return;
       }
+
+      const token = data.session?.access_token;
+      if (!token) {
+        setError(t.fallbackError);
+        return;
+      }
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) {
+        const result = await res.json().catch(() => ({}));
+        await supabase.auth.signOut();
+        setError(
+          getErrorMessage(
+            result.detail,
+            "This account is disabled. Contact an administrator."
+          )
+        );
+        return;
+      }
+
       router.replace("/dashboard");
     } catch {
       setError(t.fallbackError);

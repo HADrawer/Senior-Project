@@ -126,7 +126,7 @@ export default function HomePage() {
       </header>
 
       {/* ── Hero ────────────────────────────────────────────── */}
-      <section className={styles.hero}>
+      <section className={`${styles.hero} ${styles.reveal}`}>
         <div className={styles.heroContent}>
           <span className={styles.heroLabel}>{t.heroLabel}</span>
           <h1 className={styles.heroTitle}>{t.heroTitle}</h1>
@@ -163,7 +163,7 @@ export default function HomePage() {
         </div>
 
         {/* Hero visual */}
-        <div className={styles.heroVisual} aria-hidden>
+        <div className={`${styles.heroVisual} ${styles.revealDelay}`} aria-hidden>
           <div className={styles.visualCard}>
             <div className={styles.visualCardHeader}>
               <div className={styles.visualDot} style={{ background: "#F04060" }} />
@@ -193,13 +193,17 @@ export default function HomePage() {
       {/* ── Features ────────────────────────────────────────── */}
       <section className={styles.features}>
         <div className={styles.featuresInner}>
-          <div className={styles.sectionHead}>
+          <div className={`${styles.sectionHead} ${styles.reveal}`}>
             <h2 className={styles.featuresTitle}>{t.featuresTitle}</h2>
             <p className={styles.featuresSubtitle}>{t.featureSubtitle}</p>
           </div>
           <div className={styles.featureGrid}>
             {t.features.map((f, i) => (
-              <div key={i} className={styles.featureCard}>
+              <div
+                key={i}
+                className={`${styles.featureCard} ${styles.reveal}`}
+                style={{ animationDelay: `${i * 80}ms` }}
+              >
                 <div className={styles.featureIcon}>{f.icon}</div>
                 <h3 className={styles.featureCardTitle}>{f.title}</h3>
                 <p className={styles.featureCardText}>{f.text}</p>
@@ -210,7 +214,7 @@ export default function HomePage() {
       </section>
 
       {/* ── About ───────────────────────────────────────────── */}
-      <section className={styles.about}>
+      <section className={`${styles.about} ${styles.reveal}`}>
         <div className={styles.aboutGrid}>
           <div className={styles.aboutCard}>
             <h3 className={styles.aboutCardTitle}>{t.aboutTitle}</h3>

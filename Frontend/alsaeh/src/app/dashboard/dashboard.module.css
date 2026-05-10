@@ -2,6 +2,7 @@
   min-height: 100vh;
   display: grid;
   grid-template-columns: 290px 1fr;
+  align-items: start;
   background:
     radial-gradient(circle at top, rgba(186, 12, 47, 0.08), transparent 30%),
     linear-gradient(180deg, var(--bg-main) 0%, var(--bg-secondary) 100%);
@@ -895,6 +896,204 @@
   justify-content: center;
 }
 
+.aboutDashboardHero,
+.aboutInfoGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+  gap: 22px;
+  margin-bottom: 22px;
+  align-items: stretch;
+}
+
+.aboutDashboardHero .detailsCard,
+.aboutInfoGrid .detailsCard {
+  min-width: 0;
+}
+
+.aboutVisualCard {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 18px;
+  color: white;
+  background:
+    linear-gradient(135deg, rgba(10, 74, 98, 0.92), rgba(192, 18, 48, 0.78)),
+    var(--primary);
+  border-color: rgba(255, 255, 255, 0.18);
+  overflow: hidden;
+  position: relative;
+}
+
+.aboutVisualCard::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.aboutVisualCard > * {
+  position: relative;
+}
+
+.aboutVisualCard span {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.aboutVisualCard strong {
+  max-width: 360px;
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 3vw, 2.6rem);
+  line-height: 1.1;
+}
+
+.aboutVisualList {
+  display: grid;
+  gap: 10px;
+}
+
+.aboutVisualList p {
+  margin: 0;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.12);
+  color: white;
+  font-weight: 700;
+}
+
+.aboutObjectiveGrid,
+.aboutTeamGrid,
+.aboutStackGrid {
+  display: grid;
+  gap: 16px;
+}
+
+.aboutObjectiveGrid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 22px;
+}
+
+.aboutObjectiveCard,
+.aboutTeamCard,
+.aboutStackItem {
+  border: 1px solid var(--border-soft);
+  border-radius: 18px;
+  background: var(--bg-hover);
+}
+
+.aboutObjectiveCard {
+  min-height: 220px;
+  padding: 18px;
+}
+
+.aboutObjectiveCard span {
+  display: block;
+  margin-bottom: 18px;
+  color: var(--primary);
+  font-family: var(--font-display);
+  font-size: 2.2rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.aboutObjectiveCard h3,
+.aboutTeamCard h3 {
+  margin: 0 0 10px;
+  color: var(--text-main);
+  font-size: 1rem;
+}
+
+.aboutObjectiveCard p,
+.aboutTeamCard span,
+.aboutSupervisor p,
+.aboutArchitecture span {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.6;
+  font-size: 0.92rem;
+}
+
+.aboutStackGrid {
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
+.aboutStackItem {
+  padding: 14px;
+}
+
+.aboutStackItem span,
+.aboutSupervisor span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.aboutStackItem strong,
+.aboutSupervisor strong {
+  display: block;
+  color: var(--text-main);
+}
+
+.aboutArchitecture {
+  display: grid;
+  gap: 10px;
+}
+
+.aboutArchitecture span {
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: var(--bg-hover);
+  font-weight: 700;
+}
+
+.aboutTeamGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 22px;
+}
+
+.aboutTeamCard {
+  padding: 20px;
+  text-align: center;
+}
+
+.aboutAvatar {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), #0a4a62);
+  color: white;
+  font-weight: 900;
+}
+
+.aboutSupervisor {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.aboutSupervisor > div {
+  border: 1px solid var(--border-soft);
+  border-radius: 18px;
+  padding: 18px;
+  background: var(--bg-hover);
+}
+
 .settingsSideColumn .deleteAccountBox {
   margin-top: 2px;
 }
@@ -1095,12 +1294,17 @@ html[data-theme="dark"] .navItem:hover {
   box-shadow: var(--shadow-sm);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  min-height: 100vh;
+  align-self: start;
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100vh;
+  max-height: 100dvh;
   position: sticky;
   top: 0;
   justify-content: flex-start;
   gap: 24px;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .sidebarMain {
@@ -1481,6 +1685,8 @@ html[data-theme="dark"] .navItem:hover {
 
 @media (max-width: 920px) {
   .sidebar {
+    height: auto;
+    max-height: none;
     min-height: auto;
     position: static;
   }
@@ -1926,6 +2132,19 @@ html[data-theme="dark"] .label {
   }
 }
 
+@media (max-width: 1100px) {
+  .aboutDashboardHero,
+  .aboutInfoGrid,
+  .aboutSupervisor {
+    grid-template-columns: 1fr;
+  }
+
+  .aboutObjectiveGrid,
+  .aboutTeamGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 640px) {
   .settingsOverviewGrid {
     grid-template-columns: 1fr;
@@ -1961,5 +2180,17 @@ html[data-theme="dark"] .label {
   .editPlanCard .cancelButton,
   .editPlanCard .primaryButton {
     width: 100%;
+  }
+
+  .aboutObjectiveGrid,
+  .aboutTeamGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .aboutVisualCard,
+  .aboutObjectiveCard,
+  .aboutTeamCard,
+  .aboutSupervisor > div {
+    border-radius: 16px;
   }
 }

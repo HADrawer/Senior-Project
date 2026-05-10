@@ -20,6 +20,7 @@ export default function DashboardLayout({ children }) {
       brand: "Alsaeh.bh",
       dashboard: "Dashboard",
       createPlan: "Create Plan",
+      about: "About",
       settings: "Settings",
       admin: "Admin",
       logout: "Logout",
@@ -50,6 +51,7 @@ export default function DashboardLayout({ children }) {
   useEffect(() => {
     router.prefetch("/dashboard");
     router.prefetch("/dashboard/create-plan");
+    router.prefetch("/dashboard/about");
     router.prefetch("/dashboard/settings");
   }, [router]);
 
@@ -65,8 +67,6 @@ export default function DashboardLayout({ children }) {
       if (cached) {
         try {
           setUser(JSON.parse(cached));
-          setCheckingAuth(false);
-          return;
         } catch {
           sessionStorage.removeItem("auth_user");
         }
@@ -84,7 +84,9 @@ export default function DashboardLayout({ children }) {
         });
 
         if (!res.ok) {
-          router.replace("/login");
+          sessionStorage.clear();
+          await supabase.auth.signOut();
+          router.replace("/");
           return;
         }
 
@@ -99,6 +101,30 @@ export default function DashboardLayout({ children }) {
     }
 
     loadUser();
+  }, [router]);
+
+  useEffect(() => {
+    async function verifyAccountStatus() {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (!data.session) return;
+
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
+          headers: { Authorization: `Bearer ${data.session.access_token}` },
+        });
+
+        if (!res.ok) {
+          sessionStorage.clear();
+          await supabase.auth.signOut();
+          router.replace("/");
+        }
+      } catch {
+        return;
+      }
+    }
+
+    const intervalId = window.setInterval(verifyAccountStatus, 15000);
+    return () => window.clearInterval(intervalId);
   }, [router]);
 
   function toggleLanguage() {
@@ -171,10 +197,19 @@ export default function DashboardLayout({ children }) {
               {t.settings}
             </Link>
 
+            <Link
+              href="/dashboard/about"
+              className={`${styles.navItem} ${
+                pathname === "/dashboard/about" ? styles.activeNavItem : ""
+              }`}
+            >
+              {t.about || "About"}
+            </Link>
+
             {user?.role === "admin" && (
               <Link
                 href="/admin"
-                className={`${styles.navItem} ${styles.adminNavItem} ${styles.activeNavItem}`}
+                className={`${styles.navItem} ${styles.adminNavItem}`}
               >
                 {t.admin || "Admin"}
               </Link>

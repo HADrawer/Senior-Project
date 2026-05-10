@@ -1,6 +1,7 @@
 import os
 import json
 import time
+import httpx
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,7 +11,7 @@ from google import genai
 from google.genai import errors
 from urllib.parse import quote_plus
 
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user, invalidate_auth_cache_for_user
 from app.db import get_conn
 from app.schemas import (
     UpdatePlanRequest,
@@ -341,13 +342,195 @@ def get_plan(plan_id: int, current_user = Depends(get_current_user)):
 
     return plan
 
+def clean_ai_json(raw_text: str) -> str:
+    raw_text = raw_text.strip()
+
+    if raw_text.startswith("```json"):
+        raw_text = raw_text.replace("```json", "", 1).strip()
+
+    if raw_text.startswith("```"):
+        raw_text = raw_text.replace("```", "", 1).strip()
+
+    if raw_text.endswith("```"):
+        raw_text = raw_text[:-3].strip()
+
+    return raw_text
+
+
+def parse_interests(value: str | None) -> list[str]:
+    interests = [
+        interest.strip()
+        for interest in (value or "").split(",")
+        if interest.strip()
+    ]
+
+    return interests or ["Bahrain tourism"]
+
+
+def build_plan_prompt_from_values(
+    title: str,
+    days: int,
+    budget: float | None,
+    interests: list[str],
+    travel_style: str | None,
+    preferences: str | None,
+    constraints: list[str] | None,
+    people_count: int,
+    language: str = "auto",
+    category: str | None = None,
+    place: str | None = None,
+) -> str:
+        interests_text = ", ".join(interests)
+        constraints_text = ", ".join(constraints or [])
+
+        language_instruction = (
+            "Detect the user's language from the input and reply in the same language."
+            if language == "auto"
+            else f"Reply in this language: {language}."
+        )
+
+        category_instruction = (
+            f"Preferred category: {category}."
+            if category
+            else "Preferred category: any suitable Bahrain tourism category."
+        )
+        place_instruction = (
+            f"Preferred place or area: {place}."
+            if place
+            else "Preferred place or area: any suitable place in Bahrain."
+        )
+
+        return f"""
+    You are Alsaeh.bh, an AI tourism planner specialized only in Bahrain tourism.
+
+    Your task is to generate a realistic tourism itinerary in Bahrain only.
+
+    User input:
+    Title: {title}
+    Days: {days}
+    Budget in BHD: {budget}
+    Interests: {interests_text}
+    Travel style: {travel_style}
+    Preferences: {preferences}
+    Constraints: {constraints_text}
+    People count: {people_count}
+    {category_instruction}
+    {place_instruction}
+
+    Language rule:
+    {language_instruction}
+
+    Rules:
+    - Only recommend places, activities, restaurants, cafes, museums, beaches, shopping areas, and attractions located in Bahrain.
+    - Do not answer anything unrelated to Bahrain tourism.
+    - If the request is unrelated, return JSON with "refused": true.
+    - Keep the itinerary realistic.
+    - Match the budget if provided.
+    - Return ONLY valid JSON.
+    - Do not return markdown.
+    - Do not use ```json.
+    - Do not add text outside JSON.
+    - All user-facing text inside the JSON must follow the language rule.
+    - Consider the number of people when estimating costs.
+    - Budget is for the whole group, not one person.
+    - Reconstruct the full itinerary from the latest user input.
+    - The number of objects in the days array must match Days exactly.
+    - The itinerary must reflect the latest interests, travel style, preferences, preferred category, preferred place or area, budget, and people count.
+    - For each activity, include a real Bahrain location name.
+    - For each activity, include location_area such as Manama, Muharraq, Seef, Riffa, Zallaq, etc.
+    - For google_maps_query, write a search query using this format: place name + area + Bahrain.
+    - Do not invent coordinates.
+    - Do not invent Google Maps URLs.
+    - Do not give generic suggestions such as "a local restaurant", "a nearby cafe", "a hotel", or "a beach".
+    - Always provide exact real place names in Bahrain.
+    - If recommending a restaurant, cafe, hotel, museum, attraction, mall, or beach, use its exact known name.
+    - Each activity name must be a specific real place or activity location.
+    - location_name must match the exact place name.
+    - google_maps_query must include the exact place name, area, and Bahrain.
+
+    Return this exact JSON structure:
+    {{
+    "refused": false,
+    "title": "string",
+    "summary": "string",
+    "estimated_total_budget_bhd": 0,
+    "days": [
+        {{
+        "day_number": 1,
+        "theme": "string",
+        "activities": [
+            {{
+            "time": "string",
+            "name": "string",
+            "type": "string",
+            "location_name": "string",
+            "location_area": "string",
+            "google_maps_query": "string",
+            "estimated_cost_bhd": 0,
+            "notes": "string"
+            }}
+        ]
+        }}
+    ],
+    "tips": ["string"]
+    }}
+    """
+
+
+def build_plan_prompt(data: GenerateAIPlanRequest) -> str:
+    return build_plan_prompt_from_values(
+        title=data.title,
+        days=data.days,
+        budget=data.budget,
+        interests=data.interests,
+        travel_style=data.travel_style,
+        preferences=data.preferences,
+        constraints=data.constraints,
+        people_count=data.people_count,
+        language=data.language,
+    )
+
+
+def generate_plan_details_from_update(data: UpdatePlanRequest):
+    try:
+        prompt = build_plan_prompt_from_values(
+            title=data.title,
+            days=data.days,
+            budget=data.budget,
+            interests=parse_interests(data.user_interests),
+            travel_style=data.travel_styles,
+            preferences=data.preferences,
+            constraints=None,
+            people_count=data.people_count or 1,
+            category=data.category,
+            place=data.place,
+        )
+
+        response = generate_with_retry(prompt)
+        generated_plan = json.loads(clean_ai_json(response.text))
+        generated_plan = add_google_maps_links(generated_plan)
+
+        if generated_plan.get("refused") is True:
+            raise HTTPException(
+                status_code=400,
+                detail="This request is outside Bahrain tourism planning."
+            )
+
+        return generated_plan
+
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=500, detail="AI returned invalid JSON")
+
+
 @app.put("/plans/{plan_id}")
 def update_plan(plan_id: int, data: UpdatePlanRequest, current_user = Depends(get_current_user)):
+    generated_plan_details = None
+
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT id
+                SELECT id, generated_by_ai
                 FROM plans
                 WHERE id = %s
                   AND user_id = %s
@@ -357,9 +540,14 @@ def update_plan(plan_id: int, data: UpdatePlanRequest, current_user = Depends(ge
             )
             existing_plan = cur.fetchone()
 
-            if not existing_plan:
-                raise HTTPException(status_code=404, detail="Plan not found")
+    if not existing_plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
 
+    if existing_plan.get("generated_by_ai"):
+        generated_plan_details = generate_plan_details_from_update(data)
+
+    with get_conn() as conn:
+        with conn.cursor() as cur:
             cur.execute(
                 """
                 UPDATE plans
@@ -372,6 +560,7 @@ def update_plan(plan_id: int, data: UpdatePlanRequest, current_user = Depends(ge
                     travel_styles = %s,
                     category = %s,
                     place = %s,
+                    plan_details_json = COALESCE(%s, plan_details_json),
                     people_count = %s,
                     updated_at = NOW()
                 WHERE id = %s
@@ -387,6 +576,7 @@ def update_plan(plan_id: int, data: UpdatePlanRequest, current_user = Depends(ge
                     data.travel_styles,
                     data.category,
                     data.place,
+                    json.dumps(generated_plan_details) if generated_plan_details is not None else None,
                     data.people_count,
                     plan_id,
                     current_user["id"],
@@ -407,6 +597,7 @@ def update_plan(plan_id: int, data: UpdatePlanRequest, current_user = Depends(ge
     return {
         "message": "Plan updated successfully",
         "plan_id": updated_plan["id"],
+        "regenerated": generated_plan_details is not None,
     }
 
 
@@ -455,87 +646,6 @@ def delete_plan(plan_id: int, current_user = Depends(get_current_user)):
 
     return {"message": "Plan deleted successfully"}
 
-def build_plan_prompt(data: GenerateAIPlanRequest) -> str:
-        interests_text = ", ".join(data.interests)
-        constraints_text = ", ".join(data.constraints or [])
-
-        language_instruction = (
-            "Detect the user's language from the input and reply in the same language."
-            if data.language == "auto"
-            else f"Reply in this language: {data.language}."
-        )
-
-        return f"""
-    You are Alsaeh.bh, an AI tourism planner specialized only in Bahrain tourism.
-
-    Your task is to generate a realistic tourism itinerary in Bahrain only.
-
-    User input:
-    Title: {data.title}
-    Days: {data.days}
-    Budget in BHD: {data.budget}
-    Interests: {interests_text}
-    Travel style: {data.travel_style}
-    Preferences: {data.preferences}
-    Constraints: {constraints_text}
-    People count: {data.people_count}
-
-    Language rule:
-    {language_instruction}
-
-    Rules:
-    - Only recommend places, activities, restaurants, cafes, museums, beaches, shopping areas, and attractions located in Bahrain.
-    - Do not answer anything unrelated to Bahrain tourism.
-    - If the request is unrelated, return JSON with "refused": true.
-    - Keep the itinerary realistic.
-    - Match the budget if provided.
-    - Return ONLY valid JSON.
-    - Do not return markdown.
-    - Do not use ```json.
-    - Do not add text outside JSON.
-    - All user-facing text inside the JSON must follow the language rule.
-    - Consider the number of people when estimating costs.
-    - Budget is for the whole group, not one person.
-    - For each activity, include a real Bahrain location name.
-    - For each activity, include location_area such as Manama, Muharraq, Seef, Riffa, Zallaq, etc.
-    - For google_maps_query, write a search query using this format: place name + area + Bahrain.
-    - Do not invent coordinates.
-    - Do not invent Google Maps URLs.
-    - Do not give generic suggestions such as "a local restaurant", "a nearby cafe", "a hotel", or "a beach".
-    - Always provide exact real place names in Bahrain.
-    - If recommending a restaurant, cafe, hotel, museum, attraction, mall, or beach, use its exact known name.
-    - Each activity name must be a specific real place or activity location.
-    - location_name must match the exact place name.
-    - google_maps_query must include the exact place name, area, and Bahrain.
-
-    Return this exact JSON structure:
-    {{
-    "refused": false,
-    "title": "string",
-    "summary": "string",
-    "estimated_total_budget_bhd": 0,
-    "days": [
-        {{
-        "day_number": 1,
-        "theme": "string",
-        "activities": [
-            {{
-            "time": "string",
-            "name": "string",
-            "type": "string",
-            "location_name": "string",
-            "location_area": "string",
-            "google_maps_query": "string",
-            "estimated_cost_bhd": 0,
-            "notes": "string"
-            }}
-        ]
-        }}
-    ],
-    "tips": ["string"]
-    }}
-    """
-
 @app.post("/ai/generate-plan")
 def generate_ai_plan(data: GenerateAIPlanRequest, current_user=Depends(get_current_user)):
     try:
@@ -543,18 +653,7 @@ def generate_ai_plan(data: GenerateAIPlanRequest, current_user=Depends(get_curre
 
         response = generate_with_retry(prompt)
 
-        raw_text = response.text.strip()
-
-        if raw_text.startswith("```json"):
-            raw_text = raw_text.replace("```json", "", 1).strip()
-
-        if raw_text.startswith("```"):
-            raw_text = raw_text.replace("```", "", 1).strip()
-
-        if raw_text.endswith("```"):
-            raw_text = raw_text[:-3].strip()
-
-        generated_plan = json.loads(raw_text)
+        generated_plan = json.loads(clean_ai_json(response.text))
         generated_plan = add_google_maps_links(generated_plan)
 
         if generated_plan.get("refused") is True:
@@ -1033,6 +1132,11 @@ def admin_get_users(current_user=Depends(get_current_user)):
 def admin_update_user(user_id: str, data: dict, current_user=Depends(get_current_user)):
     require_admin(current_user)
 
+    requested_active = data.get("is_active")
+
+    if user_id == current_user["id"] and requested_active is False:
+        raise HTTPException(status_code=400, detail="Admin cannot disable own account")
+
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -1050,7 +1154,7 @@ def admin_update_user(user_id: str, data: dict, current_user=Depends(get_current
                     data.get("full_name"),
                     data.get("phone_number"),
                     data.get("preferred_language"),
-                    data.get("is_active"),
+                    requested_active,
                     user_id,
                 )
             )
@@ -1061,6 +1165,9 @@ def admin_update_user(user_id: str, data: dict, current_user=Depends(get_current
                 raise HTTPException(status_code=404, detail="User not found")
 
             conn.commit()
+
+    if requested_active is not None:
+        invalidate_auth_cache_for_user(user_id)
 
     create_log(
         user_id=current_user["id"],
@@ -1080,34 +1187,28 @@ def admin_delete_user(user_id: str, current_user=Depends(get_current_user)):
     if user_id == current_user["id"]:
         raise HTTPException(status_code=400, detail="Admin cannot delete own account")
 
-    with get_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                UPDATE profiles
-                SET is_active = FALSE
-                WHERE id = %s
-                RETURNING id
-                """,
-                (user_id,)
-            )
+    service_role_key = (
+        os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+        or os.getenv("SUPABASE_SECRET_KEY")
+    )
 
-            deleted = cur.fetchone()
+    if not os.getenv("SUPABASE_URL") or not service_role_key:
+        raise HTTPException(
+            status_code=500,
+            detail="Supabase admin credentials are not configured."
+        )
 
-            if not deleted:
-                raise HTTPException(status_code=404, detail="User not found")
-
-            conn.commit()
+    delete_user_account_data(user_id, service_role_key)
 
     create_log(
         user_id=current_user["id"],
-        action_type="admin_disable_user",
+        action_type="admin_delete_user",
         entity_type="user",
         entity_id=user_id,
-        metadata={"message": "Admin disabled user account"},
+        metadata={"message": "Admin permanently deleted user account"},
     )
 
-    return {"message": "User disabled successfully"}
+    return {"message": "User deleted successfully"}
 @app.get("/admin/plans")
 def admin_get_plans(current_user=Depends(get_current_user)):
     require_admin(current_user)
@@ -1423,30 +1524,129 @@ def export_my_data(current_user=Depends(get_current_user)):
     }
 
 
-@app.delete("/settings/delete-account")
-def delete_my_account(current_user=Depends(get_current_user)):
+def delete_auth_user_from_supabase(user_id: str, service_role_key: str):
+    url = (
+        f"{os.getenv('SUPABASE_URL').rstrip('/')}"
+        f"/auth/v1/admin/users/{user_id}"
+    )
+
+    try:
+        response = httpx.delete(
+            url,
+            headers={
+                "Authorization": f"Bearer {service_role_key}",
+                "apikey": service_role_key,
+            },
+            timeout=10,
+        )
+    except httpx.HTTPError as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Could not delete Supabase Auth user: {str(e)}",
+        )
+
+    if response.status_code == 404:
+        return
+
+    if response.status_code not in (200, 204):
+        raise HTTPException(
+            status_code=502,
+            detail="Could not delete Supabase Auth user. Check service role credentials.",
+        )
+
+
+def delete_user_account_data(user_id: str, service_role_key: str):
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                UPDATE profiles
-                SET is_active = FALSE
+                SELECT id, email
+                FROM profiles
                 WHERE id = %s
                 """,
-                (current_user["id"],)
+                (user_id,)
             )
+            profile = cur.fetchone()
+
+            if not profile:
+                raise HTTPException(status_code=404, detail="User not found")
+
+            cur.execute(
+                "SELECT id FROM plans WHERE user_id = %s",
+                (user_id,)
+            )
+            plan_ids = [row["id"] for row in cur.fetchall()]
+            plan_id_strings = [str(plan_id) for plan_id in plan_ids]
+
+            cur.execute(
+                """
+                DELETE FROM messages
+                WHERE chat_session_id IN (
+                    SELECT id
+                    FROM chat_sessions
+                    WHERE user_id = %s
+                       OR plan_id = ANY(%s::bigint[])
+                )
+                """,
+                (user_id, plan_ids)
+            )
+
+            cur.execute(
+                """
+                DELETE FROM chat_sessions
+                WHERE user_id = %s
+                   OR plan_id = ANY(%s::bigint[])
+                """,
+                (user_id, plan_ids)
+            )
+
+            cur.execute(
+                """
+                DELETE FROM usage_logs
+                WHERE user_id = %s
+                   OR entity_id::text = %s
+                   OR (
+                        entity_type = 'plan'
+                        AND entity_id::text = ANY(%s::text[])
+                   )
+                """,
+                (user_id, str(user_id), plan_id_strings)
+            )
+
+            cur.execute(
+                "DELETE FROM plans WHERE user_id = %s",
+                (user_id,)
+            )
+
+            cur.execute(
+                "DELETE FROM profiles WHERE id = %s",
+                (user_id,)
+            )
+
+            delete_auth_user_from_supabase(user_id, service_role_key)
 
             conn.commit()
 
-    create_log(
-        user_id=current_user["id"],
-        action_type="delete_account",
-        entity_type="user",
-        entity_id=current_user["id"],
-        metadata={"message": "User disabled account"},
+    invalidate_auth_cache_for_user(user_id)
+
+
+@app.delete("/settings/delete-account")
+def delete_my_account(current_user=Depends(get_current_user)):
+    user_id = current_user["id"]
+    service_role_key = (
+        os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+        or os.getenv("SUPABASE_SECRET_KEY")
     )
 
-    return {"message": "Account disabled successfully"}
+    if not os.getenv("SUPABASE_URL") or not service_role_key:
+        raise HTTPException(
+            status_code=500,
+            detail="Supabase admin credentials are not configured."
+        )
+
+    delete_user_account_data(user_id, service_role_key)
+
+    return {"message": "Account deleted successfully"}
 
 @app.get("/debug/me")
 async def debug_me(current_user=Depends(get_current_user)):
