@@ -94,6 +94,26 @@
   gap: 10px;
 }
 
+.adminNavItem {
+  margin-top: 12px;
+  position: relative;
+}
+
+.adminNavItem::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -12px;
+  height: 1px;
+  background: var(--border-soft);
+}
+
+[dir="rtl"] .adminNavItem::before {
+  left: 0;
+  right: 0;
+}
+
 .navItem {
   text-decoration: none;
   color: var(--text-main);
@@ -177,6 +197,7 @@
 
 .contentArea {
   padding: 32px;
+  min-width: 0;
 }
 
 .pageContent {
@@ -742,6 +763,151 @@
   padding: 12px 16px;
 }
 
+.settingsHero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
+  gap: 24px;
+  align-items: stretch;
+}
+
+.settingsHeroCard,
+.settingsMiniCard {
+  border: 1px solid var(--border-soft);
+  background: var(--bg-hover);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+}
+
+.settingsHeroCard {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+}
+
+.settingsHeroCard span,
+.settingsMiniCard span,
+.settingsSectionHeader p,
+.settingsSectionHeader div > p {
+  color: var(--text-muted);
+}
+
+.settingsHeroCard strong {
+  color: var(--primary);
+  font-family: var(--font-display);
+  font-size: 1.9rem;
+  line-height: 1;
+}
+
+.settingsHeroCard small,
+.settingsMiniCard strong {
+  overflow-wrap: anywhere;
+}
+
+.settingsOverviewGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.settingsMiniCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  box-shadow: var(--shadow-sm);
+}
+
+.settingsMiniCard strong {
+  color: var(--text-main);
+  font-size: 1rem;
+}
+
+.settingsLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 390px);
+  gap: 22px;
+  align-items: start;
+}
+
+.settingsMainColumn,
+.settingsSideColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  min-width: 0;
+}
+
+.settingsSideColumn {
+  position: sticky;
+  top: 24px;
+}
+
+.settingsSection {
+  margin-bottom: 0;
+}
+
+.settingsSectionHeader {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.settingsSectionHeader h2,
+.settingsSectionHeader h3,
+.settingsSectionHeader p {
+  margin: 0;
+}
+
+.settingsSectionHeader p {
+  margin-top: 6px;
+  line-height: 1.6;
+}
+
+.settingsSectionIcon {
+  display: inline-flex;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: var(--primary-light);
+  color: var(--primary);
+  border: 1px solid var(--primary-mid);
+  font-weight: 900;
+}
+
+.settingsActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.settingsSideColumn .settingsSection {
+  padding: 22px;
+}
+
+.settingsSideColumn .settingsSection .secondaryActionButton,
+.settingsSideColumn .settingsSection .deleteButton,
+.settingsSideColumn .settingsSection .supportLink {
+  width: 100%;
+  justify-content: center;
+}
+
+.settingsSideColumn .deleteAccountBox {
+  margin-top: 2px;
+}
+
+.settingsSection button:disabled,
+.secondaryActionButton:disabled,
+.cancelButton:disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 /* Dark mode polish */
 html[data-theme="dark"] .dashboardPage {
   background:
@@ -911,5 +1077,889 @@ html[data-theme="dark"] .navItem:hover {
 
   .aiChatPanel {
     position: static;
+  }
+}
+
+/* Landing-page visual alignment */
+.dashboardPage {
+  background:
+    radial-gradient(circle at top right, rgba(192, 18, 48, 0.08), transparent 32%),
+    radial-gradient(circle at bottom left, rgba(192, 18, 48, 0.05), transparent 28%),
+    var(--bg-main);
+  font-family: var(--font-body);
+}
+
+.sidebar {
+  background: rgba(255, 255, 255, 0.82);
+  border-right-color: var(--border-soft);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  min-height: 100vh;
+  position: sticky;
+  top: 0;
+  justify-content: flex-start;
+  gap: 24px;
+  overflow-y: auto;
+}
+
+.sidebarMain {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.brand,
+.pageTitle,
+.planTitle,
+.blockTitle,
+.settingsSection h2,
+.settingsSubForm h3,
+.aiChatHeader h3,
+.createHeader h1 {
+  font-family: var(--font-display);
+  letter-spacing: 0;
+}
+
+.brand {
+  font-size: 1.3rem;
+}
+
+.logoMark {
+  width: 6px;
+  height: 38px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 60%, transparent) 100%);
+  box-shadow: none;
+}
+
+.userBox,
+.statsCard,
+.planCard,
+.detailsCard,
+.aiCreateCard,
+.aiChatPanel,
+.settingsSection,
+.emptyState,
+.createHeader {
+  border-color: var(--border-soft);
+  box-shadow: var(--shadow-card);
+}
+
+.userBox,
+.planCard,
+.detailsCard,
+.aiCreateCard,
+.aiChatPanel,
+.settingsSection,
+.emptyState {
+  border-radius: var(--radius-xl);
+}
+
+.userBox {
+  overflow: hidden;
+}
+
+.sidebarBottom {
+  margin-top: auto;
+  padding-top: 18px;
+}
+
+.userEmail {
+  overflow-wrap: anywhere;
+}
+
+.createHeader {
+  background:
+    radial-gradient(circle at top right, var(--primary-light), transparent 34%),
+    var(--bg-card);
+}
+
+.createBadge,
+.planStatus {
+  background: var(--primary-light);
+  color: var(--primary);
+  border: 1px solid var(--primary-mid);
+}
+
+.navItem {
+  background: transparent;
+  border-color: transparent;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+}
+
+.navItem:hover {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.activeNavItem {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+  box-shadow: 0 8px 24px rgba(192, 18, 48, 0.22);
+}
+
+.langBtn,
+.secondaryActionButton,
+.cancelButton,
+.mapButton,
+.supportLink,
+.passwordHeader button,
+.smallSecondary {
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+}
+
+.langBtn:hover,
+.secondaryActionButton:hover,
+.cancelButton:hover,
+.mapButton:hover,
+.supportLink:hover,
+.passwordHeader button:hover,
+.smallSecondary:hover {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.logoutBtn,
+.viewButton,
+.aiGenerateButton,
+.aiChatForm button {
+  border-radius: var(--radius-md);
+  background: var(--primary);
+  font-family: var(--font-body);
+  box-shadow: none;
+}
+
+.logoutBtn:hover,
+.viewButton:hover,
+.aiGenerateButton:hover,
+.aiChatForm button:hover {
+  background: var(--primary-hover);
+  box-shadow: 0 8px 24px rgba(192, 18, 48, 0.28);
+}
+
+.deleteButton {
+  border-radius: var(--radius-md);
+  background: #8f1222;
+  font-family: var(--font-body);
+}
+
+.detailItem,
+.deleteAccountBox,
+.aiChatHeader,
+.aiChatEmpty,
+.assistantChatBubble {
+  background: var(--bg-hover);
+  border-color: var(--border-soft);
+}
+
+.textarea,
+.input,
+.aiField input,
+.aiField select,
+.aiField textarea,
+.aiChatForm textarea,
+.deleteAccountBox input {
+  font-family: var(--font-body);
+  background: var(--bg-input);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.textarea:focus,
+.input:focus,
+.aiField input:focus,
+.aiField select:focus,
+.aiField textarea:focus,
+.aiChatForm textarea:focus,
+.deleteAccountBox input:focus {
+  border-color: var(--border-focus);
+  background: var(--bg-card);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.successMessage {
+  background: var(--success-bg);
+  color: var(--success-text);
+  border-color: var(--success-border);
+  border-radius: var(--radius-md);
+}
+
+.error {
+  background: var(--error-bg);
+  color: var(--error-text);
+  border: 1px solid var(--error-border);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  font-weight: 700;
+}
+
+html[data-theme="dark"] .dashboardPage {
+  background:
+    radial-gradient(circle at top right, rgba(240, 64, 96, 0.08), transparent 32%),
+    radial-gradient(circle at bottom left, rgba(240, 64, 96, 0.05), transparent 28%),
+    var(--bg-main);
+}
+
+html[data-theme="dark"] .sidebar {
+  background: rgba(30, 20, 16, 0.82);
+  border-color: var(--border-soft);
+}
+
+html[data-theme="dark"] .settingsSection,
+html[data-theme="dark"] .aiCreateCard,
+html[data-theme="dark"] .detailsCard,
+html[data-theme="dark"] .planCard,
+html[data-theme="dark"] .userBox,
+html[data-theme="dark"] .statsCard,
+html[data-theme="dark"] .emptyState,
+html[data-theme="dark"] .aiChatPanel,
+html[data-theme="dark"] .createHeader {
+  background: var(--bg-card);
+  color: var(--text-main);
+  border-color: var(--border-soft);
+  box-shadow: var(--shadow-card);
+}
+
+html[data-theme="dark"] .detailItem,
+html[data-theme="dark"] .deleteAccountBox,
+html[data-theme="dark"] .aiChatHeader,
+html[data-theme="dark"] .aiChatEmpty,
+html[data-theme="dark"] .assistantChatBubble {
+  background: var(--bg-hover);
+  color: var(--text-main);
+  border-color: var(--border-soft);
+}
+
+html[data-theme="dark"] .aiField input,
+html[data-theme="dark"] .aiField select,
+html[data-theme="dark"] .aiField textarea,
+html[data-theme="dark"] .input,
+html[data-theme="dark"] .textarea,
+html[data-theme="dark"] .aiChatForm textarea,
+html[data-theme="dark"] .deleteAccountBox input {
+  background: var(--bg-input);
+  color: var(--text-main);
+  border-color: var(--border);
+}
+
+html[data-theme="dark"] .secondaryActionButton,
+html[data-theme="dark"] .cancelButton,
+html[data-theme="dark"] .langBtn,
+html[data-theme="dark"] .mapButton,
+html[data-theme="dark"] .supportLink,
+html[data-theme="dark"] .passwordHeader button,
+html[data-theme="dark"] .smallSecondary {
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  border-color: var(--border);
+}
+
+html[data-theme="dark"] .secondaryActionButton:hover,
+html[data-theme="dark"] .cancelButton:hover,
+html[data-theme="dark"] .langBtn:hover,
+html[data-theme="dark"] .mapButton:hover,
+html[data-theme="dark"] .supportLink:hover,
+html[data-theme="dark"] .passwordHeader button:hover,
+html[data-theme="dark"] .smallSecondary:hover {
+  background: var(--primary-light);
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+html[data-theme="dark"] .aiGenerateButton,
+html[data-theme="dark"] .viewButton,
+html[data-theme="dark"] .logoutBtn,
+html[data-theme="dark"] .activeNavItem {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+html[data-theme="dark"] .aiGenerateButton:hover,
+html[data-theme="dark"] .viewButton:hover,
+html[data-theme="dark"] .logoutBtn:hover {
+  background: var(--primary-hover);
+}
+
+html[data-theme="dark"] .settingsSection h2,
+html[data-theme="dark"] .blockTitle,
+html[data-theme="dark"] .aiField label,
+html[data-theme="dark"] .aiChatHeader h3 {
+  color: var(--primary);
+}
+
+html[data-theme="dark"] .settingsSubForm h3,
+html[data-theme="dark"] .pageTitle,
+html[data-theme="dark"] .planTitle,
+html[data-theme="dark"] .userName,
+html[data-theme="dark"] .brand {
+  color: var(--text-main);
+}
+
+html[data-theme="dark"] .settingsText,
+html[data-theme="dark"] .pageSubtitle,
+html[data-theme="dark"] .planDescription,
+html[data-theme="dark"] .planMeta,
+html[data-theme="dark"] .detailLabel,
+html[data-theme="dark"] .userLabel,
+html[data-theme="dark"] .userEmail {
+  color: var(--text-muted);
+}
+
+html[data-theme="dark"] .navItem {
+  background: transparent;
+  color: var(--text-secondary);
+  border-color: transparent;
+}
+
+html[data-theme="dark"] .navItem:hover {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) .dashboardPage {
+    background:
+      radial-gradient(circle at top right, rgba(240, 64, 96, 0.08), transparent 32%),
+      radial-gradient(circle at bottom left, rgba(240, 64, 96, 0.05), transparent 28%),
+      var(--bg-main);
+  }
+
+  html:not([data-theme="light"]) .sidebar {
+    background: rgba(30, 20, 16, 0.94);
+    border-color: var(--border-soft);
+    box-shadow: var(--shadow-card);
+  }
+
+  html:not([data-theme="light"]) .brand,
+  html:not([data-theme="light"]) .userName {
+    color: var(--text-main);
+  }
+
+  html:not([data-theme="light"]) .userBox {
+    background: var(--bg-card);
+    border-color: var(--border-soft);
+    box-shadow: var(--shadow-card);
+  }
+
+  html:not([data-theme="light"]) .userLabel,
+  html:not([data-theme="light"]) .userEmail {
+    color: var(--text-muted);
+  }
+
+  html:not([data-theme="light"]) .navItem {
+    background: transparent;
+    color: var(--text-secondary);
+    border-color: transparent;
+  }
+
+  html:not([data-theme="light"]) .navItem:hover {
+    background: var(--primary-light);
+    color: var(--primary);
+  }
+
+  html:not([data-theme="light"]) .activeNavItem {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+  }
+
+  html:not([data-theme="light"]) .langBtn {
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    border-color: var(--border);
+  }
+}
+
+@media (max-width: 920px) {
+  .sidebar {
+    min-height: auto;
+    position: static;
+  }
+
+  .settingsHero,
+  .settingsLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .settingsSideColumn {
+    position: static;
+  }
+}
+
+/* Terminal-style plan assistant */
+.planDetailsLayout {
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 400px);
+  gap: 26px;
+}
+
+.editPlanLayout {
+  grid-template-columns: 1fr;
+}
+
+.aiChatPanel {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 48px);
+  min-height: 620px;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 24%),
+    #120c09;
+  border: 1px solid rgba(240, 64, 96, 0.22);
+  border-radius: var(--radius-xl);
+  box-shadow:
+    0 22px 60px rgba(0, 0, 0, 0.28),
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+  color: #f8efe9;
+}
+
+.aiChatHeader {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  background:
+    linear-gradient(180deg, rgba(240, 64, 96, 0.12), rgba(255, 255, 255, 0.02)),
+    #1b110d;
+  border-bottom: 1px solid rgba(240, 64, 96, 0.2);
+}
+
+.terminalChrome {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+}
+
+.terminalChrome span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #f04060;
+  box-shadow: 0 0 12px rgba(240, 64, 96, 0.45);
+}
+
+.terminalChrome span:nth-child(2) {
+  background: #f0a020;
+  box-shadow: 0 0 12px rgba(240, 160, 32, 0.35);
+}
+
+.terminalChrome span:nth-child(3) {
+  background: #20c070;
+  box-shadow: 0 0 12px rgba(32, 192, 112, 0.35);
+}
+
+.aiChatHeader h3 {
+  margin: 0 0 3px;
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 0.98rem;
+  letter-spacing: 0;
+}
+
+.aiChatHeader p {
+  margin: 0;
+  color: rgba(248, 239, 233, 0.62);
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.terminalStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  border: 1px solid rgba(32, 192, 112, 0.28);
+  border-radius: var(--radius-full);
+  color: #7af0ac;
+  background: rgba(32, 192, 112, 0.08);
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.terminalStatus::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 10px currentColor;
+}
+
+.aiChatMessages {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+  padding: 18px;
+  gap: 14px;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    #120c09;
+  background-size: 100% 34px;
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  scrollbar-color: rgba(240, 64, 96, 0.38) transparent;
+}
+
+.aiChatEmpty,
+.assistantChatBubble,
+.userChatBubble {
+  position: relative;
+  max-width: 100%;
+  border-radius: 12px;
+  padding: 13px 14px 13px 34px;
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  font-size: 0.86rem;
+  line-height: 1.65;
+  word-break: break-word;
+}
+
+.aiChatEmpty {
+  color: rgba(248, 239, 233, 0.72);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(240, 64, 96, 0.28);
+}
+
+.assistantChatBubble {
+  align-self: stretch;
+  color: #f8efe9;
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 3px solid rgba(240, 64, 96, 0.8);
+}
+
+.userChatBubble {
+  align-self: stretch;
+  color: #ffeef2;
+  background: rgba(240, 64, 96, 0.13);
+  border: 1px solid rgba(240, 64, 96, 0.28);
+  border-left: 3px solid #f04060;
+}
+
+.assistantChatBubble::before,
+.userChatBubble::before,
+.aiChatEmpty::before {
+  position: absolute;
+  left: 13px;
+  top: 13px;
+  color: #f04060;
+  font-weight: 800;
+}
+
+.assistantChatBubble::before,
+.aiChatEmpty::before {
+  content: "$";
+}
+
+.userChatBubble::before {
+  content: ">";
+}
+
+.aiChatForm {
+  padding: 14px;
+  gap: 12px;
+  background: #1b110d;
+  border-top: 1px solid rgba(240, 64, 96, 0.2);
+}
+
+.terminalPrompt {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  padding: 12px 13px;
+}
+
+.terminalPrompt span {
+  color: #f04060;
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  font-weight: 800;
+  line-height: 1.55;
+}
+
+.aiChatForm textarea {
+  min-height: 74px;
+  max-height: 180px;
+  padding: 0;
+  resize: vertical;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0;
+  box-shadow: none !important;
+  color: #f8efe9;
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.aiChatForm textarea::placeholder {
+  color: rgba(248, 239, 233, 0.45);
+}
+
+.aiChatForm button {
+  height: 46px;
+  border-radius: var(--radius-md);
+  background: #f04060;
+  color: #fff;
+  font-family: var(--font-body);
+}
+
+.aiChatForm button:hover:not(:disabled) {
+  background: #e02040;
+  box-shadow: 0 10px 24px rgba(240, 64, 96, 0.25);
+}
+
+html[data-theme="dark"] .aiChatPanel,
+html[data-theme="dark"] .aiChatHeader,
+html[data-theme="dark"] .aiChatMessages,
+html[data-theme="dark"] .aiChatForm,
+html[data-theme="dark"] .aiChatEmpty,
+html[data-theme="dark"] .assistantChatBubble {
+  color: #f8efe9;
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) .aiChatPanel,
+  html:not([data-theme="light"]) .aiChatHeader,
+  html:not([data-theme="light"]) .aiChatMessages,
+  html:not([data-theme="light"]) .aiChatForm,
+  html:not([data-theme="light"]) .aiChatEmpty,
+  html:not([data-theme="light"]) .assistantChatBubble {
+    color: #f8efe9;
+  }
+}
+
+@media (max-width: 1280px) {
+  .planDetailsLayout {
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 360px);
+  }
+}
+
+@media (max-width: 1100px) {
+  .planDetailsLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .aiChatPanel {
+    order: -1;
+    position: static;
+    min-height: 520px;
+    max-height: none;
+  }
+
+  .aiChatMessages {
+    min-height: 300px;
+    max-height: 520px;
+  }
+}
+
+@media (max-width: 640px) {
+  .aiChatHeader {
+    grid-template-columns: 1fr auto;
+  }
+
+  .terminalChrome {
+    display: none;
+  }
+
+  .terminalStatus {
+    align-self: start;
+  }
+
+  .aiChatPanel {
+    min-height: 480px;
+    border-radius: var(--radius-lg);
+  }
+
+  .aiChatMessages {
+    padding: 14px;
+  }
+
+  .aiChatEmpty,
+  .assistantChatBubble,
+  .userChatBubble {
+    font-size: 0.82rem;
+    padding-left: 30px;
+  }
+}
+
+/* Plan edit form polish */
+.editPlanCard {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  background:
+    radial-gradient(circle at top right, var(--primary-light), transparent 34%),
+    var(--bg-card);
+}
+
+.editPlanHeader {
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.editPlanHeader .blockTitle {
+  margin-top: 12px;
+  margin-bottom: 8px;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.label {
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.editPlanCard .formGrid {
+  gap: 18px;
+}
+
+.editPlanCard .input,
+.editPlanCard .textarea,
+.editPlanCard .aiField input,
+.editPlanCard .aiField select,
+.editPlanCard .aiField textarea {
+  min-height: 54px;
+  background: var(--bg-input);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-main);
+  font-family: var(--font-body);
+  font-size: 0.96rem;
+}
+
+.editPlanCard .input {
+  padding: 0 16px;
+}
+
+.editPlanCard .textarea,
+.editPlanCard .aiField textarea {
+  min-height: 124px;
+  padding: 14px 16px;
+}
+
+.editPlanCard .input:focus,
+.editPlanCard .textarea:focus,
+.editPlanCard .aiField input:focus,
+.editPlanCard .aiField select:focus,
+.editPlanCard .aiField textarea:focus {
+  background: var(--bg-card);
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.primaryButton {
+  min-height: 46px;
+  padding: 12px 18px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--primary);
+  color: #fff;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 800;
+  transition: all var(--transition);
+}
+
+.primaryButton:hover:not(:disabled) {
+  background: var(--primary-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(192, 18, 48, 0.28);
+}
+
+.primaryButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+  transform: none;
+  box-shadow: none;
+}
+
+.editPlanCard .detailsActions {
+  justify-content: flex-end;
+  padding-top: 4px;
+}
+
+.editPlanCard .cancelButton,
+.editPlanCard .primaryButton {
+  min-width: 150px;
+}
+
+html[data-theme="dark"] .editPlanCard {
+  background:
+    radial-gradient(circle at top right, var(--primary-light), transparent 34%),
+    var(--bg-card);
+}
+
+html[data-theme="dark"] .label {
+  color: var(--text-secondary);
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) .editPlanCard {
+    background:
+      radial-gradient(circle at top right, var(--primary-light), transparent 34%),
+      var(--bg-card);
+  }
+
+  html:not([data-theme="light"]) .label {
+    color: var(--text-secondary);
+  }
+}
+
+@media (max-width: 640px) {
+  .settingsOverviewGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .settingsHeroCard,
+  .settingsMiniCard,
+  .settingsSideColumn .settingsSection {
+    padding: 16px;
+  }
+
+  .settingsSectionHeader {
+    grid-template-columns: 1fr;
+  }
+
+  .settingsActions,
+  .settingsActions .aiGenerateButton {
+    width: 100%;
+  }
+
+  .settingsActions {
+    justify-content: stretch;
+  }
+
+  .editPlanCard {
+    padding: 20px;
+  }
+
+  .editPlanCard .detailsActions {
+    flex-direction: column-reverse;
+  }
+
+  .editPlanCard .cancelButton,
+  .editPlanCard .primaryButton {
+    width: 100%;
   }
 }

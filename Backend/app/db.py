@@ -2,23 +2,37 @@ import os
 import psycopg
 from psycopg.rows import dict_row
 from dotenv import load_dotenv
-import socket
 
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
+FORCE_DB_IPV4 = os.getenv("FORCE_DB_IPV4", "").lower() in {"1", "true", "yes"}
 
-
-# Force IPv4 to avoid IPv6 connectivity issues on some hosting platforms (e.g., Render)
-original_getaddrinfo = socket.getaddrinfo
-
-def ipv4_only_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
-    return original_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
 
 def get_conn():
-    # Temporarily force IPv4 for this connection
-    socket.getaddrinfo = ipv4_only_getaddrinfo
-    try:
-        return psycopg.connect(DATABASE_URL, row_factory=dict_row)
-    finally:
-        socket.getaddrinfo = original_getaddrinfo
+    if not DATABASE_URL:
+        raise RuntimeError("DATABASE_URL is not configured")
+
+    kwargs = {"row_factory": dict_row}
+
+    if FORCE_DB_IPV4:
+        kwargs["hostaddr"] = _resolve_ipv4_hostaddr(DATABASE_URL)
+
+    return psycopg.connect(DATABASE_URL, **kwargs)
+
+
+def _resolve_ipv4_hostaddr(database_url: str) -> str:
+    import socket
+    from urllib.parse import urlparse
+
+    host = urlparse(database_url).hostname
+
+    if not host:
+        raise RuntimeError("DATABASE_URL is missing a database host")
+
+    return socket.getaddrinfo(
+        host,
+        None,
+        socket.AF_INET,
+        socket.SOCK_STREAM,
+    )[0][4][0]

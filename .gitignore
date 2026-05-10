@@ -1,0 +1,8 @@
+.env
+.env.local
+Backend/.env
+Frontend/alsaeh/.env.local
+node_modules/
+.next/
+__pycache__/
+*.pyc

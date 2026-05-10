@@ -16,6 +16,9 @@ async function getAccessToken() {
   return data.session?.access_token || null;
 }
 
+const CATEGORIES_CACHE_KEY = "place_categories";
+const PLANS_CACHE_KEY = "dashboard_plans";
+
 export default function CreatePlanPage() {
   const router = useRouter();
 
@@ -126,6 +129,16 @@ export default function CreatePlanPage() {
 
   useEffect(() => {
     async function initPage() {
+      const cached = sessionStorage.getItem(CATEGORIES_CACHE_KEY);
+      if (cached) {
+        try {
+          setCategories(JSON.parse(cached));
+          setLoadingCategories(false);
+        } catch {
+          sessionStorage.removeItem(CATEGORIES_CACHE_KEY);
+        }
+      }
+
       const token = await getAccessToken();
 
       if (!token) {
@@ -160,6 +173,7 @@ export default function CreatePlanPage() {
       if (res.ok) {
         const data = await res.json();
         setCategories(data);
+        sessionStorage.setItem(CATEGORIES_CACHE_KEY, JSON.stringify(data));
       }
     } catch (error) {
       console.error("Load categories error:", error);
@@ -233,6 +247,7 @@ export default function CreatePlanPage() {
         return;
       }
 
+      sessionStorage.removeItem(PLANS_CACHE_KEY);
       router.push(`/dashboard/plans/${data.plan_id}`);
     } catch (error) {
       console.error("Generate plan error:", error);

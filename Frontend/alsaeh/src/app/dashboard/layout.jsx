@@ -21,9 +21,10 @@ export default function DashboardLayout({ children }) {
       dashboard: "Dashboard",
       createPlan: "Create Plan",
       settings: "Settings",
+      admin: "Admin",
       logout: "Logout",
       welcome: "Welcome",
-      langButton: "العربية",
+      langButton: "Arabic",
       loading: "Loading...",
     },
     ar: {
@@ -32,7 +33,7 @@ export default function DashboardLayout({ children }) {
       createPlan: "إنشاء خطة",
       settings: "الإعدادات",
       logout: "تسجيل الخروج",
-      welcome: "مرحبًا",
+      welcome: "مرحبا",
       langButton: "English",
       loading: "جاري التحميل...",
     },
@@ -42,13 +43,63 @@ export default function DashboardLayout({ children }) {
 
   useEffect(() => {
     const savedLang = localStorage.getItem("site_lang");
-
-    if (savedLang === "ar" || savedLang === "en") {
-      setLang(savedLang);
-    }
-
+    if (savedLang === "ar" || savedLang === "en") setLang(savedLang);
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    router.prefetch("/dashboard");
+    router.prefetch("/dashboard/create-plan");
+    router.prefetch("/dashboard/settings");
+  }, [router]);
+
+  useEffect(() => {
+    if (user?.role === "admin") {
+      router.prefetch("/admin");
+    }
+  }, [router, user?.role]);
+
+  useEffect(() => {
+    async function loadUser() {
+      const cached = sessionStorage.getItem("auth_user");
+      if (cached) {
+        try {
+          setUser(JSON.parse(cached));
+          setCheckingAuth(false);
+          return;
+        } catch {
+          sessionStorage.removeItem("auth_user");
+        }
+      }
+
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (!data.session) {
+          router.replace("/login");
+          return;
+        }
+
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
+          headers: { Authorization: `Bearer ${data.session.access_token}` },
+        });
+
+        if (!res.ok) {
+          router.replace("/login");
+          return;
+        }
+
+        const userData = await res.json();
+        sessionStorage.setItem("auth_user", JSON.stringify(userData));
+        setUser(userData);
+      } catch {
+        router.replace("/login");
+      } finally {
+        setCheckingAuth(false);
+      }
+    }
+
+    loadUser();
+  }, [router]);
 
   function toggleLanguage() {
     const newLang = lang === "en" ? "ar" : "en";
@@ -56,62 +107,12 @@ export default function DashboardLayout({ children }) {
     localStorage.setItem("site_lang", newLang);
   }
 
-useEffect(() => {
-  async function loadUser() {
-    // Check cache first
-    const cached = sessionStorage.getItem("auth_user");
-    if (cached) {
-      try {
-        setUser(JSON.parse(cached));
-        setCheckingAuth(false);
-        return; // ← early return prevents the fetch entirely
-      } catch {
-        sessionStorage.removeItem("auth_user");
-      }
-    }
-
-    try {
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) {
-        router.replace("/login");
-        return;
-      }
-
-      const token = data.session.access_token;
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!res.ok) {
-        router.replace("/login");
-        return;
-      }
-
-      const userData = await res.json();
-      sessionStorage.setItem("auth_user", JSON.stringify(userData));
-      setUser(userData);
-    } catch {
-      router.replace("/login");
-    } finally {
-      setCheckingAuth(false);
-    }
-  }
-
-  loadUser();
-}, [router]);
-
-// Single, correct logout function — clears cache too
-async function logout() {
-  sessionStorage.removeItem("auth_user");
-  try {
-    await supabase.auth.signOut();
-  } catch (err) {
-    console.error("Logout failed:", err);
-  }
-  router.replace("/login");
-}
-
   async function logout() {
+    sessionStorage.removeItem("auth_user");
+    sessionStorage.removeItem("dashboard_plans");
+    sessionStorage.removeItem("place_categories");
+    sessionStorage.removeItem("settings_profile");
+
     try {
       await supabase.auth.signOut();
     } catch (error) {
@@ -128,7 +129,7 @@ async function logout() {
   return (
     <main className={styles.dashboardPage} dir={lang === "ar" ? "rtl" : "ltr"}>
       <aside className={styles.sidebar}>
-        <div>
+        <div className={styles.sidebarMain}>
           <Link href="/" className={styles.brand}>
             <div className={styles.logoMark}></div>
             <span>{t.brand}</span>
@@ -169,6 +170,15 @@ async function logout() {
             >
               {t.settings}
             </Link>
+
+            {user?.role === "admin" && (
+              <Link
+                href="/admin"
+                className={`${styles.navItem} ${styles.adminNavItem} ${styles.activeNavItem}`}
+              >
+                {t.admin || "Admin"}
+              </Link>
+            )}
           </nav>
         </div>
 
