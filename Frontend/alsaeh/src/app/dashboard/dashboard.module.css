@@ -436,6 +436,7 @@
 .aiField input,
 .aiField select,
 .aiField textarea,
+.preferenceTrigger,
 .aiChatForm textarea,
 .deleteAccountBox input {
   width: 100%;
@@ -452,7 +453,8 @@
 }
 
 .aiField input,
-.aiField select {
+.aiField select,
+.preferenceTrigger {
   height: 54px;
 }
 
@@ -478,6 +480,7 @@
 .aiField input:focus,
 .aiField select:focus,
 .aiField textarea:focus,
+.preferenceTrigger:focus,
 .aiChatForm textarea:focus,
 .deleteAccountBox input:focus {
   border-color: var(--primary);
@@ -549,6 +552,9 @@
   display: flex;
   flex-direction: column;
   gap: 22px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--bg-card) 96%, white), var(--bg-card)),
+    var(--bg-card);
 }
 
 .aiField {
@@ -560,6 +566,163 @@
 .aiField label {
   font-size: 0.95rem;
   font-weight: 700;
+}
+
+.preferenceDropdown {
+  position: relative;
+}
+
+.preferenceTrigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+
+[dir="rtl"] .preferenceTrigger {
+  text-align: right;
+}
+
+.preferenceTrigger span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preferenceChevron {
+  flex: 0 0 auto;
+  color: var(--primary);
+  font-weight: 900;
+}
+
+.preferenceChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.preferenceChips span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  border: 1px solid var(--primary-mid);
+  border-radius: var(--radius-full);
+  padding: 5px 10px;
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: capitalize;
+}
+
+.preferencePanel {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 10px);
+  left: 0;
+  right: 0;
+  display: grid;
+  gap: 8px;
+  max-height: 310px;
+  overflow-y: auto;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  padding: 12px;
+  background: var(--bg-card);
+  box-shadow: var(--shadow-card);
+}
+
+.preferenceOption {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: background var(--transition);
+}
+
+.preferenceOption:hover {
+  background: var(--bg-hover);
+}
+
+.preferenceOption input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--primary);
+}
+
+.preferenceOption span {
+  text-transform: capitalize;
+}
+
+.preferenceDivider {
+  height: 1px;
+  background: var(--border-soft);
+}
+
+.preferenceEmpty {
+  margin: 0;
+  padding: 10px;
+  color: var(--text-muted);
+}
+
+.phoneGroup {
+  display: flex;
+  min-height: 54px;
+  overflow: hidden;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-input);
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.phoneGroup:focus-within {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.countrySelect {
+  flex: 0 0 150px;
+  width: 150px !important;
+  height: auto !important;
+  border: 0 !important;
+  border-right: 1.5px solid var(--border) !important;
+  border-radius: 0 !important;
+  background: var(--bg-hover) !important;
+  box-shadow: none !important;
+  font-size: 0.9rem;
+}
+
+[dir="rtl"] .countrySelect {
+  border-right: 0 !important;
+  border-left: 1.5px solid var(--border) !important;
+}
+
+.countrySelect:focus {
+  box-shadow: none !important;
+  border-color: var(--border) !important;
+}
+
+.phoneInput {
+  flex: 1;
+  min-width: 0;
+  height: auto !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.phoneInput:focus {
+  box-shadow: none !important;
 }
 
 .aiActions {
@@ -579,6 +742,20 @@
   font-weight: 700;
   font-size: 0.98rem;
   transition: 0.25s ease;
+}
+
+.aiActions .cancelButton,
+.aiActions .aiGenerateButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  box-sizing: border-box;
+}
+
+.aiActions .cancelButton {
+  min-width: 150px;
+  padding: 0 18px;
 }
 
 .planDetailsLayout {
@@ -694,6 +871,353 @@
   width: 100%;
   min-height: 42px;
   text-decoration: none;
+}
+
+.planDayList {
+  display: grid;
+  gap: 18px;
+  margin-top: 24px;
+}
+
+.planDayCard {
+  overflow: hidden;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-xl);
+  background:
+    radial-gradient(circle at top right, var(--primary-light), transparent 34%),
+    var(--bg-card);
+  box-shadow: var(--shadow-card);
+  color: var(--text-main);
+}
+
+.planDayChrome {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-soft);
+  background:
+    linear-gradient(180deg, var(--primary-light), transparent),
+    var(--bg-hover);
+}
+
+.planDayChrome span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #f04060;
+  box-shadow: 0 0 12px rgba(240, 64, 96, 0.42);
+}
+
+.planDayChrome span:nth-child(2) {
+  background: #f0a020;
+  box-shadow: 0 0 12px rgba(240, 160, 32, 0.34);
+}
+
+.planDayChrome span:nth-child(3) {
+  background: #20c070;
+  box-shadow: 0 0 12px rgba(32, 192, 112, 0.34);
+}
+
+.planDayHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 20px 20px 12px;
+}
+
+.planDayHeader h3 {
+  margin: 10px 0 0;
+  color: var(--text-main);
+  font-family: var(--font-display);
+  font-size: clamp(1.15rem, 2vw, 1.45rem);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.planDayPill {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  border: 1px solid var(--primary-mid);
+  border-radius: var(--radius-full);
+  padding: 6px 11px;
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.planDayActivities {
+  display: grid;
+  gap: 10px;
+  padding: 8px 20px 20px;
+}
+
+.activityAccordion {
+  overflow: hidden;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: var(--bg-hover);
+}
+
+.activityAccordionTrigger {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  min-height: 54px;
+  border: 0;
+  padding: 12px 13px;
+  background: transparent;
+  color: var(--text-main);
+  cursor: pointer;
+  text-align: left;
+}
+
+[dir="rtl"] .activityAccordionTrigger {
+  text-align: right;
+}
+
+.activityIcon,
+.activityExpandIndicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border-radius: 50%;
+}
+
+.activityIcon {
+  width: 32px;
+  height: 32px;
+  background: var(--primary-light);
+  border: 1px solid var(--primary-mid);
+}
+
+.activityTitle {
+  min-width: 0;
+  color: var(--text-main);
+  font-weight: 800;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.activityExpandIndicator {
+  width: 24px;
+  height: 24px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.activityDetails {
+  display: grid;
+  gap: 14px;
+  border-top: 1px solid var(--border-soft);
+  padding: 14px;
+  background: var(--bg-card);
+}
+
+.activityDescription {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.65;
+}
+
+.activityDetailGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.activityDetailItem {
+  min-width: 0;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  padding: 10px 11px;
+  background: var(--bg-hover);
+}
+
+.activityDetailItem span {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: capitalize;
+}
+
+.activityDetailItem strong {
+  display: block;
+  color: var(--text-main);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.activityMapButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 46px;
+  border-radius: var(--radius-md);
+  background: var(--primary);
+  color: white;
+  text-decoration: none;
+  font-weight: 800;
+  transition: background var(--transition), box-shadow var(--transition);
+}
+
+.activityMapButton:hover {
+  background: var(--primary-hover);
+  box-shadow: 0 10px 24px rgba(240, 64, 96, 0.25);
+}
+
+.planDayEmpty {
+  margin: 0 20px 20px;
+  border: 1px dashed var(--primary-mid);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  color: var(--text-muted);
+  background: var(--bg-hover);
+}
+
+html[data-theme="dark"] .planDayCard {
+  border-color: rgba(240, 64, 96, 0.22);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent 28%),
+    #120c09;
+  box-shadow:
+    0 22px 60px rgba(0, 0, 0, 0.24),
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+  color: #f8efe9;
+}
+
+html[data-theme="dark"] .planDayChrome {
+  border-bottom-color: rgba(240, 64, 96, 0.18);
+  background:
+    linear-gradient(180deg, rgba(240, 64, 96, 0.12), rgba(255, 255, 255, 0.02)),
+    #1b110d;
+}
+
+html[data-theme="dark"] .planDayHeader h3,
+html[data-theme="dark"] .activityTitle,
+html[data-theme="dark"] .activityAccordionTrigger,
+html[data-theme="dark"] .activityDetailItem strong {
+  color: #f8efe9;
+}
+
+html[data-theme="dark"] .planDayPill {
+  border-color: rgba(240, 64, 96, 0.3);
+  background: rgba(240, 64, 96, 0.12);
+  color: #ff9aad;
+}
+
+html[data-theme="dark"] .activityAccordion {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.055);
+}
+
+html[data-theme="dark"] .activityIcon {
+  background: rgba(240, 64, 96, 0.12);
+  border-color: rgba(240, 64, 96, 0.22);
+}
+
+html[data-theme="dark"] .activityDetails {
+  border-top-color: rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.16);
+}
+
+html[data-theme="dark"] .activityDescription,
+html[data-theme="dark"] .planDayEmpty {
+  color: rgba(248, 239, 233, 0.72);
+}
+
+html[data-theme="dark"] .activityDetailItem {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.045);
+}
+
+html[data-theme="dark"] .activityDetailItem span {
+  color: rgba(248, 239, 233, 0.54);
+}
+
+html[data-theme="dark"] .planDayEmpty {
+  border-color: rgba(240, 64, 96, 0.26);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) .planDayCard {
+    border-color: rgba(240, 64, 96, 0.22);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent 28%),
+      #120c09;
+    box-shadow:
+      0 22px 60px rgba(0, 0, 0, 0.24),
+      0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+    color: #f8efe9;
+  }
+
+  html:not([data-theme="light"]) .planDayChrome {
+    border-bottom-color: rgba(240, 64, 96, 0.18);
+    background:
+      linear-gradient(180deg, rgba(240, 64, 96, 0.12), rgba(255, 255, 255, 0.02)),
+      #1b110d;
+  }
+
+  html:not([data-theme="light"]) .planDayHeader h3,
+  html:not([data-theme="light"]) .activityTitle,
+  html:not([data-theme="light"]) .activityAccordionTrigger,
+  html:not([data-theme="light"]) .activityDetailItem strong {
+    color: #f8efe9;
+  }
+
+  html:not([data-theme="light"]) .planDayPill {
+    border-color: rgba(240, 64, 96, 0.3);
+    background: rgba(240, 64, 96, 0.12);
+    color: #ff9aad;
+  }
+
+  html:not([data-theme="light"]) .activityAccordion {
+    border-color: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.055);
+  }
+
+  html:not([data-theme="light"]) .activityIcon {
+    background: rgba(240, 64, 96, 0.12);
+    border-color: rgba(240, 64, 96, 0.22);
+  }
+
+  html:not([data-theme="light"]) .activityDetails {
+    border-top-color: rgba(255, 255, 255, 0.08);
+    background: rgba(0, 0, 0, 0.16);
+  }
+
+  html:not([data-theme="light"]) .activityDescription,
+  html:not([data-theme="light"]) .planDayEmpty {
+    color: rgba(248, 239, 233, 0.72);
+  }
+
+  html:not([data-theme="light"]) .activityDetailItem {
+    border-color: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.045);
+  }
+
+  html:not([data-theme="light"]) .activityDetailItem span {
+    color: rgba(248, 239, 233, 0.54);
+  }
+
+  html:not([data-theme="light"]) .planDayEmpty {
+    border-color: rgba(240, 64, 96, 0.26);
+    background: rgba(255, 255, 255, 0.04);
+  }
 }
 
 .settingsSection {
@@ -1207,6 +1731,7 @@ html[data-theme="dark"] .assistantChatBubble {
 html[data-theme="dark"] .aiField input,
 html[data-theme="dark"] .aiField select,
 html[data-theme="dark"] .aiField textarea,
+html[data-theme="dark"] .preferenceTrigger,
 html[data-theme="dark"] .input,
 html[data-theme="dark"] .textarea,
 html[data-theme="dark"] .aiChatForm textarea,
@@ -1717,6 +2242,7 @@ html[data-theme="dark"] .navItem:hover {
 .aiField input,
 .aiField select,
 .aiField textarea,
+.preferenceTrigger,
 .aiChatForm textarea,
 .deleteAccountBox input {
   font-family: var(--font-body);
@@ -1730,6 +2256,7 @@ html[data-theme="dark"] .navItem:hover {
 .aiField input:focus,
 .aiField select:focus,
 .aiField textarea:focus,
+.preferenceTrigger:focus,
 .aiChatForm textarea:focus,
 .deleteAccountBox input:focus {
   border-color: var(--border-focus);
@@ -2478,6 +3005,40 @@ html[data-theme="dark"] .assistantChatBubble {
     text-align: center;
   }
 
+  .planDayCard {
+    border-radius: 18px;
+  }
+
+  .planDayChrome {
+    padding: 12px 14px;
+  }
+
+  .planDayHeader {
+    padding: 16px 14px 10px;
+  }
+
+  .planDayActivities {
+    padding: 6px 14px 14px;
+  }
+
+  .activityAccordionTrigger {
+    min-height: 50px;
+    padding: 10px;
+  }
+
+  .activityIcon {
+    width: 30px;
+    height: 30px;
+  }
+
+  .activityDetailGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .planDayEmpty {
+    margin: 0 14px 14px;
+  }
+
   .aiChatHeader {
     grid-template-columns: 1fr auto;
     gap: 10px;
@@ -2640,6 +3201,11 @@ html[data-theme="dark"] .assistantChatBubble {
 .editPlanCard .cancelButton,
 .editPlanCard .primaryButton {
   min-width: 150px;
+  min-height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
 }
 
 html[data-theme="dark"] .editPlanCard {
@@ -2751,5 +3317,464 @@ html[data-theme="dark"] .label {
   html:not([data-theme="light"]) .navItem:hover {
     background: transparent;
     color: var(--primary);
+  }
+}
+
+/* Dashboard home refresh */
+.dashboardHero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 18px;
+  padding: 26px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-xl);
+  background:
+    radial-gradient(circle at top right, var(--primary-light), transparent 34%),
+    var(--bg-card);
+  box-shadow: var(--shadow-card);
+}
+
+.dashboardHeroCopy {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.dashboardEyebrow {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  min-height: 28px;
+  border: 1px solid var(--primary-mid);
+  border-radius: var(--radius-full);
+  padding: 4px 10px;
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.dashboardEmail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 0;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  flex-wrap: wrap;
+}
+
+.dashboardEmail strong {
+  color: var(--text-main);
+  overflow-wrap: anywhere;
+}
+
+.accountButton,
+.primaryActionButton {
+  border: none;
+  cursor: pointer;
+  transition: transform var(--transition), box-shadow var(--transition), background var(--transition);
+  font-family: var(--font-body);
+  font-weight: 800;
+}
+
+.accountButton {
+  flex: 0 0 auto;
+  border: 1px solid var(--primary-mid);
+  border-radius: var(--radius-full);
+  padding: 10px 14px;
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.primaryActionButton {
+  min-height: 44px;
+  border-radius: var(--radius-md);
+  padding: 11px 16px;
+  background: var(--primary);
+  color: #fff;
+}
+
+.accountButton:hover,
+.primaryActionButton:hover,
+.viewButton:hover {
+  transform: translateY(-2px);
+}
+
+.primaryActionButton:hover {
+  background: var(--primary-hover);
+  box-shadow: 0 12px 24px rgba(206, 17, 38, 0.18);
+}
+
+.dashboardStatsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.dashboardStatCard {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-card);
+}
+
+.dashboardStatCard span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.dashboardStatCard strong {
+  display: block;
+  color: var(--text-main);
+  font-size: clamp(1.1rem, 2vw, 1.55rem);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.dashboardStatCard:first-child strong {
+  color: var(--primary);
+  font-family: var(--font-display);
+  font-size: clamp(1.7rem, 3vw, 2.25rem);
+}
+
+.plansSection {
+  display: grid;
+  gap: 18px;
+}
+
+.plansSectionHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.sectionTitle {
+  margin: 8px 0 6px;
+  color: var(--text-main);
+  font-family: var(--font-display);
+  font-size: clamp(1.45rem, 3vw, 2rem);
+  line-height: 1.15;
+}
+
+.planToolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 14px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--bg-card) 84%, transparent);
+}
+
+.planSearch {
+  flex: 1 1 320px;
+  display: grid;
+  gap: 7px;
+}
+
+.planSearch span {
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.planSearch input {
+  min-height: 44px;
+  border-radius: var(--radius-md);
+}
+
+.filterChips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filterChips button {
+  min-height: 38px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-full);
+  padding: 8px 13px;
+  background: var(--bg-card);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-weight: 800;
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
+}
+
+.filterChips button:hover,
+.filterChips .activeFilterChip {
+  border-color: var(--primary-mid);
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.planGrid {
+  align-items: stretch;
+}
+
+.planCard {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-xl);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-card);
+  transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+}
+
+.planCard:hover {
+  transform: translateY(-4px);
+  border-color: var(--primary-mid);
+  box-shadow: var(--shadow-md);
+}
+
+.planTop {
+  align-items: flex-start;
+}
+
+.planTitle {
+  display: -webkit-box;
+  min-width: 0;
+  line-height: 1.35;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.planInfoGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.planInfoGrid div {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: var(--bg-hover);
+}
+
+.planInfoGrid span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.planInfoGrid strong {
+  display: block;
+  color: var(--text-main);
+  font-size: 0.9rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.planDescription {
+  display: -webkit-box;
+  min-height: 3.4em;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.planCard .viewButton {
+  margin-top: auto;
+  min-height: 44px;
+  border-radius: var(--radius-md);
+  font-weight: 800;
+}
+
+.emptyDashboardState {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 42px 24px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-xl);
+  background:
+    radial-gradient(circle at top, var(--primary-light), transparent 36%),
+    var(--bg-card);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.emptyDashboardState span {
+  color: var(--text-main);
+  font-size: 1.15rem;
+  font-weight: 900;
+}
+
+.emptyDashboardState p {
+  max-width: 520px;
+  margin: 0;
+  line-height: 1.7;
+}
+
+.dashboardHeroSkeleton,
+.planSkeleton {
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-xl);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-card);
+}
+
+.dashboardHeroSkeleton {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 22px;
+  padding: 28px;
+}
+
+.planSkeleton {
+  display: grid;
+  gap: 12px;
+  padding: 22px;
+}
+
+.dashboardHeroSkeleton span,
+.dashboardHeroSkeleton strong,
+.dashboardHeroSkeleton p,
+.planSkeleton span,
+.planSkeleton strong,
+.planSkeleton p,
+.planSkeleton button {
+  display: block;
+  border: none;
+  border-radius: var(--radius-full);
+  background: linear-gradient(90deg, var(--border-soft), var(--bg-hover), var(--border-soft));
+  background-size: 220% 100%;
+  animation: dashboardSkeleton 1.3s ease-in-out infinite;
+}
+
+.dashboardHeroSkeleton span,
+.planSkeleton span {
+  width: 120px;
+  height: 26px;
+}
+
+.dashboardHeroSkeleton strong,
+.planSkeleton strong {
+  width: min(360px, 75%);
+  height: 32px;
+}
+
+.dashboardHeroSkeleton p,
+.planSkeleton p {
+  width: min(520px, 92%);
+  height: 16px;
+}
+
+.planSkeleton button {
+  width: 100%;
+  height: 44px;
+  margin-top: 12px;
+}
+
+@keyframes dashboardSkeleton {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+html[data-theme="dark"] .dashboardHero,
+html[data-theme="dark"] .dashboardStatCard,
+html[data-theme="dark"] .planToolbar,
+html[data-theme="dark"] .emptyDashboardState,
+html[data-theme="dark"] .dashboardHeroSkeleton,
+html[data-theme="dark"] .planSkeleton {
+  background: #1f1f1f;
+  border-color: #343434;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.35);
+}
+
+html[data-theme="dark"] .planInfoGrid div,
+html[data-theme="dark"] .filterChips button {
+  background: #292929;
+  border-color: #444;
+}
+
+html[data-theme="dark"] .dashboardEmail strong,
+html[data-theme="dark"] .dashboardStatCard strong,
+html[data-theme="dark"] .sectionTitle,
+html[data-theme="dark"] .planInfoGrid strong,
+html[data-theme="dark"] .emptyDashboardState span {
+  color: #f5f5f5;
+}
+
+html[data-theme="dark"] .planSearch span,
+html[data-theme="dark"] .dashboardStatCard span,
+html[data-theme="dark"] .planInfoGrid span {
+  color: #b8b8b8;
+}
+
+@media (max-width: 980px) {
+  .dashboardStatsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .planInfoGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboardHero {
+    flex-direction: column;
+    padding: 20px;
+    border-radius: 18px;
+  }
+
+  .accountButton,
+  .primaryActionButton,
+  .plansSectionHeader .primaryActionButton {
+    width: 100%;
+  }
+
+  .dashboardEmail {
+    display: grid;
+    gap: 2px;
+  }
+
+  .planToolbar {
+    align-items: stretch;
+    padding: 12px;
+  }
+
+  .planSearch {
+    flex-basis: 100%;
+  }
+
+  .filterChips {
+    width: 100%;
+  }
+
+  .filterChips button {
+    flex: 1 1 auto;
+  }
+
+  .emptyDashboardState {
+    padding: 30px 18px;
   }
 }

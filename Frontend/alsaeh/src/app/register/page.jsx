@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import styles from "../login/auth.module.css";
 import { supabase } from "@/lib/supabase";
+import { useLanguage } from "@/lib/i18n";
 
 function getErrorMessage(error, fallback) {
   if (error?.message) return error.message;
@@ -183,7 +184,7 @@ const COUNTRY_CODES = [
 export default function RegisterPage() {
   const router = useRouter();
 
-  const [lang, setLang] = useState("en");
+  const { lang, dir, toggleLang } = useLanguage();
   const [mounted, setMounted] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -265,8 +266,6 @@ export default function RegisterPage() {
   const isAr = lang === "ar";
 
   useEffect(() => {
-    const savedLang = localStorage.getItem("site_lang");
-    if (savedLang === "ar" || savedLang === "en") setLang(savedLang);
     setMounted(true);
   }, []);
 
@@ -284,12 +283,6 @@ export default function RegisterPage() {
 
     checkAuth();
   }, [router]);
-
-  function toggleLanguage() {
-    const newLang = isAr ? "en" : "ar";
-    setLang(newLang);
-    localStorage.setItem("site_lang", newLang);
-  }
 
   function handlePhoneChange(e) {
     setForm({ ...form, phone_number: e.target.value.replace(/\D/g, "") });
@@ -341,18 +334,22 @@ export default function RegisterPage() {
   }
 
   if (!mounted || checkingAuth) {
-    return <div className={styles.pageLoading}>Loading...</div>;
+    return (
+      <div className={styles.pageLoading}>
+        {lang === "ar" ? "جاري التحميل..." : "Loading..."}
+      </div>
+    );
   }
 
   return (
-    <main className={styles.page} dir={isAr ? "rtl" : "ltr"}>
+    <main className={styles.page} dir={dir}>
       <div className={styles.brandPanel}>
         <div className={styles.brandTop}>
           <Link href="/" className={styles.brandLogo}>
             <span className={styles.brandLogoMark} />
             <span className={styles.brandLogoText}>{t.brand}</span>
           </Link>
-          <button className={styles.langBtn} onClick={toggleLanguage}>
+          <button className={styles.langBtn} onClick={toggleLang}>
             {t.langButton}
           </button>
         </div>
@@ -434,7 +431,7 @@ export default function RegisterPage() {
                   onChange={(e) =>
                     setForm({ ...form, country: e.target.value })
                   }
-                  aria-label="Country code"
+                  aria-label={lang === "ar" ? "رمز الدولة" : "Country code"}
                 >
                   {COUNTRY_CODES.map(({ country, code }) => (
                     <option key={`${country}-${code}`} value={country}>

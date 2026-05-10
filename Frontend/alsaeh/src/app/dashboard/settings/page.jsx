@@ -4,8 +4,53 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "../dashboard.module.css";
 import { supabase } from "@/lib/supabase";
+import { useLanguage } from "@/lib/i18n";
 
 const SETTINGS_CACHE_KEY = "settings_profile";
+const COUNTRY_CODES = [
+  { country: "Bahrain", code: "+973" },
+  { country: "Afghanistan", code: "+93" },
+  { country: "Albania", code: "+355" },
+  { country: "Algeria", code: "+213" },
+  { country: "Australia", code: "+61" },
+  { country: "Austria", code: "+43" },
+  { country: "Bangladesh", code: "+880" },
+  { country: "Belgium", code: "+32" },
+  { country: "Brazil", code: "+55" },
+  { country: "Canada", code: "+1" },
+  { country: "China", code: "+86" },
+  { country: "Egypt", code: "+20" },
+  { country: "France", code: "+33" },
+  { country: "Germany", code: "+49" },
+  { country: "India", code: "+91" },
+  { country: "Indonesia", code: "+62" },
+  { country: "Iraq", code: "+964" },
+  { country: "Ireland", code: "+353" },
+  { country: "Italy", code: "+39" },
+  { country: "Japan", code: "+81" },
+  { country: "Jordan", code: "+962" },
+  { country: "Kuwait", code: "+965" },
+  { country: "Lebanon", code: "+961" },
+  { country: "Malaysia", code: "+60" },
+  { country: "Morocco", code: "+212" },
+  { country: "Netherlands", code: "+31" },
+  { country: "Oman", code: "+968" },
+  { country: "Pakistan", code: "+92" },
+  { country: "Palestine", code: "+970" },
+  { country: "Philippines", code: "+63" },
+  { country: "Qatar", code: "+974" },
+  { country: "Saudi Arabia", code: "+966" },
+  { country: "Singapore", code: "+65" },
+  { country: "South Africa", code: "+27" },
+  { country: "Spain", code: "+34" },
+  { country: "Syria", code: "+963" },
+  { country: "Tunisia", code: "+216" },
+  { country: "Turkey", code: "+90" },
+  { country: "United Arab Emirates", code: "+971" },
+  { country: "United Kingdom", code: "+44" },
+  { country: "United States", code: "+1" },
+  { country: "Yemen", code: "+967" },
+];
 
 function getErrorMessage(detail, fallback) {
   if (Array.isArray(detail)) return detail[0]?.msg || fallback;
@@ -32,14 +77,53 @@ async function getAccessToken() {
   return data.session?.access_token || null;
 }
 
+function splitPhoneNumber(phoneNumber) {
+  const phone = String(phoneNumber || "");
+  const selectedCountry =
+    [...COUNTRY_CODES]
+      .sort((a, b) => b.code.length - a.code.length)
+      .find(({ code }) => phone.startsWith(code)) || COUNTRY_CODES[0];
+
+  return {
+    country: selectedCountry.country,
+    phone_number: phone.startsWith(selectedCountry.code)
+      ? phone.slice(selectedCountry.code.length).replace(/\D/g, "")
+      : phone.replace(/\D/g, ""),
+  };
+}
+
+function normalizeProfile(profile) {
+  const phoneDetails = splitPhoneNumber(profile.phone_number);
+
+  return {
+    ...profile,
+    country: profile.country || phoneDetails.country,
+    phone_number:
+      profile.country && /^\d*$/.test(profile.phone_number || "")
+        ? profile.phone_number
+        : phoneDetails.phone_number,
+  };
+}
+
+function getFullPhoneNumber(profile) {
+  const selectedCountry =
+    COUNTRY_CODES.find(({ country }) => country === profile.country) ||
+    COUNTRY_CODES[0];
+
+  return profile.phone_number
+    ? `${selectedCountry.code}${profile.phone_number}`
+    : "";
+}
+
 export default function SettingsPage() {
   const router = useRouter();
 
-  const [lang, setLang] = useState("en");
+  const { lang, dir, setLang } = useLanguage();
   const [theme, setTheme] = useState("system");
   const [profile, setProfile] = useState({
     full_name: "",
     email: "",
+    country: "Bahrain",
     phone_number: "",
     preferred_language: "en",
   });
@@ -138,6 +222,102 @@ export default function SettingsPage() {
     },
   }[lang];
 
+  const ui = {
+    en: {
+      loading: "Loading...",
+      accountStatus: "Account status",
+      active: "Active",
+      currentEmail: "Current email",
+      preferredLanguage: "Preferred language",
+      arabic: "Arabic",
+      english: "English",
+      countryCode: "Country code",
+      profileDescription:
+        "Keep your travel profile accurate so recommendations and account recovery stay reliable.",
+      securityDescription:
+        "Email and password changes are handled securely by Supabase Auth.",
+      saving: "Saving...",
+      profileUpdated: "Profile updated successfully.",
+      emailSent: "Email update request sent. Check your email to confirm.",
+      passwordChanged: "Password changed successfully.",
+      otherSessionsLoggedOut: "Other sessions have been logged out.",
+      exportReady: "Your data export is ready.",
+      unableToConnect: "Unable to connect to server",
+      unableToUpdateEmail: "Unable to update email",
+      unableToUpdatePassword: "Unable to update password",
+      unableToLogoutSessions: "Unable to log out other sessions",
+      unableToExport: "Unable to export data",
+      failedLoad: "Failed to load settings",
+      failedUpdateProfile: "Failed to update profile",
+      failedChangeEmail: "Failed to change email",
+      failedChangePassword: "Failed to change password",
+      failedExport: "Failed to export data",
+      failedDelete: "Failed to delete account",
+      typeDelete: "Type DELETE to confirm account deletion.",
+      confirmDelete: "Are you sure you want to delete your account?",
+      preferencesDescription:
+        "These options update the app experience on this device.",
+      sessionsDescription:
+        "Revoke active sessions on other browsers and devices while keeping this session active.",
+      working: "Working...",
+      privacyDescription:
+        "Download your stored profile and plans, or permanently delete your account.",
+      exporting: "Exporting...",
+      deleting: "Deleting...",
+      supportDescription: "Need help with your account or trip planning data?",
+      version: "Version: Alsaeh.bh v1.0",
+      weak: "Weak",
+      medium: "Medium",
+      strong: "Strong",
+    },
+    ar: {
+      loading: "جاري التحميل...",
+      accountStatus: "حالة الحساب",
+      active: "نشط",
+      currentEmail: "البريد الحالي",
+      preferredLanguage: "اللغة المفضلة",
+      arabic: "العربية",
+      english: "الإنجليزية",
+      countryCode: "رمز الدولة",
+      profileDescription:
+        "حافظ على دقة ملفك الشخصي لتحسين التوصيات واستعادة الحساب.",
+      securityDescription:
+        "يتم تغيير البريد وكلمة المرور بأمان عبر Supabase Auth.",
+      saving: "جاري الحفظ...",
+      profileUpdated: "تم تحديث الملف الشخصي بنجاح.",
+      emailSent: "تم إرسال طلب تحديث البريد. تحقق من بريدك للتأكيد.",
+      passwordChanged: "تم تغيير كلمة المرور بنجاح.",
+      otherSessionsLoggedOut: "تم تسجيل الخروج من الجلسات الأخرى.",
+      exportReady: "ملف بياناتك جاهز للتنزيل.",
+      unableToConnect: "تعذر الاتصال بالخادم",
+      unableToUpdateEmail: "تعذر تحديث البريد الإلكتروني",
+      unableToUpdatePassword: "تعذر تحديث كلمة المرور",
+      unableToLogoutSessions: "تعذر تسجيل الخروج من الجلسات الأخرى",
+      unableToExport: "تعذر تنزيل البيانات",
+      failedLoad: "فشل تحميل الإعدادات",
+      failedUpdateProfile: "فشل تحديث الملف الشخصي",
+      failedChangeEmail: "فشل تغيير البريد الإلكتروني",
+      failedChangePassword: "فشل تغيير كلمة المرور",
+      failedExport: "فشل تنزيل البيانات",
+      failedDelete: "فشل حذف الحساب",
+      typeDelete: "اكتب DELETE لتأكيد حذف الحساب.",
+      confirmDelete: "هل أنت متأكد من حذف حسابك؟",
+      preferencesDescription: "تحدث هذه الخيارات تجربة التطبيق على هذا الجهاز.",
+      sessionsDescription:
+        "ألغِ الجلسات النشطة على المتصفحات والأجهزة الأخرى مع إبقاء هذه الجلسة فعالة.",
+      working: "جاري التنفيذ...",
+      privacyDescription:
+        "نزّل ملفك الشخصي وخططك المحفوظة أو احذف حسابك نهائياً.",
+      exporting: "جاري التنزيل...",
+      deleting: "جاري الحذف...",
+      supportDescription: "هل تحتاج مساعدة في حسابك أو بيانات تخطيط الرحلات؟",
+      version: "الإصدار: Alsaeh.bh v1.0",
+      weak: "ضعيفة",
+      medium: "متوسطة",
+      strong: "قوية",
+    },
+  }[lang];
+
   const passwordStrength = useMemo(
     () => getPasswordStrength(passwordForm.new_password),
     [passwordForm.new_password]
@@ -158,7 +338,7 @@ export default function SettingsPage() {
 
       if (cached) {
         try {
-          setProfile(JSON.parse(cached));
+          setProfile(normalizeProfile(JSON.parse(cached)));
           setLoading(false);
         } catch {
           sessionStorage.removeItem(SETTINGS_CACHE_KEY);
@@ -179,21 +359,23 @@ export default function SettingsPage() {
         const data = await res.json();
 
         if (!res.ok) {
-          setError(getErrorMessage(data.detail, "Failed to load settings"));
+          setError(getErrorMessage(data.detail, ui.failedLoad));
           return;
         }
 
+        const phoneDetails = splitPhoneNumber(data.phone_number);
         const nextProfile = {
           full_name: data.full_name || "",
           email: data.email || "",
-          phone_number: data.phone_number || "",
+          country: phoneDetails.country,
+          phone_number: phoneDetails.phone_number,
           preferred_language: data.preferred_language || "en",
         };
         setProfile(nextProfile);
         sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(nextProfile));
       } catch (error) {
         console.error(error);
-        if (!cached) setError("Failed to load settings");
+        if (!cached) setError(ui.failedLoad);
       } finally {
         setLoading(false);
       }
@@ -213,6 +395,13 @@ export default function SettingsPage() {
     document.documentElement.setAttribute("data-theme", value);
   }
 
+  function handlePhoneChange(e) {
+    setProfile({
+      ...profile,
+      phone_number: e.target.value.replace(/\D/g, ""),
+    });
+  }
+
   async function handleProfileSubmit(e) {
     e.preventDefault();
     resetMessages();
@@ -226,6 +415,11 @@ export default function SettingsPage() {
         return;
       }
 
+      const selectedCountry =
+        COUNTRY_CODES.find(({ country }) => country === profile.country) ||
+        COUNTRY_CODES[0];
+      const fullPhoneNumber = `${selectedCountry.code}${profile.phone_number}`;
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/settings/me`, {
         method: "PUT",
         headers: {
@@ -234,14 +428,14 @@ export default function SettingsPage() {
         },
         body: JSON.stringify({
           full_name: profile.full_name,
-          phone_number: profile.phone_number,
+          phone_number: fullPhoneNumber,
           preferred_language: profile.preferred_language,
         }),
       });
       const data = await res.json();
 
       if (!res.ok) {
-        setError(getErrorMessage(data.detail, "Failed to update profile"));
+        setError(getErrorMessage(data.detail, ui.failedUpdateProfile));
         return;
       }
 
@@ -249,7 +443,7 @@ export default function SettingsPage() {
         ? {
             full_name: data.user.full_name || profile.full_name,
             email: data.user.email || profile.email,
-            phone_number: data.user.phone_number || profile.phone_number,
+            ...splitPhoneNumber(data.user.phone_number || fullPhoneNumber),
             preferred_language: data.user.preferred_language || profile.preferred_language,
           }
         : profile;
@@ -259,10 +453,10 @@ export default function SettingsPage() {
       setLang(nextProfile.preferred_language);
       sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(nextProfile));
       sessionStorage.removeItem("auth_user");
-      setSuccess("Profile updated successfully.");
+      setSuccess(ui.profileUpdated);
     } catch (error) {
       console.error(error);
-      setError("Unable to connect to server");
+      setError(ui.unableToConnect);
     } finally {
       setSavingProfile(false);
     }
@@ -277,7 +471,7 @@ export default function SettingsPage() {
       const { error } = await supabase.auth.updateUser({ email: emailForm.new_email });
 
       if (error) {
-        setError(error.message || "Failed to change email");
+        setError(error.message || ui.failedChangeEmail);
         return;
       }
 
@@ -285,10 +479,10 @@ export default function SettingsPage() {
       setProfile(nextProfile);
       sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(nextProfile));
       setEmailForm({ new_email: "" });
-      setSuccess("Email update request sent. Check your email to confirm.");
+      setSuccess(ui.emailSent);
     } catch (error) {
       console.error(error);
-      setError("Unable to update email");
+      setError(ui.unableToUpdateEmail);
     } finally {
       setSavingEmail(false);
     }
@@ -311,15 +505,15 @@ export default function SettingsPage() {
       });
 
       if (error) {
-        setError(error.message || "Failed to change password");
+        setError(error.message || ui.failedChangePassword);
         return;
       }
 
       setPasswordForm({ new_password: "", confirm_password: "" });
-      setSuccess("Password changed successfully.");
+      setSuccess(ui.passwordChanged);
     } catch (error) {
       console.error(error);
-      setError("Unable to update password");
+      setError(ui.unableToUpdatePassword);
     } finally {
       setSavingPassword(false);
     }
@@ -333,14 +527,14 @@ export default function SettingsPage() {
       const { error } = await supabase.auth.signOut({ scope: "others" });
 
       if (error) {
-        setError(error.message || "Unable to log out other sessions");
+        setError(error.message || ui.unableToLogoutSessions);
         return;
       }
 
-      setSuccess("Other sessions have been logged out.");
+      setSuccess(ui.otherSessionsLoggedOut);
     } catch (error) {
       console.error(error);
-      setError("Unable to log out other sessions");
+      setError(ui.unableToLogoutSessions);
     } finally {
       setLoggingOutOtherSessions(false);
     }
@@ -364,7 +558,7 @@ export default function SettingsPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(getErrorMessage(data.detail, "Failed to export data"));
+        setError(getErrorMessage(data.detail, ui.failedExport));
         return;
       }
 
@@ -377,10 +571,10 @@ export default function SettingsPage() {
       a.download = "alsaeh-my-data.json";
       a.click();
       URL.revokeObjectURL(url);
-      setSuccess("Your data export is ready.");
+      setSuccess(ui.exportReady);
     } catch (error) {
       console.error(error);
-      setError("Unable to export data");
+      setError(ui.unableToExport);
     } finally {
       setExporting(false);
     }
@@ -390,11 +584,11 @@ export default function SettingsPage() {
     resetMessages();
 
     if (deleteText !== "DELETE") {
-      setError("Type DELETE to confirm account deletion.");
+      setError(ui.typeDelete);
       return;
     }
 
-    const confirmed = window.confirm("Are you sure you want to delete your account?");
+    const confirmed = window.confirm(ui.confirmDelete);
     if (!confirmed) return;
 
     setDeleting(true);
@@ -414,7 +608,7 @@ export default function SettingsPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(getErrorMessage(data.detail, "Failed to delete account"));
+        setError(getErrorMessage(data.detail, ui.failedDelete));
         return;
       }
 
@@ -423,18 +617,18 @@ export default function SettingsPage() {
       router.replace("/");
     } catch (error) {
       console.error(error);
-      setError("Unable to connect to server");
+      setError(ui.unableToConnect);
     } finally {
       setDeleting(false);
     }
   }
 
   if (loading) {
-    return <div className={styles.emptyState}>Loading...</div>;
+    return <div className={styles.emptyState}>{ui.loading}</div>;
   }
 
   return (
-    <div className={styles.pageContent} dir={lang === "ar" ? "rtl" : "ltr"}>
+    <div className={styles.pageContent} dir={dir}>
       <div className={`${styles.createHeader} ${styles.settingsHero}`}>
         <div>
           <span className={styles.createBadge}>{t.profile}</span>
@@ -443,8 +637,8 @@ export default function SettingsPage() {
         </div>
 
         <div className={styles.settingsHeroCard}>
-          <span>Account status</span>
-          <strong>Active</strong>
+          <span>{ui.accountStatus}</span>
+          <strong>{ui.active}</strong>
           <small>{profile.email || "-"}</small>
         </div>
       </div>
@@ -454,16 +648,18 @@ export default function SettingsPage() {
 
       <div className={styles.settingsOverviewGrid}>
         <div className={styles.settingsMiniCard}>
-          <span>Current email</span>
+          <span>{ui.currentEmail}</span>
           <strong>{profile.email || "-"}</strong>
         </div>
         <div className={styles.settingsMiniCard}>
           <span>{t.phone}</span>
-          <strong>{profile.phone_number || "-"}</strong>
+          <strong>{getFullPhoneNumber(profile) || "-"}</strong>
         </div>
         <div className={styles.settingsMiniCard}>
-          <span>Preferred language</span>
-          <strong>{profile.preferred_language === "ar" ? "Arabic" : "English"}</strong>
+          <span>{ui.preferredLanguage}</span>
+          <strong>
+            {profile.preferred_language === "ar" ? ui.arabic : ui.english}
+          </strong>
         </div>
       </div>
 
@@ -474,7 +670,7 @@ export default function SettingsPage() {
               <span className={styles.settingsSectionIcon}>P</span>
               <div>
                 <h2>{t.profile}</h2>
-                <p>Keep your travel profile accurate so recommendations and account recovery stay reliable.</p>
+                <p>{ui.profileDescription}</p>
               </div>
             </div>
 
@@ -490,11 +686,34 @@ export default function SettingsPage() {
 
               <div className={styles.aiField}>
                 <label>{t.phone}</label>
-                <input
-                  value={profile.phone_number}
-                  onChange={(e) => setProfile({ ...profile, phone_number: e.target.value })}
-                  required
-                />
+                <div className={styles.phoneGroup}>
+                  <select
+                    className={styles.countrySelect}
+                    value={profile.country}
+                    onChange={(e) =>
+                      setProfile({ ...profile, country: e.target.value })
+                    }
+                    aria-label={ui.countryCode}
+                  >
+                    {COUNTRY_CODES.map(({ country, code }) => (
+                      <option key={`${country}-${code}`} value={country}>
+                        {code} {country}
+                      </option>
+                    ))}
+                  </select>
+
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    autoComplete="tel-national"
+                    value={profile.phone_number}
+                    onChange={handlePhoneChange}
+                    onPaste={handlePhoneChange}
+                    className={styles.phoneInput}
+                    required
+                  />
+                </div>
               </div>
 
               <div className={styles.aiField}>
@@ -510,15 +729,15 @@ export default function SettingsPage() {
                     setProfile({ ...profile, preferred_language: e.target.value })
                   }
                 >
-                  <option value="en">English</option>
-                  <option value="ar">العربية</option>
+                  <option value="en">{ui.english}</option>
+                  <option value="ar">{ui.arabic}</option>
                 </select>
               </div>
             </div>
 
             <div className={styles.settingsActions}>
               <button className={styles.aiGenerateButton} disabled={savingProfile}>
-                {savingProfile ? "Saving..." : t.save}
+                {savingProfile ? ui.saving : t.save}
               </button>
             </div>
           </form>
@@ -528,7 +747,7 @@ export default function SettingsPage() {
               <span className={styles.settingsSectionIcon}>S</span>
               <div>
                 <h2>{t.security}</h2>
-                <p>Email and password changes are handled securely by Supabase Auth.</p>
+                <p>{ui.securityDescription}</p>
               </div>
             </div>
 
@@ -549,7 +768,7 @@ export default function SettingsPage() {
 
               <div className={styles.settingsActions}>
                 <button className={styles.aiGenerateButton} disabled={savingEmail}>
-                  {savingEmail ? "Saving..." : t.changeEmail}
+                  {savingEmail ? ui.saving : t.changeEmail}
                 </button>
               </div>
             </form>
@@ -598,7 +817,10 @@ export default function SettingsPage() {
               {passwordForm.new_password && (
                 <div className={styles.passwordStrength}>
                   <span>
-                    {t.strength}: {passwordStrength.label}
+                    {t.strength}:{" "}
+                    {passwordStrength.className
+                      ? ui[passwordStrength.className]
+                      : ""}
                   </span>
                   <div className={styles.strengthTrack}>
                     <div
@@ -616,7 +838,7 @@ export default function SettingsPage() {
 
               <div className={styles.settingsActions}>
                 <button className={styles.aiGenerateButton} disabled={savingPassword}>
-                  {savingPassword ? "Saving..." : t.changePassword}
+                  {savingPassword ? ui.saving : t.changePassword}
                 </button>
               </div>
             </form>
@@ -629,7 +851,7 @@ export default function SettingsPage() {
               <span className={styles.settingsSectionIcon}>T</span>
               <div>
                 <h2>{t.preferences}</h2>
-                <p>These options update the app experience on this device.</p>
+                <p>{ui.preferencesDescription}</p>
               </div>
             </div>
 
@@ -648,7 +870,7 @@ export default function SettingsPage() {
               <span className={styles.settingsSectionIcon}>D</span>
               <div>
                 <h2>{t.sessions}</h2>
-                <p>Revoke active sessions on other browsers and devices while keeping this session active.</p>
+                <p>{ui.sessionsDescription}</p>
               </div>
             </div>
 
@@ -658,7 +880,7 @@ export default function SettingsPage() {
               onClick={handleLogoutOtherSessions}
               disabled={loggingOutOtherSessions}
             >
-              {loggingOutOtherSessions ? "Working..." : t.logoutOtherSessions}
+              {loggingOutOtherSessions ? ui.working : t.logoutOtherSessions}
             </button>
           </section>
 
@@ -667,7 +889,7 @@ export default function SettingsPage() {
               <span className={styles.settingsSectionIcon}>R</span>
               <div>
                 <h2>{t.dataPrivacy}</h2>
-                <p>Download your stored profile and plans, or permanently delete your account.</p>
+                <p>{ui.privacyDescription}</p>
               </div>
             </div>
 
@@ -677,7 +899,7 @@ export default function SettingsPage() {
               onClick={handleExportData}
               disabled={exporting}
             >
-              {exporting ? "Exporting..." : t.exportData}
+              {exporting ? ui.exporting : t.exportData}
             </button>
 
             <div className={styles.deleteAccountBox}>
@@ -697,7 +919,7 @@ export default function SettingsPage() {
                 onClick={handleDeleteAccount}
                 disabled={deleting}
               >
-                {deleting ? "Deleting..." : t.deleteAccount}
+                {deleting ? ui.deleting : t.deleteAccount}
               </button>
             </div>
           </section>
@@ -707,7 +929,7 @@ export default function SettingsPage() {
               <span className={styles.settingsSectionIcon}>?</span>
               <div>
                 <h2>{t.support}</h2>
-                <p>Need help with your account or trip planning data?</p>
+                <p>{ui.supportDescription}</p>
               </div>
             </div>
 
@@ -722,7 +944,7 @@ export default function SettingsPage() {
               <span className={styles.settingsSectionIcon}>i</span>
               <div>
                 <h2>{t.about}</h2>
-                <p>Version: Alsaeh.bh v1.0</p>
+                <p>{ui.version}</p>
               </div>
             </div>
             <p className={styles.settingsText}>{t.aboutText}</p>

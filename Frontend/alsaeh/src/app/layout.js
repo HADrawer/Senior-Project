@@ -1,4 +1,5 @@
 import { Geist, Geist_Mono } from "next/font/google";
+import Footer from "@/components/Footer";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -26,7 +27,10 @@ export default function RootLayout({ children }) {
             __html: `
               try {
                 const theme = localStorage.getItem("theme") || "system";
+                const lang = localStorage.getItem("site_lang") === "ar" ? "ar" : "en";
                 document.documentElement.setAttribute("data-theme", theme);
+                document.documentElement.lang = lang;
+                document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
               } catch {}
             `,
           }}
@@ -35,6 +39,7 @@ export default function RootLayout({ children }) {
 
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         {children}
+        <Footer />
       </body>
     </html>
   );
