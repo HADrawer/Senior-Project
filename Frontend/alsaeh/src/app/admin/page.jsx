@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./admin.module.css";
+import dashboardStyles from "../dashboard/dashboard.module.css";
 import { supabase } from "@/lib/supabase";
 
 async function getAdminToken() {
@@ -16,6 +18,39 @@ function getErrorMessage(detail, fallback) {
   return fallback;
 }
 
+const ADMIN_CACHE_TTL_MS = 2 * 60 * 1000;
+const ADMIN_CACHE_KEYS = {
+  overview: "admin_overview",
+  users: "admin_users",
+  plans: "admin_plans",
+  logs: "admin_logs",
+};
+
+function readAdminCache(key) {
+  try {
+    const cached = sessionStorage.getItem(key);
+    if (!cached) return null;
+    return JSON.parse(cached);
+  } catch {
+    sessionStorage.removeItem(key);
+    return null;
+  }
+}
+
+function writeAdminCache(key, data) {
+  sessionStorage.setItem(
+    key,
+    JSON.stringify({
+      data,
+      savedAt: Date.now(),
+    })
+  );
+}
+
+function isFreshCache(cache) {
+  return cache && Date.now() - cache.savedAt < ADMIN_CACHE_TTL_MS;
+}
+
 export default function AdminPage() {
   const router = useRouter();
 
@@ -24,10 +59,160 @@ export default function AdminPage() {
   const [users, setUsers] = useState([]);
   const [plans, setPlans] = useState([]);
   const [logs, setLogs] = useState([]);
+  const [user, setUser] = useState(null);
+  const [lang, setLang] = useState("en");
 
   const [loading, setLoading] = useState(true);
   const [sectionLoading, setSectionLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const content = {
+    en: {
+      brand: "Alsaeh.bh",
+      adminRole: "Admin",
+      dashboard: "Dashboard",
+      createPlan: "Create Plan",
+      settings: "Settings",
+      admin: "Admin",
+      logout: "Logout",
+      langButton: "Arabic",
+      loading: "Loading...",
+      loadingData: "Loading data...",
+      adminPanel: "Admin Panel",
+      title: "System Management",
+      subtitle: "Manage users, plans, logs, and monitor system activity.",
+      overview: "Overview",
+      users: "Users",
+      plans: "Plans",
+      logs: "Logs",
+      error: "Error",
+      noOverview: "No overview data available.",
+      totalUsers: "Total Users",
+      totalPlans: "Total Plans",
+      aiGeneratedPlans: "AI Generated Plans",
+      chatMessages: "Chat Messages",
+      usageLogs: "Usage Logs",
+      popularCategories: "Popular Categories",
+      noCategoryData: "No category data yet.",
+      unknown: "Unknown",
+      noUsers: "No users found.",
+      name: "Name",
+      email: "Email",
+      phone: "Phone",
+      role: "Role",
+      language: "Language",
+      status: "Status",
+      actions: "Actions",
+      active: "Active",
+      disabled: "Disabled",
+      save: "Save",
+      cancel: "Cancel",
+      edit: "Edit",
+      disable: "Disable",
+      noPlans: "No plans found.",
+      planTitle: "Title",
+      user: "User",
+      days: "Days",
+      budget: "Budget",
+      people: "People",
+      delete: "Delete",
+      untitled: "Untitled",
+      yes: "Yes",
+      no: "No",
+      noLogs: "No logs found.",
+      action: "Action",
+      entity: "Entity",
+      metadata: "Metadata",
+      date: "Date",
+      confirmDisable: "Are you sure you want to disable this user?",
+      confirmDeletePlan: "Are you sure you want to delete this plan?",
+      unableToConnect: "Unable to connect to server",
+      failedOverview: "Failed to load overview",
+      failedUsers: "Failed to load users",
+      failedPlans: "Failed to load plans",
+      failedLogs: "Failed to load logs",
+      failedUpdateUser: "Failed to update user",
+      failedDisableUser: "Failed to disable user",
+      failedUpdatePlan: "Failed to update plan",
+      failedDeletePlan: "Failed to delete plan",
+    },
+    ar: {
+      brand: "Alsaeh.bh",
+      adminRole: "مشرف",
+      dashboard: "لوحة التحكم",
+      createPlan: "إنشاء خطة",
+      settings: "الإعدادات",
+      admin: "الإدارة",
+      logout: "تسجيل الخروج",
+      langButton: "English",
+      loading: "جاري التحميل...",
+      loadingData: "جاري تحميل البيانات...",
+      adminPanel: "لوحة الإدارة",
+      title: "إدارة النظام",
+      subtitle: "إدارة المستخدمين والخطط والسجلات ومراقبة نشاط النظام.",
+      overview: "نظرة عامة",
+      users: "المستخدمون",
+      plans: "الخطط",
+      logs: "السجلات",
+      error: "خطأ",
+      noOverview: "لا توجد بيانات عامة متاحة.",
+      totalUsers: "إجمالي المستخدمين",
+      totalPlans: "إجمالي الخطط",
+      aiGeneratedPlans: "خطط مولدة بالذكاء الاصطناعي",
+      chatMessages: "رسائل المحادثة",
+      usageLogs: "سجلات الاستخدام",
+      popularCategories: "الفئات الشائعة",
+      noCategoryData: "لا توجد بيانات فئات بعد.",
+      unknown: "غير معروف",
+      noUsers: "لا يوجد مستخدمون.",
+      name: "الاسم",
+      email: "البريد الإلكتروني",
+      phone: "الهاتف",
+      role: "الدور",
+      language: "اللغة",
+      status: "الحالة",
+      actions: "الإجراءات",
+      active: "نشط",
+      disabled: "معطل",
+      save: "حفظ",
+      cancel: "إلغاء",
+      edit: "تعديل",
+      disable: "تعطيل",
+      noPlans: "لا توجد خطط.",
+      planTitle: "العنوان",
+      user: "المستخدم",
+      days: "الأيام",
+      budget: "الميزانية",
+      people: "الأشخاص",
+      delete: "حذف",
+      untitled: "بدون عنوان",
+      yes: "نعم",
+      no: "لا",
+      noLogs: "لا توجد سجلات.",
+      action: "الإجراء",
+      entity: "الكيان",
+      metadata: "البيانات",
+      date: "التاريخ",
+      confirmDisable: "هل أنت متأكد من تعطيل هذا المستخدم؟",
+      confirmDeletePlan: "هل أنت متأكد من حذف هذه الخطة؟",
+      unableToConnect: "تعذر الاتصال بالخادم",
+      failedOverview: "فشل تحميل النظرة العامة",
+      failedUsers: "فشل تحميل المستخدمين",
+      failedPlans: "فشل تحميل الخطط",
+      failedLogs: "فشل تحميل السجلات",
+      failedUpdateUser: "فشل تحديث المستخدم",
+      failedDisableUser: "فشل تعطيل المستخدم",
+      failedUpdatePlan: "فشل تحديث الخطة",
+      failedDeletePlan: "فشل حذف الخطة",
+    },
+  };
+
+  const t = content[lang];
+
+  useEffect(() => {
+    const savedLang = localStorage.getItem("site_lang");
+    if (savedLang === "ar" || savedLang === "en") setLang(savedLang);
+  }, []);
 
   useEffect(() => {
     async function initAdmin() {
@@ -62,7 +247,20 @@ export default function AdminPage() {
           return;
         }
 
-        await loadOverview(token);
+        setUser(user);
+        const cachedOverview = readAdminCache(ADMIN_CACHE_KEYS.overview);
+
+        if (cachedOverview) {
+          setOverview(cachedOverview.data);
+          setLoading(false);
+          loadOverview(token, { background: true });
+        } else {
+          await loadOverview(token);
+        }
+
+        loadUsers({ background: true, token });
+        loadPlans({ background: true, token });
+        loadLogs({ background: true, token });
       } catch (error) {
         console.error(error);
         router.replace("/login");
@@ -74,6 +272,28 @@ export default function AdminPage() {
     initAdmin();
   }, [router]);
 
+  async function logout() {
+    sessionStorage.removeItem("auth_user");
+    sessionStorage.removeItem("dashboard_plans");
+    sessionStorage.removeItem("place_categories");
+    sessionStorage.removeItem("settings_profile");
+    Object.values(ADMIN_CACHE_KEYS).forEach((key) => sessionStorage.removeItem(key));
+
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+
+    router.replace("/login");
+  }
+
+  function toggleLanguage() {
+    const nextLang = lang === "en" ? "ar" : "en";
+    setLang(nextLang);
+    localStorage.setItem("site_lang", nextLang);
+  }
+
   async function safeJson(res) {
     try {
       return await res.json();
@@ -82,9 +302,18 @@ export default function AdminPage() {
     }
   }
 
-  async function loadOverview(tokenParam) {
-    setSectionLoading(true);
-    setError("");
+  async function loadOverview(tokenParam, options = {}) {
+    const cached = readAdminCache(ADMIN_CACHE_KEYS.overview);
+    const background = options.background;
+
+    if (cached) {
+      setOverview(cached.data);
+      if (isFreshCache(cached) && !background) return;
+    }
+
+    if (!cached && !background) setSectionLoading(true);
+    if (!background) setError("");
+
     try {
       const token = tokenParam || await getAdminToken();
       if (!token) {
@@ -98,23 +327,32 @@ export default function AdminPage() {
 
       const result = await safeJson(res);
       if (!res.ok) {
-        setError(getErrorMessage(result.detail, "Failed to load overview"));
+        if (!background) setError(getErrorMessage(result.detail, t.failedOverview));
         return;
       }
       setOverview(result);
+      writeAdminCache(ADMIN_CACHE_KEYS.overview, result);
     } catch {
-      setError("Unable to connect to server");
+      if (!background) setError(t.unableToConnect);
     } finally {
-      setSectionLoading(false);
+      if (!background) setSectionLoading(false);
     }
   }
 
-  async function loadUsers() {
-    setSectionLoading(true);
-    setError("");
+  async function loadUsers(options = {}) {
+    const cached = readAdminCache(ADMIN_CACHE_KEYS.users);
+    const background = options.background;
+
+    if (cached) {
+      setUsers(cached.data);
+      if (isFreshCache(cached) && !background) return;
+    }
+
+    if (!cached && !background) setSectionLoading(true);
+    if (!background) setError("");
 
     try {
-      const token = await getAdminToken();
+      const token = options.token || await getAdminToken();
       if (!token) {
         router.replace("/login");
         return;
@@ -129,25 +367,34 @@ export default function AdminPage() {
       const result = await safeJson(res);
 
       if (!res.ok) {
-        setError(getErrorMessage(result.detail, "Failed to load users"));
+        if (!background) setError(getErrorMessage(result.detail, t.failedUsers));
         return;
       }
 
       setUsers(result);
+      writeAdminCache(ADMIN_CACHE_KEYS.users, result);
     } catch (error) {
       console.error(error);
-      setError("Unable to connect to server");
+      if (!background) setError(t.unableToConnect);
     } finally {
-      setSectionLoading(false);
+      if (!background) setSectionLoading(false);
     }
   }
 
-  async function loadPlans() {
-    setSectionLoading(true);
-    setError("");
+  async function loadPlans(options = {}) {
+    const cached = readAdminCache(ADMIN_CACHE_KEYS.plans);
+    const background = options.background;
+
+    if (cached) {
+      setPlans(cached.data);
+      if (isFreshCache(cached) && !background) return;
+    }
+
+    if (!cached && !background) setSectionLoading(true);
+    if (!background) setError("");
 
     try {
-      const token = await getAdminToken();
+      const token = options.token || await getAdminToken();
       if (!token) {
         router.replace("/login");
         return;
@@ -162,25 +409,34 @@ export default function AdminPage() {
       const result = await safeJson(res);
 
       if (!res.ok) {
-        setError(getErrorMessage(result.detail, "Failed to load plans"));
+        if (!background) setError(getErrorMessage(result.detail, t.failedPlans));
         return;
       }
 
       setPlans(result);
+      writeAdminCache(ADMIN_CACHE_KEYS.plans, result);
     } catch (error) {
       console.error(error);
-      setError("Unable to connect to server");
+      if (!background) setError(t.unableToConnect);
     } finally {
-      setSectionLoading(false);
+      if (!background) setSectionLoading(false);
     }
   }
 
-  async function loadLogs() {
-    setSectionLoading(true);
-    setError("");
+  async function loadLogs(options = {}) {
+    const cached = readAdminCache(ADMIN_CACHE_KEYS.logs);
+    const background = options.background;
+
+    if (cached) {
+      setLogs(cached.data);
+      if (isFreshCache(cached) && !background) return;
+    }
+
+    if (!cached && !background) setSectionLoading(true);
+    if (!background) setError("");
 
     try {
-      const token = await getAdminToken();
+      const token = options.token || await getAdminToken();
       if (!token) {
         router.replace("/login");
         return;
@@ -195,16 +451,17 @@ export default function AdminPage() {
       const result = await safeJson(res);
 
       if (!res.ok) {
-        setError(getErrorMessage(result.detail, "Failed to load logs"));
+        if (!background) setError(getErrorMessage(result.detail, t.failedLogs));
         return;
       }
 
       setLogs(result);
+      writeAdminCache(ADMIN_CACHE_KEYS.logs, result);
     } catch (error) {
       console.error(error);
-      setError("Unable to connect to server");
+      if (!background) setError(t.unableToConnect);
     } finally {
-      setSectionLoading(false);
+      if (!background) setSectionLoading(false);
     }
   }
 
@@ -237,19 +494,20 @@ export default function AdminPage() {
       const result = await safeJson(res);
 
       if (!res.ok) {
-        alert(getErrorMessage(result.detail, "Failed to update user"));
+        alert(getErrorMessage(result.detail, t.failedUpdateUser));
         return;
       }
 
+      sessionStorage.removeItem(ADMIN_CACHE_KEYS.users);
       await loadUsers();
     } catch (error) {
       console.error(error);
-      alert("Unable to connect to server");
+      alert(t.unableToConnect);
     }
   }
 
   async function disableUser(userId) {
-    const confirmed = window.confirm("Are you sure you want to disable this user?");
+    const confirmed = window.confirm(t.confirmDisable);
     if (!confirmed) return;
 
     try {
@@ -269,14 +527,15 @@ export default function AdminPage() {
       const result = await safeJson(res);
 
       if (!res.ok) {
-        alert(getErrorMessage(result.detail, "Failed to disable user"));
+        alert(getErrorMessage(result.detail, t.failedDisableUser));
         return;
       }
 
+      sessionStorage.removeItem(ADMIN_CACHE_KEYS.users);
       await loadUsers();
     } catch (error) {
       console.error(error);
-      alert("Unable to connect to server");
+      alert(t.unableToConnect);
     }
   }
 
@@ -300,19 +559,21 @@ export default function AdminPage() {
       const result = await safeJson(res);
 
       if (!res.ok) {
-        alert(getErrorMessage(result.detail, "Failed to update plan"));
+        alert(getErrorMessage(result.detail, t.failedUpdatePlan));
         return;
       }
 
+      sessionStorage.removeItem(ADMIN_CACHE_KEYS.plans);
+      sessionStorage.removeItem(ADMIN_CACHE_KEYS.overview);
       await loadPlans();
     } catch (error) {
       console.error(error);
-      alert("Unable to connect to server");
+      alert(t.unableToConnect);
     }
   }
 
   async function deletePlan(planId) {
-    const confirmed = window.confirm("Are you sure you want to delete this plan?");
+    const confirmed = window.confirm(t.confirmDeletePlan);
     if (!confirmed) return;
 
     try {
@@ -332,100 +593,157 @@ export default function AdminPage() {
       const result = await safeJson(res);
 
       if (!res.ok) {
-        alert(getErrorMessage(result.detail, "Failed to delete plan"));
+        alert(getErrorMessage(result.detail, t.failedDeletePlan));
         return;
       }
 
+      sessionStorage.removeItem(ADMIN_CACHE_KEYS.plans);
+      sessionStorage.removeItem(ADMIN_CACHE_KEYS.overview);
       await loadPlans();
     } catch (error) {
       console.error(error);
-      alert("Unable to connect to server");
+      alert(t.unableToConnect);
     }
   }
 
   if (loading) {
-    return <main className={styles.page}>Loading...</main>;
+    return <p className={dashboardStyles.loadingText}>{t.loading}</p>;
   }
 
   return (
-    <main className={styles.page}>
-      <div className={styles.header}>
-        <span className={styles.badge}>Admin Panel</span>
-        <h1>System Management</h1>
-        <p>Manage users, plans, logs, and monitor system activity.</p>
-      </div>
+    <div
+      className={dashboardStyles.dashboardPage}
+      dir={lang === "ar" ? "rtl" : "ltr"}
+    >
+      <aside className={dashboardStyles.sidebar}>
+        <div className={dashboardStyles.sidebarMain}>
+          <Link href="/" className={dashboardStyles.brand}>
+            <div className={dashboardStyles.logoMark}></div>
+            <span>Alsaeh.bh</span>
+          </Link>
 
-      <div className={styles.tabs}>
-        <button
-          className={activeTab === "overview" ? styles.activeTab : ""}
-          onClick={() => changeTab("overview")}
-        >
-          Overview
-        </button>
+          <div className={dashboardStyles.userBox}>
+            <p className={dashboardStyles.userLabel}>{t.adminRole}</p>
+            <h3 className={dashboardStyles.userName}>{user?.full_name || "-"}</h3>
+            <p className={dashboardStyles.userEmail}>{user?.email || "-"}</p>
+          </div>
 
-        <button
-          className={activeTab === "users" ? styles.activeTab : ""}
-          onClick={() => changeTab("users")}
-        >
-          Users
-        </button>
+          <nav className={dashboardStyles.nav}>
+            <Link href="/dashboard" className={dashboardStyles.navItem}>
+              {t.dashboard}
+            </Link>
 
-        <button
-          className={activeTab === "plans" ? styles.activeTab : ""}
-          onClick={() => changeTab("plans")}
-        >
-          Plans
-        </button>
+            <Link href="/dashboard/create-plan" className={dashboardStyles.navItem}>
+              {t.createPlan}
+            </Link>
 
-        <button
-          className={activeTab === "logs" ? styles.activeTab : ""}
-          onClick={() => changeTab("logs")}
-        >
-          Logs
-        </button>
-      </div>
+            <Link href="/dashboard/settings" className={dashboardStyles.navItem}>
+              {t.settings}
+            </Link>
 
-      {error && (
-        <div className={styles.errorCard}>
-          <h2>Error</h2>
-          <p>{error}</p>
+            <Link
+              href="/admin"
+              className={`${dashboardStyles.navItem} ${dashboardStyles.adminNavItem} ${dashboardStyles.activeNavItem}`}
+            >
+              {t.admin}
+            </Link>
+          </nav>
         </div>
-      )}
 
-      {sectionLoading && <p className={styles.loadingText}>Loading data...</p>}
+        <div className={dashboardStyles.sidebarBottom}>
+          <button className={dashboardStyles.langBtn} onClick={toggleLanguage}>
+            {t.langButton}
+          </button>
 
-      {!sectionLoading && activeTab === "overview" && (
-        <OverviewSection data={overview} />
-      )}
+          <button className={dashboardStyles.logoutBtn} onClick={logout}>
+            {t.logout}
+          </button>
+        </div>
+      </aside>
 
-      {!sectionLoading && activeTab === "users" && (
-        <UsersSection
-          users={users}
-          onUpdateUser={updateUser}
-          onDisableUser={disableUser}
-        />
-      )}
+      <section className={`${dashboardStyles.contentArea} ${styles.adminContentArea}`}>
+        <main className={styles.page}>
+          <div className={styles.header}>
+            <span className={styles.badge}>{t.adminPanel}</span>
+            <h1>{t.title}</h1>
+            <p>{t.subtitle}</p>
+          </div>
 
-      {!sectionLoading && activeTab === "plans" && (
-        <PlansSection
-          plans={plans}
-          onUpdatePlan={updatePlan}
-          onDeletePlan={deletePlan}
-        />
-      )}
+          <div className={styles.tabs}>
+            <button
+              className={activeTab === "overview" ? styles.activeTab : ""}
+              onClick={() => changeTab("overview")}
+            >
+              {t.overview}
+            </button>
 
-      {!sectionLoading && activeTab === "logs" && (
-        <LogsSection logs={logs} />
-      )}
-    </main>
+            <button
+              className={activeTab === "users" ? styles.activeTab : ""}
+              onClick={() => changeTab("users")}
+            >
+              {t.users}
+            </button>
+
+            <button
+              className={activeTab === "plans" ? styles.activeTab : ""}
+              onClick={() => changeTab("plans")}
+            >
+              {t.plans}
+            </button>
+
+            <button
+              className={activeTab === "logs" ? styles.activeTab : ""}
+              onClick={() => changeTab("logs")}
+            >
+              {t.logs}
+            </button>
+          </div>
+
+          {error && (
+            <div className={styles.errorCard}>
+              <h2>{t.error}</h2>
+              <p>{error}</p>
+            </div>
+          )}
+
+          {sectionLoading && <p className={styles.loadingText}>{t.loadingData}</p>}
+
+          {!sectionLoading && activeTab === "overview" && (
+            <OverviewSection data={overview} t={t} />
+          )}
+
+          {!sectionLoading && activeTab === "users" && (
+            <UsersSection
+              users={users}
+              onUpdateUser={updateUser}
+              onDisableUser={disableUser}
+              t={t}
+            />
+          )}
+
+          {!sectionLoading && activeTab === "plans" && (
+            <PlansSection
+              plans={plans}
+              onUpdatePlan={updatePlan}
+              onDeletePlan={deletePlan}
+              t={t}
+            />
+          )}
+
+          {!sectionLoading && activeTab === "logs" && (
+            <LogsSection logs={logs} t={t} />
+          )}
+        </main>
+      </section>
+    </div>
   );
 }
 
-function OverviewSection({ data }) {
+function OverviewSection({ data, t }) {
   if (!data) {
     return (
       <section className={styles.panel}>
-        <p className={styles.empty}>No overview data available.</p>
+        <p className={styles.empty}>{t.noOverview}</p>
       </section>
     );
   }
@@ -433,23 +751,23 @@ function OverviewSection({ data }) {
   return (
     <>
       <section className={styles.statsGrid}>
-        <StatCard title="Total Users" value={data.total_users} />
-        <StatCard title="Total Plans" value={data.total_plans} />
-        <StatCard title="AI Generated Plans" value={data.ai_plans} />
-        <StatCard title="Chat Messages" value={data.total_messages} />
-        <StatCard title="Usage Logs" value={data.total_logs} />
+        <StatCard title={t.totalUsers} value={data.total_users} />
+        <StatCard title={t.totalPlans} value={data.total_plans} />
+        <StatCard title={t.aiGeneratedPlans} value={data.ai_plans} />
+        <StatCard title={t.chatMessages} value={data.total_messages} />
+        <StatCard title={t.usageLogs} value={data.total_logs} />
       </section>
 
       <section className={styles.panel}>
-        <h2>Popular Categories</h2>
+        <h2>{t.popularCategories}</h2>
 
         {!data.popular_categories || data.popular_categories.length === 0 ? (
-          <p className={styles.empty}>No category data yet.</p>
+          <p className={styles.empty}>{t.noCategoryData}</p>
         ) : (
           <div className={styles.categoryList}>
             {data.popular_categories.map((item, index) => (
               <div key={index} className={styles.categoryItem}>
-                <span>{item.category || "Unknown"}</span>
+                <span>{item.category || t.unknown}</span>
                 <strong>{item.total}</strong>
               </div>
             ))}
@@ -460,31 +778,31 @@ function OverviewSection({ data }) {
   );
 }
 
-function UsersSection({ users, onUpdateUser, onDisableUser }) {
+function UsersSection({ users, onUpdateUser, onDisableUser, t }) {
   if (!users.length) {
     return (
       <section className={styles.panel}>
-        <h2>Users</h2>
-        <p className={styles.empty}>No users found.</p>
+        <h2>{t.users}</h2>
+        <p className={styles.empty}>{t.noUsers}</p>
       </section>
     );
   }
 
   return (
     <section className={styles.panel}>
-      <h2>Users</h2>
+      <h2>{t.users}</h2>
 
       <div className={styles.tableWrap}>
         <table className={styles.adminTable}>
           <thead>
             <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Phone</th>
-              <th>Role</th>
-              <th>Language</th>
-              <th>Status</th>
-              <th>Actions</th>
+              <th>{t.name}</th>
+              <th>{t.email}</th>
+              <th>{t.phone}</th>
+              <th>{t.role}</th>
+              <th>{t.language}</th>
+              <th>{t.status}</th>
+              <th>{t.actions}</th>
             </tr>
           </thead>
 
@@ -495,6 +813,7 @@ function UsersSection({ users, onUpdateUser, onDisableUser }) {
                 user={user}
                 onUpdateUser={onUpdateUser}
                 onDisableUser={onDisableUser}
+                t={t}
               />
             ))}
           </tbody>
@@ -504,7 +823,7 @@ function UsersSection({ users, onUpdateUser, onDisableUser }) {
   );
 }
 
-function UserRow({ user, onUpdateUser, onDisableUser }) {
+function UserRow({ user, onUpdateUser, onDisableUser, t }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
     full_name: user.full_name || "",
@@ -569,13 +888,13 @@ function UserRow({ user, onUpdateUser, onDisableUser }) {
               setForm({ ...form, is_active: e.target.value === "true" })
             }
           >
-            <option value="true">Active</option>
-            <option value="false">Disabled</option>
+            <option value="true">{t.active}</option>
+            <option value="false">{t.disabled}</option>
           </select>
         ) : user.is_active ? (
-          "Active"
+          t.active
         ) : (
-          "Disabled"
+          t.disabled
         )}
       </td>
 
@@ -590,7 +909,7 @@ function UserRow({ user, onUpdateUser, onDisableUser }) {
                   setEditing(false);
                 }}
               >
-                Save
+                {t.save}
               </button>
 
               <button
@@ -605,7 +924,7 @@ function UserRow({ user, onUpdateUser, onDisableUser }) {
                   setEditing(false);
                 }}
               >
-                Cancel
+                {t.cancel}
               </button>
             </>
           ) : (
@@ -614,14 +933,14 @@ function UserRow({ user, onUpdateUser, onDisableUser }) {
                 className={styles.smallSecondary}
                 onClick={() => setEditing(true)}
               >
-                Edit
+                {t.edit}
               </button>
 
               <button
                 className={styles.smallDanger}
                 onClick={() => onDisableUser(user.id)}
               >
-                Disable
+                {t.disable}
               </button>
             </>
           )}
@@ -631,32 +950,32 @@ function UserRow({ user, onUpdateUser, onDisableUser }) {
   );
 }
 
-function PlansSection({ plans, onUpdatePlan, onDeletePlan }) {
+function PlansSection({ plans, onUpdatePlan, onDeletePlan, t }) {
   if (!plans.length) {
     return (
       <section className={styles.panel}>
-        <h2>Plans</h2>
-        <p className={styles.empty}>No plans found.</p>
+        <h2>{t.plans}</h2>
+        <p className={styles.empty}>{t.noPlans}</p>
       </section>
     );
   }
 
   return (
     <section className={styles.panel}>
-      <h2>Plans</h2>
+      <h2>{t.plans}</h2>
 
       <div className={styles.tableWrap}>
         <table className={styles.adminTable}>
           <thead>
             <tr>
-              <th>Title</th>
-              <th>User</th>
-              <th>Days</th>
-              <th>Budget</th>
-              <th>People</th>
-              <th>Status</th>
+              <th>{t.planTitle}</th>
+              <th>{t.user}</th>
+              <th>{t.days}</th>
+              <th>{t.budget}</th>
+              <th>{t.people}</th>
+              <th>{t.status}</th>
               <th>AI</th>
-              <th>Actions</th>
+              <th>{t.actions}</th>
             </tr>
           </thead>
 
@@ -667,6 +986,7 @@ function PlansSection({ plans, onUpdatePlan, onDeletePlan }) {
                 plan={plan}
                 onUpdatePlan={onUpdatePlan}
                 onDeletePlan={onDeletePlan}
+                t={t}
               />
             ))}
           </tbody>
@@ -676,7 +996,7 @@ function PlansSection({ plans, onUpdatePlan, onDeletePlan }) {
   );
 }
 
-function PlanRow({ plan, onUpdatePlan, onDeletePlan }) {
+function PlanRow({ plan, onUpdatePlan, onDeletePlan, t }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
     title: plan.title || "",
@@ -696,12 +1016,12 @@ function PlanRow({ plan, onUpdatePlan, onDeletePlan }) {
             onChange={(e) => setForm({ ...form, title: e.target.value })}
           />
         ) : (
-          plan.title || "Untitled"
+          plan.title || t.untitled
         )}
       </td>
 
       <td>
-        <strong>{plan.user_name || "Unknown"}</strong>
+        <strong>{plan.user_name || t.unknown}</strong>
         <br />
         <small>{plan.user_email || "-"}</small>
       </td>
@@ -771,7 +1091,7 @@ function PlanRow({ plan, onUpdatePlan, onDeletePlan }) {
         )}
       </td>
 
-      <td>{plan.generated_by_ai ? "Yes" : "No"}</td>
+      <td>{plan.generated_by_ai ? t.yes : t.no}</td>
 
       <td>
         <div className={styles.rowActions}>
@@ -790,7 +1110,7 @@ function PlanRow({ plan, onUpdatePlan, onDeletePlan }) {
                   setEditing(false);
                 }}
               >
-                Save
+                {t.save}
               </button>
 
               <button
@@ -806,7 +1126,7 @@ function PlanRow({ plan, onUpdatePlan, onDeletePlan }) {
                   setEditing(false);
                 }}
               >
-                Cancel
+                {t.cancel}
               </button>
             </>
           ) : (
@@ -815,14 +1135,14 @@ function PlanRow({ plan, onUpdatePlan, onDeletePlan }) {
                 className={styles.smallSecondary}
                 onClick={() => setEditing(true)}
               >
-                Edit
+                {t.edit}
               </button>
 
               <button
                 className={styles.smallDanger}
                 onClick={() => onDeletePlan(plan.id)}
               >
-                Delete
+                {t.delete}
               </button>
             </>
           )}
@@ -832,29 +1152,29 @@ function PlanRow({ plan, onUpdatePlan, onDeletePlan }) {
   );
 }
 
-function LogsSection({ logs }) {
+function LogsSection({ logs, t }) {
   if (!logs.length) {
     return (
       <section className={styles.panel}>
-        <h2>Logs</h2>
-        <p className={styles.empty}>No logs found.</p>
+        <h2>{t.logs}</h2>
+        <p className={styles.empty}>{t.noLogs}</p>
       </section>
     );
   }
 
   return (
     <section className={styles.panel}>
-      <h2>Usage Logs</h2>
+      <h2>{t.usageLogs}</h2>
 
       <div className={styles.tableWrap}>
         <table className={styles.adminTable}>
           <thead>
             <tr>
-              <th>Action</th>
-              <th>User</th>
-              <th>Entity</th>
-              <th>Metadata</th>
-              <th>Date</th>
+              <th>{t.action}</th>
+              <th>{t.user}</th>
+              <th>{t.entity}</th>
+              <th>{t.metadata}</th>
+              <th>{t.date}</th>
             </tr>
           </thead>
 
@@ -864,7 +1184,7 @@ function LogsSection({ logs }) {
                 <td>{log.action_type}</td>
 
                 <td>
-                  <strong>{log.user_name || "Unknown"}</strong>
+                  <strong>{log.user_name || t.unknown}</strong>
                   <br />
                   <small>{log.user_email || "-"}</small>
                 </td>

@@ -50,15 +50,15 @@ class CreatePlanRequest(BaseModel):
 
 
 class UpdatePlanRequest(BaseModel):
-    title: str
-    days: int
-    budget: float | None = None
+    title: str = Field(min_length=2, max_length=200)
+    days: int = Field(gt=0, le=14)
+    budget: float | None = Field(default=None, ge=0)
     preferences: str | None = None
     user_interests: str | None = None
     travel_styles: str | None = None
     category: str | None = None
     place: str | None = None
-    people_count: int | None = None
+    people_count: int | None = Field(default=None, gt=0, le=50)
 
 
 class GenerateAIPlanRequest(BaseModel):

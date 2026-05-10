@@ -10,155 +10,220 @@ export default function HomePage() {
   const content = {
     en: {
       brand: "Alsaeh.bh",
-      heroTitle: "Discover Bahrain Your Way",
+      heroLabel: "Bahrain Tourism AI",
+      heroTitle: "Discover Bahrain, Your Way",
       heroText:
-        "A smart tourism platform that helps you explore Bahrain with personalized recommendations and AI-generated travel plans based on your interests, budget, and time.",
-      getStarted: "Get Started",
-      login: "Login",
-      register: "Register",
+        "A smart tourism platform crafted for Bahrain. Get personalized AI-generated travel plans based on your interests, budget, and time — and refine them with a conversational assistant.",
+      getStarted: "Start Planning",
+      login: "Sign In",
+      register: "Create Account",
       featuresTitle: "Why Alsaeh.bh?",
-      feature1Title: "Personalized Plans",
-      feature1Text:
-        "Create travel plans based on your preferences, interests, and available days.",
-      feature2Title: "AI Assistance",
-      feature2Text:
-        "Get smart suggestions for places, restaurants, cafes, and activities in Bahrain.",
-      feature3Title: "Easy Planning",
-      feature3Text:
-        "Organize your trip in a simple and modern way through one platform.",
-      aboutTitle: "About the Platform",
+      featureSubtitle: "Everything you need to explore Bahrain intelligently",
+      features: [
+        {
+          icon: "✦",
+          title: "Personalized Plans",
+          text: "AI-crafted day-by-day itineraries tailored to your interests, budget, travel style, and constraints.",
+        },
+        {
+          icon: "◈",
+          title: "Conversational Editing",
+          text: "Refine your plans in real time through a built-in AI chatbot — no manual work required.",
+        },
+        {
+          icon: "⬡",
+          title: "Bahrain-First",
+          text: "Every recommendation is specific to Bahrain — real places, exact locations, Google Maps links.",
+        },
+      ],
+      aboutTitle: "Built for Real Travelers",
       aboutText:
-        "Alsaeh.bh is designed to make tourism in Bahrain easier and more enjoyable. It combines modern web technologies with AI to help users discover places and build better travel experiences.",
-      exploreTitle: "Experience Bahrain",
+        "Alsaeh.bh combines modern web technologies with Gemini AI to help tourists and locals plan richer, more organized trips across Bahrain — from heritage sites and beaches to local cafes and malls.",
+      exploreTitle: "All of Bahrain, Organized",
       exploreText:
-        "From heritage sites and museums to beaches, cafes, and local attractions, Alsaeh.bh helps you find what matches your style.",
-      footer: "Alsaeh.bh | Tourism Recommender System for Bahrain",
-      switchLabel: "العربية",
+        "From the historic Bahrain Fort and Al-Fatih Mosque to Amwaj Islands and Seef Mall — find attractions, restaurants, activities, and experiences matched to your style.",
+      footer: "© 2025–2026 Alsaeh.bh — University of Bahrain Senior Project",
+      langSwitch: "العربية",
+      statsPlans: "Plans Generated",
+      statsPlaces: "Bahrain Locations",
+      statsRating: "User Satisfaction",
     },
     ar: {
       brand: "السائح.البحرين",
+      heroLabel: "ذكاء اصطناعي للسياحة في البحرين",
       heroTitle: "اكتشف البحرين بطريقتك",
       heroText:
-        "منصة سياحية ذكية تساعدك على استكشاف البحرين من خلال توصيات مخصصة وخطط سياحية مولدة بالذكاء الاصطناعي حسب اهتماماتك وميزانيتك ووقتك.",
-      getStarted: "ابدأ الآن",
+        "منصة سياحية ذكية مصممة للبحرين. احصل على خطط سياحية مخصصة بالذكاء الاصطناعي حسب اهتماماتك وميزانيتك ووقتك — وعدّلها بمساعد محادثة تفاعلي.",
+      getStarted: "ابدأ التخطيط",
       login: "تسجيل الدخول",
       register: "إنشاء حساب",
       featuresTitle: "لماذا السائح.البحرين؟",
-      feature1Title: "خطط مخصصة",
-      feature1Text:
-        "أنشئ خططًا سياحية حسب تفضيلاتك واهتماماتك وعدد الأيام المتاحة لك.",
-      feature2Title: "مساعدة ذكية",
-      feature2Text:
-        "احصل على اقتراحات ذكية للأماكن والمطاعم والمقاهي والأنشطة في البحرين.",
-      feature3Title: "تخطيط سهل",
-      feature3Text:
-        "نظم رحلتك بطريقة بسيطة وحديثة من خلال منصة واحدة.",
-      aboutTitle: "عن المنصة",
+      featureSubtitle: "كل ما تحتاجه لاستكشاف البحرين بذكاء",
+      features: [
+        {
+          icon: "✦",
+          title: "خطط مخصصة",
+          text: "جداول سياحية يومية مُصممة بالذكاء الاصطناعي حسب اهتماماتك وميزانيتك وأسلوب سفرك.",
+        },
+        {
+          icon: "◈",
+          title: "تعديل بالمحادثة",
+          text: "عدّل خططك في الوقت الفعلي من خلال مساعد محادثة ذكي مدمج — بدون أي جهد يدوي.",
+        },
+        {
+          icon: "⬡",
+          title: "تخصص البحرين",
+          text: "كل توصية خاصة بالبحرين — أماكن حقيقية، مواقع دقيقة، روابط Google Maps.",
+        },
+      ],
+      aboutTitle: "مصنوع للمسافرين الحقيقيين",
       aboutText:
-        "تم تصميم السائح.البحرين لتسهيل السياحة في البحرين وجعلها أكثر متعة. تجمع المنصة بين تقنيات الويب الحديثة والذكاء الاصطناعي لمساعدة المستخدمين على اكتشاف الأماكن وبناء تجارب سفر أفضل.",
-      exploreTitle: "عِش تجربة البحرين",
+        "يجمع السائح.البحرين تقنيات الويب الحديثة مع Gemini AI لمساعدة السياح والمقيمين على تخطيط رحلات أكثر ثراءً وتنظيماً في البحرين.",
+      exploreTitle: "كل البحرين، منظمة",
       exploreText:
-        "من المواقع التراثية والمتاحف إلى الشواطئ والمقاهي والمعالم المحلية، تساعدك المنصة في العثور على ما يناسب أسلوبك.",
-      footer: "السائح.البحرين | نظام توصية سياحي للبحرين",
-      switchLabel: "English",
+        "من قلعة البحرين التاريخية ومسجد الفاتح إلى جزر أمواج وسيف مول — اعثر على المعالم والمطاعم والأنشطة المناسبة لأسلوبك.",
+      footer: "© 2025–2026 السائح.البحرين — مشروع تخرج جامعة البحرين",
+      langSwitch: "English",
+      statsPlans: "خطة مولّدة",
+      statsPlaces: "موقع بحريني",
+      statsRating: "رضا المستخدمين",
     },
   };
 
   const t = content[lang];
+  const isAr = lang === "ar";
 
   return (
-    <main
-      className={styles.page}
-      dir={lang === "ar" ? "rtl" : "ltr"}
-    >
-      <header className={styles.navbar}>
-        <div className={styles.logoSection}>
-          <div className={styles.logoMark}></div>
-          <h1 className={styles.logoText}>{t.brand}</h1>
-        </div>
+    <main className={styles.page} dir={isAr ? "rtl" : "ltr"}>
+      {/* Background decoration */}
+      <div className={styles.bgOrb1} aria-hidden />
+      <div className={styles.bgOrb2} aria-hidden />
 
-        <div className={styles.navActions}>
-          <button
-            className={styles.langBtn}
-            onClick={() => setLang(lang === "en" ? "ar" : "en")}
-          >
-            {t.switchLabel}
-          </button>
+      {/* ── Navigation ──────────────────────────────────────── */}
+      <header className={styles.nav}>
+        <div className={styles.navInner}>
+          <div className={styles.logo}>
+            <span className={styles.logoMark} />
+            <span className={styles.logoText}>{t.brand}</span>
+          </div>
 
-          <Link href="/login" className={styles.loginBtn}>
-            {t.login}
-          </Link>
-
-          <Link href="/register" className={styles.registerBtn}>
-            {t.register}
-          </Link>
+          <nav className={styles.navLinks}>
+            <button
+              className={styles.langBtn}
+              onClick={() => setLang(isAr ? "en" : "ar")}
+              aria-label="Switch language"
+            >
+              {t.langSwitch}
+            </button>
+            <Link href="/login" className={styles.navLogin}>
+              {t.login}
+            </Link>
+            <Link href="/register" className={styles.navRegister}>
+              {t.register}
+            </Link>
+          </nav>
         </div>
       </header>
 
+      {/* ── Hero ────────────────────────────────────────────── */}
       <section className={styles.hero}>
         <div className={styles.heroContent}>
-          <span className={styles.badge}>Bahrain Inspired</span>
-          <h2 className={styles.heroTitle}>{t.heroTitle}</h2>
+          <span className={styles.heroLabel}>{t.heroLabel}</span>
+          <h1 className={styles.heroTitle}>{t.heroTitle}</h1>
           <p className={styles.heroText}>{t.heroText}</p>
-
-          <div className={styles.heroButtons}>
-            <Link href="/register" className={styles.primaryBtn}>
+          <div className={styles.heroCta}>
+            <Link href="/register" className={styles.ctaPrimary}>
               {t.getStarted}
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+                <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             </Link>
-
-            <Link href="/login" className={styles.secondaryBtn}>
+            <Link href="/login" className={styles.ctaSecondary}>
               {t.login}
             </Link>
           </div>
+
+          {/* Stats row */}
+          <div className={styles.statsRow}>
+            <div className={styles.stat}>
+              <strong>500+</strong>
+              <span>{t.statsPlans}</span>
+            </div>
+            <div className={styles.statDivider} />
+            <div className={styles.stat}>
+              <strong>200+</strong>
+              <span>{t.statsPlaces}</span>
+            </div>
+            <div className={styles.statDivider} />
+            <div className={styles.stat}>
+              <strong>98%</strong>
+              <span>{t.statsRating}</span>
+            </div>
+          </div>
         </div>
 
-        <div className={styles.heroVisual}>
-          <div className={styles.cardLarge}>
-            <div className={styles.cardTop}></div>
-            <div className={styles.cardCircle}></div>
-            <div className={styles.cardLine}></div>
-            <div className={styles.cardLineSmall}></div>
+        {/* Hero visual */}
+        <div className={styles.heroVisual} aria-hidden>
+          <div className={styles.visualCard}>
+            <div className={styles.visualCardHeader}>
+              <div className={styles.visualDot} style={{ background: "#F04060" }} />
+              <div className={styles.visualDot} style={{ background: "#F0A020" }} />
+              <div className={styles.visualDot} style={{ background: "#20C040" }} />
+            </div>
+            <div className={styles.visualBody}>
+              <div className={styles.visualPill}>🌟 Personalized for you</div>
+              <div className={styles.visualLine} style={{ width: "90%" }} />
+              <div className={styles.visualLine} style={{ width: "70%" }} />
+              <div className={styles.visualActivities}>
+                {["🏖️ Al Zallaq Beach", "🕌 Al-Fatih Mosque", "🍽️ Haji's Restaurant", "🛍️ City Centre Mall"].map((item, i) => (
+                  <div key={i} className={styles.visualActivity}>
+                    <span>{item}</span>
+                    <div className={styles.visualBadge}>✓</div>
+                  </div>
+                ))}
+              </div>
+              <div className={styles.visualMapBtn}>📍 Open in Google Maps</div>
+            </div>
           </div>
-
-          <div className={styles.floatingBoxOne}></div>
-          <div className={styles.floatingBoxTwo}></div>
+          <div className={styles.visualFloatA} />
+          <div className={styles.visualFloatB} />
         </div>
       </section>
 
+      {/* ── Features ────────────────────────────────────────── */}
       <section className={styles.features}>
-        <h3 className={styles.sectionTitle}>{t.featuresTitle}</h3>
-
-        <div className={styles.featureGrid}>
-          <div className={styles.featureCard}>
-            <h4>{t.feature1Title}</h4>
-            <p>{t.feature1Text}</p>
+        <div className={styles.featuresInner}>
+          <div className={styles.sectionHead}>
+            <h2 className={styles.featuresTitle}>{t.featuresTitle}</h2>
+            <p className={styles.featuresSubtitle}>{t.featureSubtitle}</p>
           </div>
-
-          <div className={styles.featureCard}>
-            <h4>{t.feature2Title}</h4>
-            <p>{t.feature2Text}</p>
-          </div>
-
-          <div className={styles.featureCard}>
-            <h4>{t.feature3Title}</h4>
-            <p>{t.feature3Text}</p>
+          <div className={styles.featureGrid}>
+            {t.features.map((f, i) => (
+              <div key={i} className={styles.featureCard}>
+                <div className={styles.featureIcon}>{f.icon}</div>
+                <h3 className={styles.featureCardTitle}>{f.title}</h3>
+                <p className={styles.featureCardText}>{f.text}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-
+      {/* ── About ───────────────────────────────────────────── */}
       <section className={styles.about}>
-        <div className={styles.aboutCard}>
-          <h3>{t.aboutTitle}</h3>
-          <p>{t.aboutText}</p>
-        </div>
-
-        <div className={styles.aboutCard}>
-          <h3>{t.exploreTitle}</h3>
-          <p>{t.exploreText}</p>
+        <div className={styles.aboutGrid}>
+          <div className={styles.aboutCard}>
+            <h3 className={styles.aboutCardTitle}>{t.aboutTitle}</h3>
+            <p className={styles.aboutCardText}>{t.aboutText}</p>
+          </div>
+          <div className={styles.aboutCard}>
+            <h3 className={styles.aboutCardTitle}>{t.exploreTitle}</h3>
+            <p className={styles.aboutCardText}>{t.exploreText}</p>
+          </div>
         </div>
       </section>
 
+      {/* ── Footer ──────────────────────────────────────────── */}
       <footer className={styles.footer}>
         <p>{t.footer}</p>
       </footer>

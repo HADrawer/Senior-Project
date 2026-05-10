@@ -5,6 +5,8 @@ import styles from "./dashboard.module.css";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
+const PLANS_CACHE_KEY = "dashboard_plans";
+
 export default function DashboardHomePage() {
   const router = useRouter();
 
@@ -54,6 +56,16 @@ export default function DashboardHomePage() {
 
   useEffect(() => {
     async function initDashboard() {
+      const cached = sessionStorage.getItem(PLANS_CACHE_KEY);
+      if (cached) {
+        try {
+          setPlans(JSON.parse(cached));
+          setLoading(false);
+        } catch {
+          sessionStorage.removeItem(PLANS_CACHE_KEY);
+        }
+      }
+
       try {
         const { data } = await supabase.auth.getSession();
 
@@ -74,15 +86,16 @@ export default function DashboardHomePage() {
         );
 
         if (!res.ok) {
-          setError("Failed to load plans");
+          if (!cached) setError("Failed to load plans");
           return;
         }
 
         const result = await res.json();
         setPlans(result);
+        sessionStorage.setItem(PLANS_CACHE_KEY, JSON.stringify(result));
       } catch (error) {
         console.error("Dashboard error:", error);
-        setError("Unable to connect to server");
+        if (!cached) setError("Unable to connect to server");
       } finally {
         setLoading(false);
       }

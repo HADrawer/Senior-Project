@@ -16,6 +16,9 @@ async function getAccessToken() {
   return data.session?.access_token || null;
 }
 
+const CATEGORIES_CACHE_KEY = "place_categories";
+const PLANS_CACHE_KEY = "dashboard_plans";
+
 export default function PlanDetailsPage() {
   const { id } = useParams();
   const router = useRouter();
@@ -33,6 +36,8 @@ export default function PlanDetailsPage() {
     category: "",
     place: "",
   });
+  const [categories, setCategories] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -46,6 +51,19 @@ export default function PlanDetailsPage() {
 
   useEffect(() => {
     async function initPage() {
+      const cacheKey = `plan_${id}`;
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached) {
+        try {
+          const cachedPlan = JSON.parse(cached);
+          setPlan(cachedPlan);
+          fillForm(cachedPlan);
+          setLoading(false);
+        } catch {
+          sessionStorage.removeItem(cacheKey);
+        }
+      }
+
       const token = await getAccessToken();
 
       if (!token) {
@@ -58,6 +76,47 @@ export default function PlanDetailsPage() {
 
     initPage();
   }, [id, router]);
+
+  useEffect(() => {
+    async function loadCategories() {
+      const cached = sessionStorage.getItem(CATEGORIES_CACHE_KEY);
+      if (cached) {
+        try {
+          setCategories(JSON.parse(cached));
+          setLoadingCategories(false);
+        } catch {
+          sessionStorage.removeItem(CATEGORIES_CACHE_KEY);
+        }
+      }
+
+      try {
+        const token = await getAccessToken();
+
+        if (!token) return;
+
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/place-categories`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (res.ok) {
+          const data = await res.json();
+          setCategories(data);
+          sessionStorage.setItem(CATEGORIES_CACHE_KEY, JSON.stringify(data));
+        }
+      } catch (error) {
+        console.error("Load categories error:", error);
+      } finally {
+        setLoadingCategories(false);
+      }
+    }
+
+    loadCategories();
+  }, []);
     useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
@@ -87,6 +146,7 @@ export default function PlanDetailsPage() {
       const data = await res.json();
       setPlan(data);
       fillForm(data);
+      sessionStorage.setItem(`plan_${id}`, JSON.stringify(data));
     } catch (error) {
       console.error("Load plan error:", error);
       router.replace("/dashboard");
@@ -127,6 +187,7 @@ export default function PlanDetailsPage() {
       const updatedPlan = await res.json();
       setPlan(updatedPlan);
       fillForm(updatedPlan);
+      sessionStorage.setItem(`plan_${id}`, JSON.stringify(updatedPlan));
     }
   }
 
@@ -149,18 +210,18 @@ export default function PlanDetailsPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          title: form.title,
-          days: Number(form.days),
-          budget: form.budget === "" ? null : Number(form.budget),
-          people_count: Number(form.people_count),
-          preferences: form.preferences || null,
-          user_interests: form.user_interests || null,
-          travel_styles: form.travel_styles || null,
-          category: form.category || null,
-          place: form.place || null,
-        }),
-      });
+          body: JSON.stringify({
+            title: form.title,
+            days: Number(form.days),
+            budget: form.budget === "" ? null : Number(form.budget),
+            people_count: Number(form.people_count),
+            preferences: form.preferences || null,
+            user_interests: form.user_interests || null,
+            travel_styles: form.travel_styles || null,
+            category: form.category || null,
+            place: null,
+          }),
+        });
 
       const data = await res.json();
 
@@ -170,6 +231,7 @@ export default function PlanDetailsPage() {
       }
 
       await refreshPlan();
+      sessionStorage.removeItem(PLANS_CACHE_KEY);
       setEditMode(false);
     } catch (error) {
       console.error("Update plan error:", error);
@@ -208,6 +270,8 @@ export default function PlanDetailsPage() {
         return;
       }
 
+      sessionStorage.removeItem(`plan_${id}`);
+      sessionStorage.removeItem(PLANS_CACHE_KEY);
       router.replace("/dashboard");
     } catch (error) {
       console.error("Delete plan error:", error);
@@ -272,6 +336,7 @@ export default function PlanDetailsPage() {
 
       if (data.updated) {
         await refreshPlan();
+        sessionStorage.removeItem(PLANS_CACHE_KEY);
       }
     } catch (error) {
       console.error("Chat error:", error);
@@ -328,103 +393,129 @@ export default function PlanDetailsPage() {
 
       {error && <p className={styles.error}>{error}</p>}
 
-      <div className={styles.planDetailsLayout}>
+      <div
+        className={`${styles.planDetailsLayout} ${
+          editMode ? styles.editPlanLayout : ""
+        }`}
+      >
         <div className={styles.planDetailsMain}>
           {editMode ? (
-            <form onSubmit={handleUpdate} className={styles.detailsCard}>
-              <div className={styles.formGrid}>
-                <div className={styles.inputGroup}>
-                  <label className={styles.label}>Title</label>
+            <form onSubmit={handleUpdate} className={`${styles.detailsCard} ${styles.editPlanCard}`}>
+              <div className={styles.editPlanHeader}>
+                <span className={styles.createBadge}>Editing plan</span>
+                <h2 className={styles.blockTitle}>Plan Details</h2>
+                <p className={styles.pageSubtitle}>
+                  Update the core trip information, preferences, and travel context.
+                </p>
+              </div>
+
+              <div className={styles.aiFormGrid}>
+                <div className={styles.aiField}>
+                  <label>Plan Title</label>
                   <input
-                    className={styles.input}
                     value={form.title}
+                    placeholder="Relaxed Bahrain Weekend"
                     onChange={(e) => setForm({ ...form, title: e.target.value })}
+                    required
                   />
                 </div>
 
-                <div className={styles.inputGroup}>
-                  <label className={styles.label}>Days</label>
+                <div className={styles.aiField}>
+                  <label>Number of Days</label>
                   <input
                     type="number"
                     min="1"
-                    className={styles.input}
+                    max="14"
                     value={form.days}
+                    placeholder="2"
                     onChange={(e) => setForm({ ...form, days: e.target.value })}
+                    required
                   />
                 </div>
 
-                <div className={styles.inputGroup}>
-                  <label className={styles.label}>Budget</label>
+                <div className={styles.aiField}>
+                  <label>Budget in BHD</label>
                   <input
                     type="number"
                     min="0"
-                    className={styles.input}
                     value={form.budget}
+                    placeholder="35"
                     onChange={(e) => setForm({ ...form, budget: e.target.value })}
                   />
                 </div>
 
-                <div className={styles.inputGroup}>
-                  <label className={styles.label}>People Count</label>
+                <div className={styles.aiField}>
+                  <label>Number of People</label>
                   <input
                     type="number"
                     min="1"
-                    className={styles.input}
+                    max="50"
                     value={form.people_count}
+                    placeholder="2"
                     onChange={(e) =>
                       setForm({ ...form, people_count: e.target.value })
                     }
+                    required
                   />
                 </div>
 
-                <div className={styles.inputGroup}>
-                  <label className={styles.label}>Category</label>
-                  <input
-                    className={styles.input}
+                <div className={styles.aiField}>
+                  <label>Preferred Category</label>
+                  <select
                     value={form.category}
                     onChange={(e) => setForm({ ...form, category: e.target.value })}
-                  />
+                  >
+                    <option value="">
+                      {loadingCategories ? "Loading categories..." : "Any category"}
+                    </option>
+
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.name}>
+                        {category.name.replaceAll("_", " ")}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
-                <div className={styles.inputGroup}>
-                  <label className={styles.label}>Place</label>
-                  <input
-                    className={styles.input}
-                    value={form.place}
-                    onChange={(e) => setForm({ ...form, place: e.target.value })}
-                  />
-                </div>
-
-                <div className={styles.inputGroup}>
-                  <label className={styles.label}>Travel Style</label>
-                  <input
-                    className={styles.input}
+                <div className={styles.aiField}>
+                  <label>Travel Style</label>
+                  <select
                     value={form.travel_styles}
                     onChange={(e) =>
                       setForm({ ...form, travel_styles: e.target.value })
                     }
-                  />
+                  >
+                    <option value="">Select travel style</option>
+                    <option value="relaxed">Relaxed</option>
+                    <option value="adventure">Adventure</option>
+                    <option value="family-friendly">Family-friendly</option>
+                    <option value="cultural">Cultural</option>
+                    <option value="budget-friendly">Budget-friendly</option>
+                    <option value="luxury">Luxury</option>
+                  </select>
                 </div>
               </div>
 
-              <div className={styles.inputGroup}>
-                <label className={styles.label}>Preferences</label>
-                <textarea
-                  className={styles.textarea}
-                  value={form.preferences}
-                  onChange={(e) =>
-                    setForm({ ...form, preferences: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className={styles.inputGroup}>
-                <label className={styles.label}>User Interests</label>
-                <textarea
-                  className={styles.textarea}
+              <div className={styles.aiField}>
+                <label>Interests</label>
+                <input
                   value={form.user_interests}
+                  placeholder="cafes, museum, beach"
                   onChange={(e) =>
                     setForm({ ...form, user_interests: e.target.value })
+                  }
+                  required
+                />
+                <small>Separate interests with commas.</small>
+              </div>
+
+              <div className={styles.aiField}>
+                <label>Extra Preferences</label>
+                <textarea
+                  value={form.preferences}
+                  placeholder="Example: low walking, indoor preferred, suitable for family"
+                  onChange={(e) =>
+                    setForm({ ...form, preferences: e.target.value })
                   }
                 />
               </div>
@@ -589,10 +680,19 @@ export default function PlanDetailsPage() {
           )}
         </div>
 
+        {!editMode && (
         <aside className={styles.aiChatPanel}>
           <div className={styles.aiChatHeader}>
-            <h3>AI Trip Assistant</h3>
-            <p>Ask for advice or request changes to this plan.</p>
+            <div className={styles.terminalChrome}>
+              <span />
+              <span />
+              <span />
+            </div>
+            <div>
+              <h3>AI Trip Terminal</h3>
+              <p>Ask for advice or request changes to this plan.</p>
+            </div>
+            <span className={styles.terminalStatus}>online</span>
           </div>
 
           <div className={styles.aiChatMessages}>
@@ -618,29 +718,27 @@ export default function PlanDetailsPage() {
             {chatLoading && (
               <div className={styles.assistantChatBubble}>Thinking...</div>
             )}
-      
 
-              <div className={styles.aiChatMessages}>
-                {chatLoading && (
-                  <div className={styles.assistantChatBubble}>Thinking...</div>
-                )}
-                <div ref={chatEndRef} /> 
-              </div>
+            <div ref={chatEndRef} />
           </div>
 
           <form onSubmit={handleChatSubmit} className={styles.aiChatForm}>
-            <textarea
-              value={chatMessage}
-              placeholder="Ask for advice or request a change..."
-              onChange={(e) => setChatMessage(e.target.value)}
-              disabled={chatLoading}
-            />
+            <div className={styles.terminalPrompt}>
+              <span>&gt;</span>
+              <textarea
+                value={chatMessage}
+                placeholder="ask for advice or request a change..."
+                onChange={(e) => setChatMessage(e.target.value)}
+                disabled={chatLoading}
+              />
+            </div>
 
             <button type="submit" disabled={chatLoading || !chatMessage.trim()}>
               Send
             </button>
           </form>
         </aside>
+        )}
       </div>
     </div>
   );
