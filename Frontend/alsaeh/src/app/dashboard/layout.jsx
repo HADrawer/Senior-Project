@@ -14,12 +14,14 @@ export default function DashboardLayout({ children }) {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [lang, setLang] = useState("en");
   const [mounted, setMounted] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const content = {
     en: {
       brand: "Alsaeh.bh",
       dashboard: "Dashboard",
       createPlan: "Create Plan",
+      about: "About",
       settings: "Settings",
       admin: "Admin",
       logout: "Logout",
@@ -50,8 +52,13 @@ export default function DashboardLayout({ children }) {
   useEffect(() => {
     router.prefetch("/dashboard");
     router.prefetch("/dashboard/create-plan");
+    router.prefetch("/dashboard/about");
     router.prefetch("/dashboard/settings");
   }, [router]);
+
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     if (user?.role === "admin") {
@@ -65,8 +72,6 @@ export default function DashboardLayout({ children }) {
       if (cached) {
         try {
           setUser(JSON.parse(cached));
-          setCheckingAuth(false);
-          return;
         } catch {
           sessionStorage.removeItem("auth_user");
         }
@@ -84,7 +89,9 @@ export default function DashboardLayout({ children }) {
         });
 
         if (!res.ok) {
-          router.replace("/login");
+          sessionStorage.clear();
+          await supabase.auth.signOut();
+          router.replace("/");
           return;
         }
 
@@ -101,10 +108,44 @@ export default function DashboardLayout({ children }) {
     loadUser();
   }, [router]);
 
+  useEffect(() => {
+    async function verifyAccountStatus() {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (!data.session) return;
+
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
+          headers: { Authorization: `Bearer ${data.session.access_token}` },
+        });
+
+        if (!res.ok) {
+          sessionStorage.clear();
+          await supabase.auth.signOut();
+          router.replace("/");
+        }
+      } catch {
+        return;
+      }
+    }
+
+    const intervalId = window.setInterval(verifyAccountStatus, 15000);
+    return () => window.clearInterval(intervalId);
+  }, [router]);
+
   function toggleLanguage() {
     const newLang = lang === "en" ? "ar" : "en";
     setLang(newLang);
     localStorage.setItem("site_lang", newLang);
+  }
+
+  function scrollToChatbot() {
+    setSidebarOpen(false);
+
+    window.setTimeout(() => {
+      document
+        .getElementById("plan-chatbot")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 250);
   }
 
   async function logout() {
@@ -128,9 +169,48 @@ export default function DashboardLayout({ children }) {
 
   return (
     <main className={styles.dashboardPage} dir={lang === "ar" ? "rtl" : "ltr"}>
-      <aside className={styles.sidebar}>
+      <header className={styles.mobileTopBar}>
+        <Link href="/" className={styles.mobileBrand}>
+          <span className={styles.logoMark}></span>
+          <span>{t.brand}</span>
+        </Link>
+        <button
+          type="button"
+          className={styles.mobileMenuButton}
+          onClick={() => setSidebarOpen(true)}
+          aria-label="Open navigation menu"
+        >
+          <span aria-hidden="true" className={styles.menuIcon}>
+            <span />
+            <span />
+            <span />
+          </span>
+        </button>
+      </header>
+
+      {sidebarOpen && (
+        <button
+          type="button"
+          className={styles.sidebarOverlay}
+          onClick={() => setSidebarOpen(false)}
+          aria-label="Close navigation menu"
+        />
+      )}
+
+      <aside className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ""}`}>
         <div className={styles.sidebarMain}>
-          <Link href="/" className={styles.brand}>
+          <div className={styles.sidebarMobileHeader}>
+            <span>Navigation</span>
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(false)}
+              aria-label="Close navigation menu"
+            >
+              Close
+            </button>
+          </div>
+
+          <Link href="/" className={styles.brand} onClick={() => setSidebarOpen(false)}>
             <div className={styles.logoMark}></div>
             <span>{t.brand}</span>
           </Link>
@@ -144,6 +224,7 @@ export default function DashboardLayout({ children }) {
           <nav className={styles.nav}>
             <Link
               href="/dashboard"
+              onClick={() => setSidebarOpen(false)}
               className={`${styles.navItem} ${
                 pathname === "/dashboard" ? styles.activeNavItem : ""
               }`}
@@ -153,6 +234,7 @@ export default function DashboardLayout({ children }) {
 
             <Link
               href="/dashboard/create-plan"
+              onClick={() => setSidebarOpen(false)}
               className={`${styles.navItem} ${
                 pathname === "/dashboard/create-plan"
                   ? styles.activeNavItem
@@ -164,6 +246,7 @@ export default function DashboardLayout({ children }) {
 
             <Link
               href="/dashboard/settings"
+              onClick={() => setSidebarOpen(false)}
               className={`${styles.navItem} ${
                 pathname === "/dashboard/settings" ? styles.activeNavItem : ""
               }`}
@@ -171,10 +254,31 @@ export default function DashboardLayout({ children }) {
               {t.settings}
             </Link>
 
+            <Link
+              href="/dashboard/about"
+              onClick={() => setSidebarOpen(false)}
+              className={`${styles.navItem} ${
+                pathname === "/dashboard/about" ? styles.activeNavItem : ""
+              }`}
+            >
+              {t.about || "About"}
+            </Link>
+
+            {sidebarOpen && pathname?.startsWith("/dashboard/plans/") && (
+              <button
+                type="button"
+                onClick={scrollToChatbot}
+                className={`${styles.navItem} ${styles.mobileOnlyNavItem}`}
+              >
+                Chatbot
+              </button>
+            )}
+
             {user?.role === "admin" && (
               <Link
                 href="/admin"
-                className={`${styles.navItem} ${styles.adminNavItem} ${styles.activeNavItem}`}
+                onClick={() => setSidebarOpen(false)}
+                className={`${styles.navItem} ${styles.adminNavItem}`}
               >
                 {t.admin || "Admin"}
               </Link>

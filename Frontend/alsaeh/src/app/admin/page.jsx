@@ -61,6 +61,7 @@ export default function AdminPage() {
   const [logs, setLogs] = useState([]);
   const [user, setUser] = useState(null);
   const [lang, setLang] = useState("en");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [sectionLoading, setSectionLoading] = useState(false);
@@ -73,6 +74,7 @@ export default function AdminPage() {
       dashboard: "Dashboard",
       createPlan: "Create Plan",
       settings: "Settings",
+      about: "About",
       admin: "Admin",
       logout: "Logout",
       langButton: "Arabic",
@@ -109,6 +111,7 @@ export default function AdminPage() {
       cancel: "Cancel",
       edit: "Edit",
       disable: "Disable",
+      enable: "Enable",
       noPlans: "No plans found.",
       planTitle: "Title",
       user: "User",
@@ -125,6 +128,9 @@ export default function AdminPage() {
       metadata: "Metadata",
       date: "Date",
       confirmDisable: "Are you sure you want to disable this user?",
+      confirmEnable: "Are you sure you want to enable this user?",
+      confirmDeleteUser:
+        "Are you sure you want to permanently delete this user and all related data?",
       confirmDeletePlan: "Are you sure you want to delete this plan?",
       unableToConnect: "Unable to connect to server",
       failedOverview: "Failed to load overview",
@@ -133,6 +139,8 @@ export default function AdminPage() {
       failedLogs: "Failed to load logs",
       failedUpdateUser: "Failed to update user",
       failedDisableUser: "Failed to disable user",
+      failedEnableUser: "Failed to enable user",
+      failedDeleteUser: "Failed to delete user",
       failedUpdatePlan: "Failed to update plan",
       failedDeletePlan: "Failed to delete plan",
     },
@@ -142,6 +150,7 @@ export default function AdminPage() {
       dashboard: "لوحة التحكم",
       createPlan: "إنشاء خطة",
       settings: "الإعدادات",
+      about: "About",
       admin: "الإدارة",
       logout: "تسجيل الخروج",
       langButton: "English",
@@ -178,6 +187,7 @@ export default function AdminPage() {
       cancel: "إلغاء",
       edit: "تعديل",
       disable: "تعطيل",
+      enable: "تفعيل",
       noPlans: "لا توجد خطط.",
       planTitle: "العنوان",
       user: "المستخدم",
@@ -194,6 +204,9 @@ export default function AdminPage() {
       metadata: "البيانات",
       date: "التاريخ",
       confirmDisable: "هل أنت متأكد من تعطيل هذا المستخدم؟",
+      confirmEnable: "هل أنت متأكد من تفعيل هذا المستخدم؟",
+      confirmDeleteUser:
+        "هل أنت متأكد من حذف هذا المستخدم وكل بياناته نهائيا؟",
       confirmDeletePlan: "هل أنت متأكد من حذف هذه الخطة؟",
       unableToConnect: "تعذر الاتصال بالخادم",
       failedOverview: "فشل تحميل النظرة العامة",
@@ -202,6 +215,8 @@ export default function AdminPage() {
       failedLogs: "فشل تحميل السجلات",
       failedUpdateUser: "فشل تحديث المستخدم",
       failedDisableUser: "فشل تعطيل المستخدم",
+      failedEnableUser: "فشل تفعيل المستخدم",
+      failedDeleteUser: "فشل حذف المستخدم",
       failedUpdatePlan: "فشل تحديث الخطة",
       failedDeletePlan: "فشل حذف الخطة",
     },
@@ -466,6 +481,7 @@ export default function AdminPage() {
   }
 
   async function changeTab(tab) {
+    setSidebarOpen(false);
     setActiveTab(tab);
 
     if (tab === "overview") await loadOverview();
@@ -506,8 +522,53 @@ export default function AdminPage() {
     }
   }
 
-  async function disableUser(userId) {
-    const confirmed = window.confirm(t.confirmDisable);
+  async function toggleUserStatus(user) {
+    const userId = user.id;
+    const nextIsActive = !user.is_active;
+    const confirmed = window.confirm(
+      nextIsActive ? t.confirmEnable : t.confirmDisable
+    );
+    if (!confirmed) return;
+
+    try {
+      const token = await getAdminToken();
+      if (!token) {
+        router.replace("/login");
+        return;
+      }
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/users/${userId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ is_active: nextIsActive }),
+      });
+
+      const result = await safeJson(res);
+
+      if (!res.ok) {
+        alert(
+          getErrorMessage(
+            result.detail,
+            nextIsActive ? t.failedEnableUser : t.failedDisableUser
+          )
+        );
+        return;
+      }
+
+      sessionStorage.removeItem(ADMIN_CACHE_KEYS.users);
+      sessionStorage.removeItem(ADMIN_CACHE_KEYS.overview);
+      await loadUsers();
+    } catch (error) {
+      console.error(error);
+      alert(t.unableToConnect);
+    }
+  }
+
+  async function deleteUser(userId) {
+    const confirmed = window.confirm(t.confirmDeleteUser);
     if (!confirmed) return;
 
     try {
@@ -527,11 +588,14 @@ export default function AdminPage() {
       const result = await safeJson(res);
 
       if (!res.ok) {
-        alert(getErrorMessage(result.detail, t.failedDisableUser));
+        alert(getErrorMessage(result.detail, t.failedDeleteUser));
         return;
       }
 
       sessionStorage.removeItem(ADMIN_CACHE_KEYS.users);
+      sessionStorage.removeItem(ADMIN_CACHE_KEYS.overview);
+      sessionStorage.removeItem(ADMIN_CACHE_KEYS.plans);
+      sessionStorage.removeItem(ADMIN_CACHE_KEYS.logs);
       await loadUsers();
     } catch (error) {
       console.error(error);
@@ -615,9 +679,56 @@ export default function AdminPage() {
       className={dashboardStyles.dashboardPage}
       dir={lang === "ar" ? "rtl" : "ltr"}
     >
-      <aside className={dashboardStyles.sidebar}>
+      <header className={dashboardStyles.mobileTopBar}>
+        <Link href="/" className={dashboardStyles.mobileBrand}>
+          <span className={dashboardStyles.logoMark}></span>
+          <span>{t.brand}</span>
+        </Link>
+        <button
+          type="button"
+          className={dashboardStyles.mobileMenuButton}
+          onClick={() => setSidebarOpen(true)}
+          aria-label="Open navigation menu"
+        >
+          <span aria-hidden="true" className={dashboardStyles.menuIcon}>
+            <span />
+            <span />
+            <span />
+          </span>
+        </button>
+      </header>
+
+      {sidebarOpen && (
+        <button
+          type="button"
+          className={dashboardStyles.sidebarOverlay}
+          onClick={() => setSidebarOpen(false)}
+          aria-label="Close navigation menu"
+        />
+      )}
+
+      <aside
+        className={`${dashboardStyles.sidebar} ${
+          sidebarOpen ? dashboardStyles.sidebarOpen : ""
+        }`}
+      >
         <div className={dashboardStyles.sidebarMain}>
-          <Link href="/" className={dashboardStyles.brand}>
+          <div className={dashboardStyles.sidebarMobileHeader}>
+            <span>Navigation</span>
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(false)}
+              aria-label="Close navigation menu"
+            >
+              Close
+            </button>
+          </div>
+
+          <Link
+            href="/"
+            className={dashboardStyles.brand}
+            onClick={() => setSidebarOpen(false)}
+          >
             <div className={dashboardStyles.logoMark}></div>
             <span>Alsaeh.bh</span>
           </Link>
@@ -629,21 +740,42 @@ export default function AdminPage() {
           </div>
 
           <nav className={dashboardStyles.nav}>
-            <Link href="/dashboard" className={dashboardStyles.navItem}>
+            <Link
+              href="/dashboard"
+              className={dashboardStyles.navItem}
+              onClick={() => setSidebarOpen(false)}
+            >
               {t.dashboard}
             </Link>
 
-            <Link href="/dashboard/create-plan" className={dashboardStyles.navItem}>
+            <Link
+              href="/dashboard/create-plan"
+              className={dashboardStyles.navItem}
+              onClick={() => setSidebarOpen(false)}
+            >
               {t.createPlan}
             </Link>
 
-            <Link href="/dashboard/settings" className={dashboardStyles.navItem}>
+            <Link
+              href="/dashboard/settings"
+              className={dashboardStyles.navItem}
+              onClick={() => setSidebarOpen(false)}
+            >
               {t.settings}
             </Link>
 
             <Link
+              href="/dashboard/about"
+              className={dashboardStyles.navItem}
+              onClick={() => setSidebarOpen(false)}
+            >
+              {t.about}
+            </Link>
+
+            <Link
               href="/admin"
-              className={`${dashboardStyles.navItem} ${dashboardStyles.adminNavItem} ${dashboardStyles.activeNavItem}`}
+              className={`${dashboardStyles.navItem} ${dashboardStyles.activeNavItem}`}
+              onClick={() => setSidebarOpen(false)}
             >
               {t.admin}
             </Link>
@@ -716,7 +848,8 @@ export default function AdminPage() {
             <UsersSection
               users={users}
               onUpdateUser={updateUser}
-              onDisableUser={disableUser}
+              onToggleUserStatus={toggleUserStatus}
+              onDeleteUser={deleteUser}
               t={t}
             />
           )}
@@ -778,7 +911,7 @@ function OverviewSection({ data, t }) {
   );
 }
 
-function UsersSection({ users, onUpdateUser, onDisableUser, t }) {
+function UsersSection({ users, onUpdateUser, onToggleUserStatus, onDeleteUser, t }) {
   if (!users.length) {
     return (
       <section className={styles.panel}>
@@ -812,7 +945,8 @@ function UsersSection({ users, onUpdateUser, onDisableUser, t }) {
                 key={user.id}
                 user={user}
                 onUpdateUser={onUpdateUser}
-                onDisableUser={onDisableUser}
+                onToggleUserStatus={onToggleUserStatus}
+                onDeleteUser={onDeleteUser}
                 t={t}
               />
             ))}
@@ -823,7 +957,7 @@ function UsersSection({ users, onUpdateUser, onDisableUser, t }) {
   );
 }
 
-function UserRow({ user, onUpdateUser, onDisableUser, t }) {
+function UserRow({ user, onUpdateUser, onToggleUserStatus, onDeleteUser, t }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
     full_name: user.full_name || "",
@@ -938,9 +1072,16 @@ function UserRow({ user, onUpdateUser, onDisableUser, t }) {
 
               <button
                 className={styles.smallDanger}
-                onClick={() => onDisableUser(user.id)}
+                onClick={() => onToggleUserStatus(user)}
               >
-                {t.disable}
+                {user.is_active ? t.disable : t.enable}
+              </button>
+
+              <button
+                className={styles.smallDanger}
+                onClick={() => onDeleteUser(user.id)}
+              >
+                {t.delete}
               </button>
             </>
           )}

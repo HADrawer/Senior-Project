@@ -34,6 +34,17 @@ def _cache_user(token: str, user: dict):
     )
 
 
+def invalidate_auth_cache_for_user(user_id: str):
+    stale_tokens = [
+        token
+        for token, (_, user) in _auth_cache.items()
+        if str(user.get("id")) == str(user_id)
+    ]
+
+    for token in stale_tokens:
+        _auth_cache.pop(token, None)
+
+
 async def get_current_user(authorization: str | None = Header(default=None)):
     if not authorization:
         raise HTTPException(status_code=401, detail="Missing authorization header")

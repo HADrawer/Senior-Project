@@ -881,7 +881,7 @@ export default function PlanDetailsPage() {
                   className={styles.primaryButton}
                   disabled={saving}
                 >
-                  {saving ? "Saving..." : "Save Changes"}
+                  {saving ? "Rebuilding plan..." : "Save Changes"}
                 </button>
               </div>
             </form>
@@ -1025,7 +1025,7 @@ export default function PlanDetailsPage() {
         </div>
 
         {!editMode && (
-        <aside className={styles.aiChatPanel}>
+        <aside id="plan-chatbot" className={styles.aiChatPanel}>
           <div className={styles.aiChatHeader}>
             <div className={styles.terminalChrome}>
               <span />

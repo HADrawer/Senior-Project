@@ -2,6 +2,7 @@
   min-height: 100vh;
   display: grid;
   grid-template-columns: 290px 1fr;
+  align-items: start;
   background:
     radial-gradient(circle at top, rgba(186, 12, 47, 0.08), transparent 30%),
     linear-gradient(180deg, var(--bg-main) 0%, var(--bg-secondary) 100%);
@@ -129,6 +130,10 @@
   background: var(--bg-hover);
 }
 
+.mobileOnlyNavItem {
+  display: none;
+}
+
 .activeNavItem {
   background: var(--primary);
   color: white;
@@ -200,6 +205,12 @@
   min-width: 0;
 }
 
+.mobileTopBar,
+.sidebarOverlay,
+.sidebarMobileHeader {
+  display: none;
+}
+
 .pageContent {
   width: 100%;
 }
@@ -229,6 +240,56 @@
   min-width: 160px;
   border-radius: 20px;
   padding: 18px 20px;
+}
+
+.dashboardUserCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 24px;
+  padding: 22px 24px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-xl);
+  background:
+    radial-gradient(circle at top right, var(--primary-light), transparent 34%),
+    var(--bg-card);
+  box-shadow: var(--shadow-card);
+}
+
+.dashboardUserCard span,
+.dashboardUserCard p {
+  color: var(--text-muted);
+}
+
+.dashboardUserCard span {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.dashboardUserCard h2 {
+  margin: 0 0 4px;
+  font-family: var(--font-display);
+  color: var(--text-main);
+}
+
+.dashboardUserCard p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.dashboardUserCard strong {
+  flex: 0 0 auto;
+  border: 1px solid var(--primary-mid);
+  border-radius: var(--radius-full);
+  padding: 8px 12px;
+  color: var(--primary);
+  background: var(--primary-light);
+  font-size: 0.82rem;
 }
 
 .statsLabel {
@@ -895,6 +956,204 @@
   justify-content: center;
 }
 
+.aboutDashboardHero,
+.aboutInfoGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+  gap: 22px;
+  margin-bottom: 22px;
+  align-items: stretch;
+}
+
+.aboutDashboardHero .detailsCard,
+.aboutInfoGrid .detailsCard {
+  min-width: 0;
+}
+
+.aboutVisualCard {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 18px;
+  color: white;
+  background:
+    linear-gradient(135deg, rgba(10, 74, 98, 0.92), rgba(192, 18, 48, 0.78)),
+    var(--primary);
+  border-color: rgba(255, 255, 255, 0.18);
+  overflow: hidden;
+  position: relative;
+}
+
+.aboutVisualCard::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.aboutVisualCard > * {
+  position: relative;
+}
+
+.aboutVisualCard span {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.aboutVisualCard strong {
+  max-width: 360px;
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 3vw, 2.6rem);
+  line-height: 1.1;
+}
+
+.aboutVisualList {
+  display: grid;
+  gap: 10px;
+}
+
+.aboutVisualList p {
+  margin: 0;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.12);
+  color: white;
+  font-weight: 700;
+}
+
+.aboutObjectiveGrid,
+.aboutTeamGrid,
+.aboutStackGrid {
+  display: grid;
+  gap: 16px;
+}
+
+.aboutObjectiveGrid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 22px;
+}
+
+.aboutObjectiveCard,
+.aboutTeamCard,
+.aboutStackItem {
+  border: 1px solid var(--border-soft);
+  border-radius: 18px;
+  background: var(--bg-hover);
+}
+
+.aboutObjectiveCard {
+  min-height: 220px;
+  padding: 18px;
+}
+
+.aboutObjectiveCard span {
+  display: block;
+  margin-bottom: 18px;
+  color: var(--primary);
+  font-family: var(--font-display);
+  font-size: 2.2rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.aboutObjectiveCard h3,
+.aboutTeamCard h3 {
+  margin: 0 0 10px;
+  color: var(--text-main);
+  font-size: 1rem;
+}
+
+.aboutObjectiveCard p,
+.aboutTeamCard span,
+.aboutSupervisor p,
+.aboutArchitecture span {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.6;
+  font-size: 0.92rem;
+}
+
+.aboutStackGrid {
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
+.aboutStackItem {
+  padding: 14px;
+}
+
+.aboutStackItem span,
+.aboutSupervisor span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.aboutStackItem strong,
+.aboutSupervisor strong {
+  display: block;
+  color: var(--text-main);
+}
+
+.aboutArchitecture {
+  display: grid;
+  gap: 10px;
+}
+
+.aboutArchitecture span {
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: var(--bg-hover);
+  font-weight: 700;
+}
+
+.aboutTeamGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 22px;
+}
+
+.aboutTeamCard {
+  padding: 20px;
+  text-align: center;
+}
+
+.aboutAvatar {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), #0a4a62);
+  color: white;
+  font-weight: 900;
+}
+
+.aboutSupervisor {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.aboutSupervisor > div {
+  border: 1px solid var(--border-soft);
+  border-radius: 18px;
+  padding: 18px;
+  background: var(--bg-hover);
+}
+
 .settingsSideColumn .deleteAccountBox {
   margin-top: 2px;
 }
@@ -925,6 +1184,7 @@ html[data-theme="dark"] .aiCreateCard,
 html[data-theme="dark"] .detailsCard,
 html[data-theme="dark"] .planCard,
 html[data-theme="dark"] .userBox,
+html[data-theme="dark"] .dashboardUserCard,
 html[data-theme="dark"] .statsCard,
 html[data-theme="dark"] .emptyState,
 html[data-theme="dark"] .aiChatPanel {
@@ -1095,12 +1355,17 @@ html[data-theme="dark"] .navItem:hover {
   box-shadow: var(--shadow-sm);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  min-height: 100vh;
+  align-self: start;
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100vh;
+  max-height: 100dvh;
   position: sticky;
   top: 0;
   justify-content: flex-start;
   gap: 24px;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .sidebarMain {
@@ -1243,6 +1508,193 @@ html[data-theme="dark"] .navItem:hover {
 .aiChatForm button:hover {
   background: var(--primary-hover);
   box-shadow: 0 8px 24px rgba(192, 18, 48, 0.28);
+}
+
+@media (min-width: 921px) {
+  .planDetailsLayout {
+    align-items: start;
+  }
+
+  .aiChatPanel {
+    position: sticky;
+    top: 92px;
+    align-self: start;
+    box-shadow:
+      0 18px 48px rgba(80, 30, 20, 0.14),
+      0 0 0 10px color-mix(in srgb, var(--bg-card) 88%, transparent),
+      0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+  }
+
+  .dashboardPage {
+    display: block;
+    min-height: 100vh;
+  }
+
+  .sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 80;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    width: 100%;
+    height: auto;
+    max-height: none;
+    padding: 10px 32px;
+    overflow: visible;
+    border-right: 0;
+    border-bottom: 1px solid var(--border-soft);
+    background: color-mix(in srgb, var(--bg-card) 90%, transparent);
+  }
+
+  .sidebarMain {
+    display: flex;
+    flex: 1;
+    flex-direction: row;
+    align-items: center;
+    gap: 28px;
+    min-width: 0;
+  }
+
+  .brand {
+    flex: 0 0 auto;
+    margin: 0;
+    white-space: nowrap;
+  }
+
+  .logoMark {
+    height: 30px;
+  }
+
+  .userBox {
+    display: none;
+  }
+
+  .nav {
+    flex: 1;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 20px;
+    min-width: 0;
+  }
+
+  .navItem {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    min-height: auto;
+    padding: 4px 0;
+    border-radius: 0;
+    border: 0;
+    background: transparent;
+    font-size: 0.92rem;
+    white-space: nowrap;
+  }
+
+  .navItem::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -5px;
+    height: 2px;
+    border-radius: var(--radius-full);
+    background: var(--primary);
+    opacity: 0;
+    transform: scaleX(0.35);
+    transform-origin: center;
+    transition: opacity var(--transition), transform var(--transition), box-shadow var(--transition);
+  }
+
+  .navItem:hover {
+    background: transparent;
+    color: var(--primary);
+    text-shadow:
+      0 0 8px color-mix(in srgb, var(--primary) 34%, transparent),
+      0 0 18px color-mix(in srgb, var(--primary) 20%, transparent);
+  }
+
+  .navItem:hover::after,
+  .activeNavItem::after {
+    opacity: 1;
+    transform: scaleX(1);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--primary) 42%, transparent);
+  }
+
+  .activeNavItem {
+    background: transparent;
+    color: var(--primary);
+    border-color: transparent;
+    box-shadow: none;
+    text-shadow:
+      0 0 10px color-mix(in srgb, var(--primary) 55%, transparent),
+      0 0 22px color-mix(in srgb, var(--primary) 32%, transparent);
+  }
+
+  .activeNavItem:hover {
+    background: transparent;
+    color: var(--primary);
+  }
+
+  .adminNavItem {
+    margin-top: 0;
+  }
+
+  .adminNavItem::before {
+    display: none;
+  }
+
+  .sidebarBottom {
+    flex: 0 0 auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    margin-top: 0;
+    padding-top: 0;
+  }
+
+  .langBtn,
+  .logoutBtn {
+    min-height: 32px;
+    padding: 6px 12px;
+    border-radius: var(--radius-full);
+    font-size: 0.86rem;
+    white-space: nowrap;
+  }
+
+  .contentArea {
+    width: min(1440px, 100%);
+    margin: 0 auto;
+    padding: 28px 32px 32px;
+  }
+}
+
+@media (min-width: 921px) and (max-width: 1180px) {
+  .sidebar {
+    gap: 12px;
+    padding-inline: 18px;
+  }
+
+  .sidebarMain {
+    gap: 12px;
+  }
+
+  .userBox {
+    display: none;
+  }
+
+  .nav {
+    justify-content: flex-start;
+  }
+
+  .navItem {
+    padding-inline: 11px;
+    font-size: 0.9rem;
+  }
 }
 
 .deleteButton {
@@ -1450,6 +1902,14 @@ html[data-theme="dark"] .navItem:hover {
     box-shadow: var(--shadow-card);
   }
 
+  html:not([data-theme="light"]) .dashboardUserCard {
+    background:
+      radial-gradient(circle at top right, var(--primary-light), transparent 34%),
+      var(--bg-card);
+    border-color: var(--border-soft);
+    box-shadow: var(--shadow-card);
+  }
+
   html:not([data-theme="light"]) .userLabel,
   html:not([data-theme="light"]) .userEmail {
     color: var(--text-muted);
@@ -1480,9 +1940,148 @@ html[data-theme="dark"] .navItem:hover {
 }
 
 @media (max-width: 920px) {
+  .dashboardPage {
+    display: block;
+    min-height: 100vh;
+  }
+
+  .mobileTopBar {
+    position: sticky;
+    top: 0;
+    z-index: 80;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px;
+    background: color-mix(in srgb, var(--bg-card) 92%, transparent);
+    border-bottom: 1px solid var(--border-soft);
+    box-shadow: var(--shadow-sm);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  .mobileBrand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-main);
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 800;
+    text-decoration: none;
+    min-width: 0;
+  }
+
+  .mobileBrand .logoMark {
+    height: 30px;
+  }
+
+  .mobileMenuButton,
+  .sidebarMobileHeader button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+    font-weight: 800;
+    padding: 10px 14px;
+  }
+
+  .mobileMenuButton {
+    width: 44px;
+    height: 42px;
+    padding: 0;
+  }
+
+  .menuIcon {
+    display: grid;
+    gap: 4px;
+    width: 18px;
+  }
+
+  .menuIcon span {
+    display: block;
+    height: 2px;
+    border-radius: var(--radius-full);
+    background: currentColor;
+  }
+
+  .sidebarOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    display: block;
+    border: 0;
+    background: rgba(0, 0, 0, 0.42);
+    backdrop-filter: blur(2px);
+  }
+
   .sidebar {
-    min-height: auto;
-    position: static;
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 100;
+    width: min(86vw, 320px);
+    height: 100dvh;
+    max-height: 100dvh;
+    min-height: 0;
+    border-right: 1px solid var(--border-soft);
+    border-bottom: 0;
+    transform: translateX(-105%);
+    transition: transform var(--transition-slow);
+    box-shadow: 18px 0 44px rgba(0, 0, 0, 0.22);
+  }
+
+  [dir="rtl"] .sidebar {
+    inset: 0 0 0 auto;
+    transform: translateX(105%);
+    border-right: 0;
+    border-left: 1px solid var(--border-soft);
+    box-shadow: -18px 0 44px rgba(0, 0, 0, 0.22);
+  }
+
+  .sidebarOpen,
+  [dir="rtl"] .sidebarOpen {
+    transform: translateX(0);
+  }
+
+  .mobileOnlyNavItem {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: flex-start;
+    font-family: var(--font-body);
+    font-size: 1rem;
+    line-height: 1.4;
+    text-align: left;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+  }
+
+  [dir="rtl"] .mobileOnlyNavItem {
+    justify-content: flex-start;
+    text-align: right;
+  }
+
+  .sidebarMobileHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 18px;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .sidebar .brand {
+    margin-bottom: 20px;
   }
 
   .settingsHero,
@@ -1492,6 +2091,10 @@ html[data-theme="dark"] .navItem:hover {
 
   .settingsSideColumn {
     position: static;
+  }
+
+  .contentArea {
+    padding: 20px 14px 28px;
   }
 }
 
@@ -1508,8 +2111,10 @@ html[data-theme="dark"] .navItem:hover {
 .aiChatPanel {
   display: flex;
   flex-direction: column;
-  max-height: calc(100vh - 48px);
-  min-height: 620px;
+  height: min(620px, calc(100vh - 150px));
+  max-height: calc(100vh - 150px);
+  min-height: 480px;
+  scroll-margin-top: 76px;
   overflow: hidden;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 24%),
@@ -1754,21 +2359,129 @@ html[data-theme="dark"] .assistantChatBubble {
   }
 
   .aiChatPanel {
-    order: -1;
+    order: 0;
     position: static;
-    min-height: 520px;
+    height: auto;
+    min-height: 420px;
     max-height: none;
   }
 
   .aiChatMessages {
-    min-height: 300px;
-    max-height: 520px;
+    min-height: 220px;
+    max-height: 360px;
   }
 }
 
 @media (max-width: 640px) {
+  .pageHeader,
+  .detailsHeader,
+  .createHeader {
+    margin-bottom: 18px;
+  }
+
+  .dashboardUserCard {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 18px;
+    border-radius: 18px;
+  }
+
+  .pageTitle {
+    font-size: 1.55rem;
+  }
+
+  .pageSubtitle {
+    font-size: 0.92rem;
+  }
+
+  .detailsCard,
+  .planCard,
+  .aiCreateCard,
+  .settingsSection,
+  .createHeader {
+    padding: 18px;
+    border-radius: 18px;
+  }
+
+  .planGrid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .detailBlock {
+    margin-top: 18px;
+    padding-top: 18px;
+  }
+
+  .detailBlock .blockTitle {
+    font-size: 1.15rem;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
+  .planCard {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .planTop {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .planTitle {
+    min-width: 0;
+    font-size: 1.05rem;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
+  .planStatus {
+    width: fit-content;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.35;
+    font-size: 0.76rem;
+    padding: 6px 9px;
+  }
+
+  .planDescription {
+    margin-bottom: 14px;
+    font-size: 0.92rem;
+    line-height: 1.65;
+    overflow-wrap: anywhere;
+  }
+
+  .planMeta {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 6px;
+    margin-bottom: 12px;
+    font-size: 0.88rem;
+  }
+
+  .locationText {
+    margin-top: 10px;
+    font-size: 0.86rem;
+    overflow-wrap: anywhere;
+  }
+
+  .mapButton {
+    min-height: 40px;
+    margin-top: 12px;
+    padding: 10px 12px;
+    font-size: 0.9rem;
+    text-align: center;
+  }
+
   .aiChatHeader {
     grid-template-columns: 1fr auto;
+    gap: 10px;
+    padding: 12px;
   }
 
   .terminalChrome {
@@ -1780,19 +2493,44 @@ html[data-theme="dark"] .assistantChatBubble {
   }
 
   .aiChatPanel {
-    min-height: 480px;
-    border-radius: var(--radius-lg);
+    min-height: 0;
+    border-radius: 18px;
+    max-height: none;
   }
 
   .aiChatMessages {
-    padding: 14px;
+    min-height: 150px;
+    max-height: 240px;
+    padding: 12px;
+    gap: 10px;
   }
 
   .aiChatEmpty,
   .assistantChatBubble,
   .userChatBubble {
-    font-size: 0.82rem;
-    padding-left: 30px;
+    border-radius: 10px;
+    font-size: 0.78rem;
+    line-height: 1.55;
+    padding: 10px 10px 10px 28px;
+  }
+
+  .aiChatForm {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .terminalPrompt {
+    padding: 9px 10px;
+  }
+
+  .aiChatForm textarea {
+    min-height: 46px;
+    max-height: 92px;
+    font-size: 0.8rem;
+  }
+
+  .aiChatForm button {
+    height: 42px;
   }
 }
 
@@ -1926,6 +2664,19 @@ html[data-theme="dark"] .label {
   }
 }
 
+@media (max-width: 1100px) {
+  .aboutDashboardHero,
+  .aboutInfoGrid,
+  .aboutSupervisor {
+    grid-template-columns: 1fr;
+  }
+
+  .aboutObjectiveGrid,
+  .aboutTeamGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 640px) {
   .settingsOverviewGrid {
     grid-template-columns: 1fr;
@@ -1961,5 +2712,44 @@ html[data-theme="dark"] .label {
   .editPlanCard .cancelButton,
   .editPlanCard .primaryButton {
     width: 100%;
+  }
+
+  .aboutObjectiveGrid,
+  .aboutTeamGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .aboutVisualCard,
+  .aboutObjectiveCard,
+  .aboutTeamCard,
+  .aboutSupervisor > div {
+    border-radius: 16px;
+  }
+}
+
+@media (min-width: 921px) {
+  html[data-theme="dark"] .activeNavItem,
+  html:not([data-theme="light"]) .activeNavItem,
+  .activeNavItem {
+    background: transparent;
+    color: var(--primary);
+    border-color: transparent;
+    box-shadow: none;
+    text-shadow:
+      0 0 10px color-mix(in srgb, var(--primary) 55%, transparent),
+      0 0 22px color-mix(in srgb, var(--primary) 32%, transparent);
+  }
+
+  html[data-theme="dark"] .activeNavItem:hover,
+  html:not([data-theme="light"]) .activeNavItem:hover,
+  .activeNavItem:hover {
+    background: transparent;
+    color: var(--primary);
+  }
+
+  html[data-theme="dark"] .navItem:hover,
+  html:not([data-theme="light"]) .navItem:hover {
+    background: transparent;
+    color: var(--primary);
   }
 }
