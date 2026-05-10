@@ -12,6 +12,7 @@ export default function DashboardHomePage() {
 
   const [lang, setLang] = useState("en");
   const [plans, setPlans] = useState([]);
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -28,6 +29,8 @@ export default function DashboardHomePage() {
       loading: "Loading plans...",
       fallbackTitle: "Untitled Plan",
       serverError: "Something went wrong while loading your plans.",
+      welcome: "Welcome",
+      account: "Account",
     },
     ar: {
       title: "خططك السياحية",
@@ -57,6 +60,16 @@ export default function DashboardHomePage() {
   useEffect(() => {
     async function initDashboard() {
       const cached = sessionStorage.getItem(PLANS_CACHE_KEY);
+      const cachedUser = sessionStorage.getItem("auth_user");
+
+      if (cachedUser) {
+        try {
+          setUser(JSON.parse(cachedUser));
+        } catch {
+          sessionStorage.removeItem("auth_user");
+        }
+      }
+
       if (cached) {
         try {
           setPlans(JSON.parse(cached));
@@ -114,6 +127,17 @@ export default function DashboardHomePage() {
 
   return (
     <div className={styles.pageContent} dir={lang === "ar" ? "rtl" : "ltr"}>
+      {user && (
+        <div className={styles.dashboardUserCard}>
+          <div>
+            <span>{t.welcome || "Welcome"}</span>
+            <h2>{user.full_name || "-"}</h2>
+            <p>{user.email || "-"}</p>
+          </div>
+          <strong>{t.account || "Account"}</strong>
+        </div>
+      )}
+
       <div className={styles.pageHeader}>
         <div>
           <h1 className={styles.pageTitle}>{t.title}</h1>

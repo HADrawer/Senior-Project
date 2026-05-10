@@ -74,6 +74,7 @@ export default function AdminPage() {
       dashboard: "Dashboard",
       createPlan: "Create Plan",
       settings: "Settings",
+      about: "About",
       admin: "Admin",
       logout: "Logout",
       langButton: "Arabic",
@@ -149,6 +150,7 @@ export default function AdminPage() {
       dashboard: "لوحة التحكم",
       createPlan: "إنشاء خطة",
       settings: "الإعدادات",
+      about: "About",
       admin: "الإدارة",
       logout: "تسجيل الخروج",
       langButton: "English",
@@ -763,8 +765,16 @@ export default function AdminPage() {
             </Link>
 
             <Link
+              href="/dashboard/about"
+              className={dashboardStyles.navItem}
+              onClick={() => setSidebarOpen(false)}
+            >
+              {t.about}
+            </Link>
+
+            <Link
               href="/admin"
-              className={`${dashboardStyles.navItem} ${dashboardStyles.adminNavItem} ${dashboardStyles.activeNavItem}`}
+              className={`${dashboardStyles.navItem} ${dashboardStyles.activeNavItem}`}
               onClick={() => setSidebarOpen(false)}
             >
               {t.admin}

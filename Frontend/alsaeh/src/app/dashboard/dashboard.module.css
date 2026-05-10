@@ -242,6 +242,56 @@
   padding: 18px 20px;
 }
 
+.dashboardUserCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 24px;
+  padding: 22px 24px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-xl);
+  background:
+    radial-gradient(circle at top right, var(--primary-light), transparent 34%),
+    var(--bg-card);
+  box-shadow: var(--shadow-card);
+}
+
+.dashboardUserCard span,
+.dashboardUserCard p {
+  color: var(--text-muted);
+}
+
+.dashboardUserCard span {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.dashboardUserCard h2 {
+  margin: 0 0 4px;
+  font-family: var(--font-display);
+  color: var(--text-main);
+}
+
+.dashboardUserCard p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.dashboardUserCard strong {
+  flex: 0 0 auto;
+  border: 1px solid var(--primary-mid);
+  border-radius: var(--radius-full);
+  padding: 8px 12px;
+  color: var(--primary);
+  background: var(--primary-light);
+  font-size: 0.82rem;
+}
+
 .statsLabel {
   display: block;
   color: var(--text-muted);
@@ -1134,6 +1184,7 @@ html[data-theme="dark"] .aiCreateCard,
 html[data-theme="dark"] .detailsCard,
 html[data-theme="dark"] .planCard,
 html[data-theme="dark"] .userBox,
+html[data-theme="dark"] .dashboardUserCard,
 html[data-theme="dark"] .statsCard,
 html[data-theme="dark"] .emptyState,
 html[data-theme="dark"] .aiChatPanel {
@@ -1459,6 +1510,193 @@ html[data-theme="dark"] .navItem:hover {
   box-shadow: 0 8px 24px rgba(192, 18, 48, 0.28);
 }
 
+@media (min-width: 921px) {
+  .planDetailsLayout {
+    align-items: start;
+  }
+
+  .aiChatPanel {
+    position: sticky;
+    top: 92px;
+    align-self: start;
+    box-shadow:
+      0 18px 48px rgba(80, 30, 20, 0.14),
+      0 0 0 10px color-mix(in srgb, var(--bg-card) 88%, transparent),
+      0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+  }
+
+  .dashboardPage {
+    display: block;
+    min-height: 100vh;
+  }
+
+  .sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 80;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    width: 100%;
+    height: auto;
+    max-height: none;
+    padding: 10px 32px;
+    overflow: visible;
+    border-right: 0;
+    border-bottom: 1px solid var(--border-soft);
+    background: color-mix(in srgb, var(--bg-card) 90%, transparent);
+  }
+
+  .sidebarMain {
+    display: flex;
+    flex: 1;
+    flex-direction: row;
+    align-items: center;
+    gap: 28px;
+    min-width: 0;
+  }
+
+  .brand {
+    flex: 0 0 auto;
+    margin: 0;
+    white-space: nowrap;
+  }
+
+  .logoMark {
+    height: 30px;
+  }
+
+  .userBox {
+    display: none;
+  }
+
+  .nav {
+    flex: 1;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 20px;
+    min-width: 0;
+  }
+
+  .navItem {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    min-height: auto;
+    padding: 4px 0;
+    border-radius: 0;
+    border: 0;
+    background: transparent;
+    font-size: 0.92rem;
+    white-space: nowrap;
+  }
+
+  .navItem::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -5px;
+    height: 2px;
+    border-radius: var(--radius-full);
+    background: var(--primary);
+    opacity: 0;
+    transform: scaleX(0.35);
+    transform-origin: center;
+    transition: opacity var(--transition), transform var(--transition), box-shadow var(--transition);
+  }
+
+  .navItem:hover {
+    background: transparent;
+    color: var(--primary);
+    text-shadow:
+      0 0 8px color-mix(in srgb, var(--primary) 34%, transparent),
+      0 0 18px color-mix(in srgb, var(--primary) 20%, transparent);
+  }
+
+  .navItem:hover::after,
+  .activeNavItem::after {
+    opacity: 1;
+    transform: scaleX(1);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--primary) 42%, transparent);
+  }
+
+  .activeNavItem {
+    background: transparent;
+    color: var(--primary);
+    border-color: transparent;
+    box-shadow: none;
+    text-shadow:
+      0 0 10px color-mix(in srgb, var(--primary) 55%, transparent),
+      0 0 22px color-mix(in srgb, var(--primary) 32%, transparent);
+  }
+
+  .activeNavItem:hover {
+    background: transparent;
+    color: var(--primary);
+  }
+
+  .adminNavItem {
+    margin-top: 0;
+  }
+
+  .adminNavItem::before {
+    display: none;
+  }
+
+  .sidebarBottom {
+    flex: 0 0 auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    margin-top: 0;
+    padding-top: 0;
+  }
+
+  .langBtn,
+  .logoutBtn {
+    min-height: 32px;
+    padding: 6px 12px;
+    border-radius: var(--radius-full);
+    font-size: 0.86rem;
+    white-space: nowrap;
+  }
+
+  .contentArea {
+    width: min(1440px, 100%);
+    margin: 0 auto;
+    padding: 28px 32px 32px;
+  }
+}
+
+@media (min-width: 921px) and (max-width: 1180px) {
+  .sidebar {
+    gap: 12px;
+    padding-inline: 18px;
+  }
+
+  .sidebarMain {
+    gap: 12px;
+  }
+
+  .userBox {
+    display: none;
+  }
+
+  .nav {
+    justify-content: flex-start;
+  }
+
+  .navItem {
+    padding-inline: 11px;
+    font-size: 0.9rem;
+  }
+}
+
 .deleteButton {
   border-radius: var(--radius-md);
   background: #8f1222;
@@ -1664,6 +1902,14 @@ html[data-theme="dark"] .navItem:hover {
     box-shadow: var(--shadow-card);
   }
 
+  html:not([data-theme="light"]) .dashboardUserCard {
+    background:
+      radial-gradient(circle at top right, var(--primary-light), transparent 34%),
+      var(--bg-card);
+    border-color: var(--border-soft);
+    box-shadow: var(--shadow-card);
+  }
+
   html:not([data-theme="light"]) .userLabel,
   html:not([data-theme="light"]) .userEmail {
     color: var(--text-muted);
@@ -1865,8 +2111,9 @@ html[data-theme="dark"] .navItem:hover {
 .aiChatPanel {
   display: flex;
   flex-direction: column;
-  max-height: calc(100vh - 48px);
-  min-height: 620px;
+  height: min(620px, calc(100vh - 150px));
+  max-height: calc(100vh - 150px);
+  min-height: 480px;
   scroll-margin-top: 76px;
   overflow: hidden;
   background:
@@ -2114,6 +2361,7 @@ html[data-theme="dark"] .assistantChatBubble {
   .aiChatPanel {
     order: 0;
     position: static;
+    height: auto;
     min-height: 420px;
     max-height: none;
   }
@@ -2129,6 +2377,13 @@ html[data-theme="dark"] .assistantChatBubble {
   .detailsHeader,
   .createHeader {
     margin-bottom: 18px;
+  }
+
+  .dashboardUserCard {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 18px;
+    border-radius: 18px;
   }
 
   .pageTitle {
@@ -2469,5 +2724,32 @@ html[data-theme="dark"] .label {
   .aboutTeamCard,
   .aboutSupervisor > div {
     border-radius: 16px;
+  }
+}
+
+@media (min-width: 921px) {
+  html[data-theme="dark"] .activeNavItem,
+  html:not([data-theme="light"]) .activeNavItem,
+  .activeNavItem {
+    background: transparent;
+    color: var(--primary);
+    border-color: transparent;
+    box-shadow: none;
+    text-shadow:
+      0 0 10px color-mix(in srgb, var(--primary) 55%, transparent),
+      0 0 22px color-mix(in srgb, var(--primary) 32%, transparent);
+  }
+
+  html[data-theme="dark"] .activeNavItem:hover,
+  html:not([data-theme="light"]) .activeNavItem:hover,
+  .activeNavItem:hover {
+    background: transparent;
+    color: var(--primary);
+  }
+
+  html[data-theme="dark"] .navItem:hover,
+  html:not([data-theme="light"]) .navItem:hover {
+    background: transparent;
+    color: var(--primary);
   }
 }

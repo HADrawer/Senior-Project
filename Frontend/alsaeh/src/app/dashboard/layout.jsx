@@ -264,7 +264,7 @@ export default function DashboardLayout({ children }) {
               {t.about || "About"}
             </Link>
 
-            {pathname?.startsWith("/dashboard/plans/") && (
+            {sidebarOpen && pathname?.startsWith("/dashboard/plans/") && (
               <button
                 type="button"
                 onClick={scrollToChatbot}

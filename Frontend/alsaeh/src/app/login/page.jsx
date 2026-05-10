@@ -197,6 +197,11 @@ export default function LoginPage() {
 
       {/* ── Form panel ──────────────────────────────────────── */}
       <div className={styles.formPanel}>
+        <Link href="/" className={styles.mobileHomeLink}>
+          <span className={styles.mobileHomeMark} />
+          <span>{t.brand}</span>
+        </Link>
+
         <div className={styles.formCard}>
           <div className={styles.formHeader}>
             <h2 className={styles.formTitle}>{t.formTitle}</h2>

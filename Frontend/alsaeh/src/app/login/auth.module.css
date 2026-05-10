@@ -211,6 +211,10 @@
   margin: 0 auto;
 }
 
+.mobileHomeLink {
+  display: none;
+}
+
 .formHeader {
   margin-bottom: 2rem;
 }
@@ -481,11 +485,40 @@
     padding: 2rem 1.25rem;
     min-height: 100vh;
     justify-content: flex-start;
-    padding-top: 2.5rem;
+    padding-top: 1.25rem;
   }
 
   .formCard {
     max-width: 100%;
+  }
+
+  .mobileHomeLink {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    width: fit-content;
+    margin: 0 auto 1.25rem;
+    color: var(--text-main);
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    font-weight: 800;
+    text-decoration: none !important;
+    letter-spacing: -0.01em;
+  }
+
+  .mobileHomeLink:visited,
+  .mobileHomeLink:hover,
+  .mobileHomeLink:active {
+    color: var(--text-main);
+    text-decoration: none;
+  }
+
+  .mobileHomeMark {
+    display: block;
+    width: 6px;
+    height: 38px;
+    border-radius: 3px;
+    background: linear-gradient(180deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 60%, transparent) 100%);
   }
 }
 
