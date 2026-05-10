@@ -200,6 +200,7 @@ export default function RegisterPage() {
   const [success, setSuccess] = useState("");
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState(false);
 
   const content = {
     en: {
@@ -225,9 +226,12 @@ export default function RegisterPage() {
       switchText: "Already have an account?",
       switchLink: "Sign in",
       fallbackError: "Registration failed. Please check your details.",
+      googleError: "Google sign-in failed. Please try again.",
       success:
         "Account created. Please check your email to confirm your account before logging in.",
       langButton: "Arabic",
+      continueWithGoogle: "Continue with Google",
+      orContinueWith: "or continue with",
       previewPlan: "New Trip Plan",
       previewDays: "Personalized itinerary",
     },
@@ -254,9 +258,12 @@ export default function RegisterPage() {
       switchText: "لديك حساب بالفعل؟",
       switchLink: "تسجيل الدخول",
       fallbackError: "فشل إنشاء الحساب. يرجى التحقق من البيانات.",
+      googleError: "فشل تسجيل الدخول باستخدام Google. يرجى المحاولة مرة أخرى.",
       success:
         "تم إنشاء الحساب. يرجى التحقق من بريدك الإلكتروني لتأكيد الحساب قبل تسجيل الدخول.",
       langButton: "English",
+      continueWithGoogle: "المتابعة باستخدام Google",
+      orContinueWith: "أو تابع باستخدام",
       previewPlan: "خطة رحلة جديدة",
       previewDays: "جدول مخصص",
     },
@@ -333,6 +340,30 @@ export default function RegisterPage() {
     }
   }
 
+  async function handleGoogleSignIn() {
+    setError("");
+    setSuccess("");
+    setOauthLoading(true);
+
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (error) {
+        setError(getErrorMessage(error, t.googleError));
+        setOauthLoading(false);
+      }
+    } catch (error) {
+      console.error("Google sign-in error:", error);
+      setError(t.googleError);
+      setOauthLoading(false);
+    }
+  }
+
   if (!mounted || checkingAuth) {
     return (
       <div className={styles.pageLoading}>
@@ -385,6 +416,26 @@ export default function RegisterPage() {
           <div className={styles.formHeader}>
             <h2 className={styles.formTitle}>{t.formTitle}</h2>
             <p className={styles.formSubtitle}>{t.formSubtitle}</p>
+          </div>
+
+          <button
+            type="button"
+            className={styles.oauthButton}
+            onClick={handleGoogleSignIn}
+            disabled={oauthLoading || loading}
+          >
+            <span className={styles.oauthIcon} aria-hidden>
+              G
+            </span>
+            {oauthLoading
+              ? lang === "ar"
+                ? "جاري التحميل..."
+                : "Loading..."
+              : t.continueWithGoogle}
+          </button>
+
+          <div className={styles.oauthDivider}>
+            <span>{t.orContinueWith}</span>
           </div>
 
           <form onSubmit={handleSubmit} className={styles.form} noValidate>

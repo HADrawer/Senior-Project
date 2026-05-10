@@ -24,6 +24,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState(false);
 
   const t = {
     en: {
@@ -45,7 +46,10 @@ export default function LoginPage() {
       switchText: "Don't have an account?",
       switchLink: "Create one",
       fallbackError: "Login failed. Please check your credentials.",
+      googleError: "Google sign-in failed. Please try again.",
       disabledAccount: "This account is disabled. Contact an administrator.",
+      continueWithGoogle: "Continue with Google",
+      orContinueWith: "or continue with",
       langButton: "العربية",
       previewPlan: "AI Trip Plan",
       previewDays: "3-day itinerary",
@@ -69,7 +73,10 @@ export default function LoginPage() {
       switchText: "ليس لديك حساب؟",
       switchLink: "أنشئ حساباً",
       fallbackError: "فشل تسجيل الدخول. تحقق من بيانات الدخول.",
+      googleError: "فشل تسجيل الدخول باستخدام Google. يرجى المحاولة مرة أخرى.",
       disabledAccount: "هذا الحساب معطل. تواصل مع المسؤول.",
+      continueWithGoogle: "المتابعة باستخدام Google",
+      orContinueWith: "أو تابع باستخدام",
       langButton: "English",
       previewPlan: "خطة سياحية بالذكاء الاصطناعي",
       previewDays: "جدول لمدة 3 أيام",
@@ -146,6 +153,29 @@ export default function LoginPage() {
     }
   }
 
+  async function handleGoogleSignIn() {
+    setError("");
+    setOauthLoading(true);
+
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (error) {
+        setError(getErrorMessage(error, t.googleError));
+        setOauthLoading(false);
+      }
+    } catch (error) {
+      console.error("Google sign-in error:", error);
+      setError(t.googleError);
+      setOauthLoading(false);
+    }
+  }
+
   if (!mounted || checkingAuth) {
     return <div className={styles.pageLoading}>{t.loading}</div>;
   }
@@ -194,6 +224,22 @@ export default function LoginPage() {
           <div className={styles.formHeader}>
             <h2 className={styles.formTitle}>{t.formTitle}</h2>
             <p className={styles.formSubtitle}>{t.formSubtitle}</p>
+          </div>
+
+          <button
+            type="button"
+            className={styles.oauthButton}
+            onClick={handleGoogleSignIn}
+            disabled={oauthLoading || loading}
+          >
+            <span className={styles.oauthIcon} aria-hidden>
+              G
+            </span>
+            {oauthLoading ? t.loading : t.continueWithGoogle}
+          </button>
+
+          <div className={styles.oauthDivider}>
+            <span>{t.orContinueWith}</span>
           </div>
 
           <form onSubmit={handleSubmit} className={styles.form} noValidate>
