@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import styles from "./dashboard.module.css";
 import { supabase } from "@/lib/supabase";
+import { useLanguage } from "@/lib/i18n";
 
 export default function DashboardLayout({ children }) {
   const pathname = usePathname();
@@ -12,11 +13,11 @@ export default function DashboardLayout({ children }) {
 
   const [user, setUser] = useState(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
-  const [lang, setLang] = useState("en");
+  const { lang, dir, toggleLang } = useLanguage();
   const [mounted, setMounted] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const content = {
+  const t = {
     en: {
       brand: "Alsaeh.bh",
       dashboard: "Dashboard",
@@ -24,28 +25,36 @@ export default function DashboardLayout({ children }) {
       about: "About",
       settings: "Settings",
       admin: "Admin",
+      chatbot: "Chatbot",
       logout: "Logout",
       welcome: "Welcome",
       langButton: "Arabic",
       loading: "Loading...",
+      navigation: "Navigation",
+      close: "Close",
+      openNavigation: "Open navigation menu",
+      closeNavigation: "Close navigation menu",
     },
     ar: {
       brand: "السائح.البحرين",
       dashboard: "لوحة التحكم",
       createPlan: "إنشاء خطة",
+      about: "حول",
       settings: "الإعدادات",
+      admin: "الإدارة",
+      chatbot: "المحادثة",
       logout: "تسجيل الخروج",
-      welcome: "مرحبا",
+      welcome: "مرحباً",
       langButton: "English",
       loading: "جاري التحميل...",
+      navigation: "التنقل",
+      close: "إغلاق",
+      openNavigation: "فتح قائمة التنقل",
+      closeNavigation: "إغلاق قائمة التنقل",
     },
-  };
-
-  const t = content[lang];
+  }[lang];
 
   useEffect(() => {
-    const savedLang = localStorage.getItem("site_lang");
-    if (savedLang === "ar" || savedLang === "en") setLang(savedLang);
     setMounted(true);
   }, []);
 
@@ -132,12 +141,6 @@ export default function DashboardLayout({ children }) {
     return () => window.clearInterval(intervalId);
   }, [router]);
 
-  function toggleLanguage() {
-    const newLang = lang === "en" ? "ar" : "en";
-    setLang(newLang);
-    localStorage.setItem("site_lang", newLang);
-  }
-
   function scrollToChatbot() {
     setSidebarOpen(false);
 
@@ -168,7 +171,7 @@ export default function DashboardLayout({ children }) {
   }
 
   return (
-    <main className={styles.dashboardPage} dir={lang === "ar" ? "rtl" : "ltr"}>
+    <main className={styles.dashboardPage} dir={dir}>
       <header className={styles.mobileTopBar}>
         <Link href="/" className={styles.mobileBrand}>
           <span className={styles.logoMark}></span>
@@ -178,7 +181,7 @@ export default function DashboardLayout({ children }) {
           type="button"
           className={styles.mobileMenuButton}
           onClick={() => setSidebarOpen(true)}
-          aria-label="Open navigation menu"
+          aria-label={t.openNavigation}
         >
           <span aria-hidden="true" className={styles.menuIcon}>
             <span />
@@ -193,20 +196,20 @@ export default function DashboardLayout({ children }) {
           type="button"
           className={styles.sidebarOverlay}
           onClick={() => setSidebarOpen(false)}
-          aria-label="Close navigation menu"
+          aria-label={t.closeNavigation}
         />
       )}
 
       <aside className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ""}`}>
         <div className={styles.sidebarMain}>
           <div className={styles.sidebarMobileHeader}>
-            <span>Navigation</span>
+            <span>{t.navigation}</span>
             <button
               type="button"
               onClick={() => setSidebarOpen(false)}
-              aria-label="Close navigation menu"
+              aria-label={t.closeNavigation}
             >
-              Close
+              {t.close}
             </button>
           </div>
 
@@ -261,7 +264,7 @@ export default function DashboardLayout({ children }) {
                 pathname === "/dashboard/about" ? styles.activeNavItem : ""
               }`}
             >
-              {t.about || "About"}
+              {t.about}
             </Link>
 
             {sidebarOpen && pathname?.startsWith("/dashboard/plans/") && (
@@ -270,7 +273,7 @@ export default function DashboardLayout({ children }) {
                 onClick={scrollToChatbot}
                 className={`${styles.navItem} ${styles.mobileOnlyNavItem}`}
               >
-                Chatbot
+                {t.chatbot}
               </button>
             )}
 
@@ -280,14 +283,14 @@ export default function DashboardLayout({ children }) {
                 onClick={() => setSidebarOpen(false)}
                 className={`${styles.navItem} ${styles.adminNavItem}`}
               >
-                {t.admin || "Admin"}
+                {t.admin}
               </Link>
             )}
           </nav>
         </div>
 
         <div className={styles.sidebarBottom}>
-          <button className={styles.langBtn} onClick={toggleLanguage}>
+          <button className={styles.langBtn} onClick={toggleLang}>
             {t.langButton}
           </button>
 

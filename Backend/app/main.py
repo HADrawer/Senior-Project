@@ -367,20 +367,48 @@ def parse_interests(value: str | None) -> list[str]:
     return interests or ["Bahrain tourism"]
 
 
+def format_plan_preferences(
+    preferences: list[str] | str | None,
+    extra_preferences: str | None = None,
+    constraints: list[str] | None = None,
+) -> str | None:
+    if isinstance(preferences, str):
+        selected_preferences = parse_interests(preferences)
+    else:
+        selected_preferences = [
+            preference.strip()
+            for preference in (preferences or [])
+            if preference and preference.strip()
+        ]
+
+    parts = []
+
+    if selected_preferences:
+        parts.append(f"Preferences: {', '.join(selected_preferences)}")
+
+    if extra_preferences:
+        parts.append(f"Extra preferences: {extra_preferences}")
+
+    if constraints:
+        parts.append(f"Constraints: {', '.join(constraints)}")
+
+    return ". ".join(parts) if parts else None
+
+
 def build_plan_prompt_from_values(
     title: str,
     days: int,
     budget: float | None,
-    interests: list[str],
+    selected_preferences: list[str],
     travel_style: str | None,
-    preferences: str | None,
+    extra_preferences: str | None,
     constraints: list[str] | None,
     people_count: int,
     language: str = "auto",
     category: str | None = None,
     place: str | None = None,
 ) -> str:
-        interests_text = ", ".join(interests)
+        preferences_text = ", ".join(selected_preferences)
         constraints_text = ", ".join(constraints or [])
 
         language_instruction = (
@@ -409,9 +437,9 @@ def build_plan_prompt_from_values(
     Title: {title}
     Days: {days}
     Budget in BHD: {budget}
-    Interests: {interests_text}
+    Preferences: {preferences_text}
     Travel style: {travel_style}
-    Preferences: {preferences}
+    Extra preferences: {extra_preferences}
     Constraints: {constraints_text}
     People count: {people_count}
     {category_instruction}
@@ -435,7 +463,7 @@ def build_plan_prompt_from_values(
     - Budget is for the whole group, not one person.
     - Reconstruct the full itinerary from the latest user input.
     - The number of objects in the days array must match Days exactly.
-    - The itinerary must reflect the latest interests, travel style, preferences, preferred category, preferred place or area, budget, and people count.
+    - The itinerary must reflect the latest preferences, travel style, extra preferences, preferred category, preferred place or area, budget, and people count.
     - For each activity, include a real Bahrain location name.
     - For each activity, include location_area such as Manama, Muharraq, Seef, Riffa, Zallaq, etc.
     - For google_maps_query, write a search query using this format: place name + area + Bahrain.
@@ -482,9 +510,9 @@ def build_plan_prompt(data: GenerateAIPlanRequest) -> str:
         title=data.title,
         days=data.days,
         budget=data.budget,
-        interests=data.interests,
+        selected_preferences=data.preferences,
         travel_style=data.travel_style,
-        preferences=data.preferences,
+        extra_preferences=data.extra_preferences,
         constraints=data.constraints,
         people_count=data.people_count,
         language=data.language,
@@ -497,10 +525,10 @@ def generate_plan_details_from_update(data: UpdatePlanRequest):
             title=data.title,
             days=data.days,
             budget=data.budget,
-            interests=parse_interests(data.user_interests),
+            selected_preferences=data.preferences,
             travel_style=data.travel_styles,
-            preferences=data.preferences,
-            constraints=None,
+            extra_preferences=data.extra_preferences,
+            constraints=data.constraints,
             people_count=data.people_count or 1,
             category=data.category,
             place=data.place,
@@ -525,6 +553,11 @@ def generate_plan_details_from_update(data: UpdatePlanRequest):
 @app.put("/plans/{plan_id}")
 def update_plan(plan_id: int, data: UpdatePlanRequest, current_user = Depends(get_current_user)):
     generated_plan_details = None
+    stored_preferences = format_plan_preferences(
+        data.preferences,
+        data.extra_preferences,
+        data.constraints,
+    )
 
     with get_conn() as conn:
         with conn.cursor() as cur:
@@ -571,8 +604,8 @@ def update_plan(plan_id: int, data: UpdatePlanRequest, current_user = Depends(ge
                     data.title,
                     data.days,
                     data.budget,
-                    data.preferences,
-                    data.user_interests,
+                    stored_preferences,
+                    None,
                     data.travel_styles,
                     data.category,
                     data.place,
@@ -682,6 +715,12 @@ def generate_ai_plan(data: GenerateAIPlanRequest, current_user=Depends(get_curre
         raise HTTPException(status_code=500, detail=f"AI generation failed: {str(e)}")
 
     try:
+        stored_preferences = format_plan_preferences(
+            data.preferences,
+            data.extra_preferences,
+            data.constraints,
+        )
+
         with get_conn() as conn:
             with conn.cursor() as cur:
                 cur.execute(
@@ -707,8 +746,8 @@ def generate_ai_plan(data: GenerateAIPlanRequest, current_user=Depends(get_curre
                         generated_plan.get("title", data.title),
                         data.budget,
                         data.days,
-                        data.preferences,
-                        ", ".join(data.interests),
+                        stored_preferences,
+                        None,
                         data.travel_style,
                         json.dumps(generated_plan),
                         data.people_count,

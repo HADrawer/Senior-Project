@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import styles from "./admin.module.css";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 import { supabase } from "@/lib/supabase";
+import { useLanguage } from "@/lib/i18n";
 
 async function getAdminToken() {
   const { data } = await supabase.auth.getSession();
@@ -60,7 +61,7 @@ export default function AdminPage() {
   const [plans, setPlans] = useState([]);
   const [logs, setLogs] = useState([]);
   const [user, setUser] = useState(null);
-  const [lang, setLang] = useState("en");
+  const { lang, dir, toggleLang } = useLanguage();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [loading, setLoading] = useState(true);
@@ -143,6 +144,7 @@ export default function AdminPage() {
       failedDeleteUser: "Failed to delete user",
       failedUpdatePlan: "Failed to update plan",
       failedDeletePlan: "Failed to delete plan",
+      ai: "AI",
     },
     ar: {
       brand: "Alsaeh.bh",
@@ -222,12 +224,11 @@ export default function AdminPage() {
     },
   };
 
-  const t = content[lang];
-
-  useEffect(() => {
-    const savedLang = localStorage.getItem("site_lang");
-    if (savedLang === "ar" || savedLang === "en") setLang(savedLang);
-  }, []);
+  const t = {
+    ...content[lang],
+    ai: lang === "ar" ? "الذكاء الاصطناعي" : content[lang].ai,
+    about: lang === "ar" ? "حول" : content[lang].about,
+  };
 
   useEffect(() => {
     async function initAdmin() {
@@ -301,12 +302,6 @@ export default function AdminPage() {
     }
 
     router.replace("/login");
-  }
-
-  function toggleLanguage() {
-    const nextLang = lang === "en" ? "ar" : "en";
-    setLang(nextLang);
-    localStorage.setItem("site_lang", nextLang);
   }
 
   async function safeJson(res) {
@@ -677,7 +672,7 @@ export default function AdminPage() {
   return (
     <div
       className={dashboardStyles.dashboardPage}
-      dir={lang === "ar" ? "rtl" : "ltr"}
+      dir={dir}
     >
       <header className={dashboardStyles.mobileTopBar}>
         <Link href="/" className={dashboardStyles.mobileBrand}>
@@ -688,7 +683,7 @@ export default function AdminPage() {
           type="button"
           className={dashboardStyles.mobileMenuButton}
           onClick={() => setSidebarOpen(true)}
-          aria-label="Open navigation menu"
+          aria-label={lang === "ar" ? "فتح قائمة التنقل" : "Open navigation menu"}
         >
           <span aria-hidden="true" className={dashboardStyles.menuIcon}>
             <span />
@@ -703,7 +698,7 @@ export default function AdminPage() {
           type="button"
           className={dashboardStyles.sidebarOverlay}
           onClick={() => setSidebarOpen(false)}
-          aria-label="Close navigation menu"
+          aria-label={lang === "ar" ? "إغلاق قائمة التنقل" : "Close navigation menu"}
         />
       )}
 
@@ -714,13 +709,13 @@ export default function AdminPage() {
       >
         <div className={dashboardStyles.sidebarMain}>
           <div className={dashboardStyles.sidebarMobileHeader}>
-            <span>Navigation</span>
+            <span>{lang === "ar" ? "التنقل" : "Navigation"}</span>
             <button
               type="button"
               onClick={() => setSidebarOpen(false)}
-              aria-label="Close navigation menu"
+              aria-label={lang === "ar" ? "إغلاق قائمة التنقل" : "Close navigation menu"}
             >
-              Close
+              {lang === "ar" ? "إغلاق" : "Close"}
             </button>
           </div>
 
@@ -730,7 +725,7 @@ export default function AdminPage() {
             onClick={() => setSidebarOpen(false)}
           >
             <div className={dashboardStyles.logoMark}></div>
-            <span>Alsaeh.bh</span>
+            <span>{t.brand}</span>
           </Link>
 
           <div className={dashboardStyles.userBox}>
@@ -783,7 +778,7 @@ export default function AdminPage() {
         </div>
 
         <div className={dashboardStyles.sidebarBottom}>
-          <button className={dashboardStyles.langBtn} onClick={toggleLanguage}>
+          <button className={dashboardStyles.langBtn} onClick={toggleLang}>
             {t.langButton}
           </button>
 
@@ -1115,7 +1110,7 @@ function PlansSection({ plans, onUpdatePlan, onDeletePlan, t }) {
               <th>{t.budget}</th>
               <th>{t.people}</th>
               <th>{t.status}</th>
-              <th>AI</th>
+              <th>{t.ai || "AI"}</th>
               <th>{t.actions}</th>
             </tr>
           </thead>

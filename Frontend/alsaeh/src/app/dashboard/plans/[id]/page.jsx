@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect ,useRef, useState } from "react";
+import { useCallback, useEffect ,useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import styles from "../../dashboard.module.css";
 import { supabase } from "@/lib/supabase";
+import { useLanguage } from "@/lib/i18n";
 
 function getErrorMessage(detail, fallback) {
   if (Array.isArray(detail)) return detail[0]?.msg || fallback;
@@ -296,7 +297,6 @@ function buildPlanPdfHtml(plan) {
           <section class="block">
             <h2>Plan Preferences</h2>
             <p><strong>Preferences:</strong> ${formatPdfValue(plan.preferences)}</p>
-            <p><strong>User interests:</strong> ${formatPdfValue(plan.user_interests)}</p>
           </section>
 
           ${
@@ -339,10 +339,224 @@ function buildPlanPdfHtml(plan) {
 const CATEGORIES_CACHE_KEY = "place_categories";
 const PLANS_CACHE_KEY = "dashboard_plans";
 
+const integerInputPattern = /^\d*$/;
+const budgetInputPattern = /^\d*(?:\.\d{0,3})?$/;
+const dayPattern = /^(?:[1-9]|1[0-4])$/;
+const peoplePattern = /^(?:[1-9]|[1-4][0-9]|50)$/;
+const budgetPattern = /^(?:0|[1-9]\d*)(?:\.\d{1,3})?$/;
+
+function updateIntegerField(setForm, field, value) {
+  if (!integerInputPattern.test(value)) return;
+  setForm((currentForm) => ({ ...currentForm, [field]: value }));
+}
+
+function updateBudgetField(setForm, value) {
+  if (!budgetInputPattern.test(value)) return;
+  setForm((currentForm) => ({ ...currentForm, budget: value }));
+}
+
+function splitCommaList(value) {
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function getPreferenceSection(value, label) {
+  const text = String(value || "");
+  const pattern = new RegExp(`${label}:\\s*([\\s\\S]*?)(?=\\.\\s*(?:Preferences|Extra preferences|Constraints):|$)`, "i");
+  return text.match(pattern)?.[1]?.trim() || "";
+}
+
+function parsePlanPreferences(data) {
+  const preferenceText = data.preferences || "";
+  const selectedText =
+    getPreferenceSection(preferenceText, "Preferences") ||
+    data.category ||
+    data.user_interests ||
+    "";
+
+  return {
+    selected_preferences: splitCommaList(selectedText),
+    extra_preferences:
+      getPreferenceSection(preferenceText, "Extra preferences") ||
+      (/^\s*(?:Preferences|Constraints):/i.test(preferenceText)
+        ? ""
+        : preferenceText),
+    constraints: getPreferenceSection(preferenceText, "Constraints"),
+  };
+}
+
+function getActivityIcon(activity) {
+  const type = String(activity?.type || activity?.category || "").toLowerCase();
+  const name = String(activity?.name || "").toLowerCase();
+  const text = `${type} ${name}`;
+
+  if (/beach|sea|zallaq|island/.test(text)) return "🏖️";
+  if (/museum|heritage|historical|fort|culture/.test(text)) return "🏛️";
+  if (/restaurant|dining|food|cafe|coffee/.test(text)) return "🍽️";
+  if (/mall|shopping|market|souq/.test(text)) return "🛍️";
+  if (/mosque|religious/.test(text)) return "🕌";
+  if (/park|garden|nature/.test(text)) return "🌿";
+  if (/activity|adventure|experience/.test(text)) return "✨";
+
+  return "📍";
+}
+
+function formatActivityValue(value) {
+  if (value === null || value === undefined || value === "") return null;
+  if (Array.isArray(value)) return value.filter(Boolean).join(", ");
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+}
+
+function ActivityDetail({ label, value }) {
+  const formattedValue = formatActivityValue(value);
+  if (!formattedValue) return null;
+
+  return (
+    <div className={styles.activityDetailItem}>
+      <span>{label}</span>
+      <strong>{formattedValue}</strong>
+    </div>
+  );
+}
+
+function ActivityAccordion({ activity, activityId, ui }) {
+  const [open, setOpen] = useState(false);
+  const hiddenExtraKeys = new Set([
+    "time",
+    "name",
+    "type",
+    "category",
+    "location_name",
+    "location_area",
+    "google_maps_query",
+    "google_maps_url",
+    "estimated_cost_bhd",
+    "price",
+    "cost",
+    "opening_hours",
+    "description",
+    "notes",
+  ]);
+  const extraDetails = Object.entries(activity || {}).filter(
+    ([key, value]) => !hiddenExtraKeys.has(key) && formatActivityValue(value)
+  );
+
+  return (
+    <div className={styles.activityAccordion}>
+      <button
+        type="button"
+        className={styles.activityAccordionTrigger}
+        onClick={() => setOpen((current) => !current)}
+        aria-expanded={open}
+        aria-controls={`${activityId}-details`}
+      >
+        <span className={styles.activityIcon}>{getActivityIcon(activity)}</span>
+        <span className={styles.activityTitle}>
+          {activity?.name || activity?.location_name || "Activity"}
+        </span>
+        <span className={styles.activityExpandIndicator}>
+          {open ? "-" : "+"}
+        </span>
+      </button>
+
+      {open && (
+        <div id={`${activityId}-details`} className={styles.activityDetails}>
+          {activity?.notes && (
+            <p className={styles.activityDescription}>{activity.notes}</p>
+          )}
+
+          {activity?.description && activity.description !== activity.notes && (
+            <p className={styles.activityDescription}>{activity.description}</p>
+          )}
+
+          <div className={styles.activityDetailGrid}>
+            <ActivityDetail label={ui.time} value={activity?.time} />
+            <ActivityDetail
+              label={ui.estimatedCost}
+              value={
+                activity?.estimated_cost_bhd !== undefined
+                  ? `${activity.estimated_cost_bhd} BHD`
+                  : activity?.price || activity?.cost
+              }
+            />
+            <ActivityDetail label={ui.openingHours} value={activity?.opening_hours} />
+            <ActivityDetail label={ui.category} value={activity?.type || activity?.category} />
+            <ActivityDetail label={ui.location} value={activity?.location_name} />
+            <ActivityDetail label={ui.area} value={activity?.location_area} />
+            <ActivityDetail label={ui.mapSearch} value={activity?.google_maps_query} />
+
+            {extraDetails.map(([key, value]) => (
+              <ActivityDetail
+                key={key}
+                label={key.replaceAll("_", " ")}
+                value={value}
+              />
+            ))}
+          </div>
+
+          {activity?.google_maps_url && (
+            <a
+              href={activity.google_maps_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.activityMapButton}
+            >
+              {ui.googleMaps}
+            </a>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PlanDayCard({ day, ui }) {
+  const activities = Array.isArray(day?.activities) ? day.activities : [];
+
+  return (
+    <section className={styles.planDayCard}>
+      <div className={styles.planDayChrome}>
+        <span />
+        <span />
+        <span />
+      </div>
+
+      <div className={styles.planDayHeader}>
+        <div>
+          <span className={styles.planDayPill}>{ui.personalizedForYou}</span>
+          <h3>
+            {ui.day} {day?.day_number || ""}
+            {day?.theme ? `: ${day.theme}` : ""}
+          </h3>
+        </div>
+      </div>
+
+      {activities.length > 0 ? (
+        <div className={styles.planDayActivities}>
+          {activities.map((activity, index) => (
+            <ActivityAccordion
+              key={`${day?.day_number || "day"}-${index}-${activity?.name || "activity"}`}
+              activity={activity}
+              activityId={`day-${day?.day_number || "x"}-activity-${index}`}
+              ui={ui}
+            />
+          ))}
+        </div>
+      ) : (
+        <p className={styles.planDayEmpty}>{ui.noActivitiesDay}</p>
+      )}
+    </section>
+  );
+}
+
 export default function PlanDetailsPage() {
   const { id } = useParams();
   const router = useRouter();
   const chatEndRef = useRef(null);
+  const { lang, dir } = useLanguage();
 
   const [plan, setPlan] = useState(null);
   const [form, setForm] = useState({
@@ -350,13 +564,14 @@ export default function PlanDetailsPage() {
     days: "",
     budget: "",
     people_count: "",
-    preferences: "",
-    user_interests: "",
+    selected_preferences: [],
+    extra_preferences: "",
+    constraints: "",
     travel_styles: "",
-    category: "",
     place: "",
   });
   const [categories, setCategories] = useState([]);
+  const [preferencesOpen, setPreferencesOpen] = useState(false);
   const [loadingCategories, setLoadingCategories] = useState(true);
 
   const [loading, setLoading] = useState(true);
@@ -368,6 +583,233 @@ export default function PlanDetailsPage() {
   const [chatMessage, setChatMessage] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
+
+  const ui = {
+    en: {
+      loading: "Loading...",
+      notFound: "Plan not found",
+      untitledPlan: "Untitled Plan",
+      subtitle: "View, edit, and improve your tourism plan with the AI assistant.",
+      downloadPdf: "Download PDF",
+      editPlan: "Edit Plan",
+      deletePlan: "Delete Plan",
+      deleting: "Deleting...",
+      editingPlan: "Editing plan",
+      planDetails: "Plan Details",
+      editSubtitle:
+        "Update the core trip information, preferences, and travel context.",
+      planTitle: "Plan Title",
+      planTitlePlaceholder: "Relaxed Bahrain Weekend",
+      days: "Days",
+      numberOfDays: "Number of Days",
+      daysHint: "Whole numbers only, from 1 to 14.",
+      budget: "Budget",
+      budgetBhd: "Budget (BHD)",
+      budgetHint: "Use numbers only. Decimals can include up to 3 digits.",
+      people: "People",
+      numberOfPeople: "Number of People",
+      status: "Status",
+      generatedByAi: "Generated by AI",
+      yes: "Yes",
+      no: "No",
+      preferences: "Preferences",
+      extraPreferences: "Extra Preferences",
+      constraints: "Constraints",
+      travelStyle: "Travel Style",
+      selectTravelStyle: "Select travel style",
+      relaxed: "Relaxed",
+      adventure: "Adventure",
+      family: "Family-friendly",
+      friends: "Friends",
+      soloTravel: "Solo Travel",
+      cultural: "Cultural",
+      budgetFriendly: "Budget-friendly",
+      luxury: "Luxury",
+      selected: "selected",
+      loadingPreferences: "Loading preferences...",
+      selectPreferences: "Select one or more preferences",
+      selectAllPreferences: "Select all preferences",
+      noPreferences: "No preferences available",
+      extraPreferencesPlaceholder:
+        "Example: low walking, indoor preferred, suitable for family",
+      constraintsPlaceholder:
+        "Example: indoor preferred, no expensive restaurants",
+      constraintsHint: "Separate constraints with commas.",
+      cancel: "Cancel",
+      saveChanges: "Save Changes",
+      rebuilding: "Rebuilding plan...",
+      estimatedBudget: "Estimated Budget",
+      aiItinerary: "AI Generated Itinerary",
+      noSummary: "No summary available.",
+      tips: "Tips",
+      time: "Time",
+      estimatedCost: "Estimated cost",
+      openingHours: "Opening Hours",
+      category: "Category",
+      location: "Location",
+      area: "Area",
+      mapSearch: "Map search",
+      googleMaps: "Open in Google Maps",
+      personalizedForYou: "Personalized for you",
+      day: "Day",
+      noActivitiesDay: "No activities available for this day.",
+      aiTerminal: "AI Trip Terminal",
+      aiTerminalSubtitle: "Ask for advice or request changes to this plan.",
+      online: "online",
+      chatEmpty: "Ask me about this trip, or tell me what you want to change.",
+      thinking: "Thinking...",
+      chatPlaceholder: "ask for advice or request a change...",
+      send: "Send",
+      updateFailed: "Failed to update plan",
+      deleteFailed: "Failed to delete plan",
+      unableToConnect: "Unable to connect to server",
+      confirmDelete: "Are you sure you want to delete this plan?",
+      allowPopups: "Please allow pop-ups to download this plan as a PDF.",
+      aiBusy: "AI service is busy. Please try again.",
+      done: "Done.",
+      daysError: "Number of days must be a whole number from 1 to 14.",
+      budgetError:
+        "Budget must be a positive BHD amount with up to 3 decimal places.",
+      peopleError: "Number of people must be a whole number from 1 to 50.",
+      preferencesError: "Select at least one preference.",
+    },
+    ar: {
+      loading: "جاري التحميل...",
+      notFound: "لم يتم العثور على الخطة",
+      untitledPlan: "خطة بدون عنوان",
+      subtitle: "اعرض وعدّل وحسّن خطتك السياحية بمساعدة الذكاء الاصطناعي.",
+      downloadPdf: "تنزيل PDF",
+      editPlan: "تعديل الخطة",
+      deletePlan: "حذف الخطة",
+      deleting: "جاري الحذف...",
+      editingPlan: "تعديل الخطة",
+      planDetails: "تفاصيل الخطة",
+      editSubtitle:
+        "حدّث معلومات الرحلة والتفضيلات وسياق السفر الأساسي.",
+      planTitle: "عنوان الخطة",
+      planTitlePlaceholder: "عطلة هادئة في البحرين",
+      days: "الأيام",
+      numberOfDays: "عدد الأيام",
+      daysHint: "أرقام صحيحة فقط من 1 إلى 14.",
+      budget: "الميزانية",
+      budgetBhd: "الميزانية (BHD)",
+      budgetHint: "استخدم الأرقام فقط. يمكن أن تحتوي الكسور على 3 خانات كحد أقصى.",
+      people: "الأشخاص",
+      numberOfPeople: "عدد الأشخاص",
+      status: "الحالة",
+      generatedByAi: "مولدة بالذكاء الاصطناعي",
+      yes: "نعم",
+      no: "لا",
+      preferences: "التفضيلات",
+      extraPreferences: "تفضيلات إضافية",
+      constraints: "القيود",
+      travelStyle: "نمط الرحلة",
+      selectTravelStyle: "اختر نمط الرحلة",
+      relaxed: "هادئة",
+      adventure: "مغامرة",
+      family: "مناسبة للعائلة",
+      friends: "أصدقاء",
+      soloTravel: "سفر فردي",
+      cultural: "ثقافية",
+      budgetFriendly: "اقتصادية",
+      luxury: "فاخرة",
+      selected: "محدد",
+      loadingPreferences: "جاري تحميل التفضيلات...",
+      selectPreferences: "اختر تفضيلاً واحداً أو أكثر",
+      selectAllPreferences: "تحديد كل التفضيلات",
+      noPreferences: "لا توجد تفضيلات متاحة",
+      extraPreferencesPlaceholder:
+        "مثال: مشي قليل، أماكن داخلية، مناسبة للعائلة",
+      constraintsPlaceholder:
+        "مثال: أماكن داخلية، بدون مطاعم غالية",
+      constraintsHint: "افصل بين القيود باستخدام الفواصل.",
+      cancel: "إلغاء",
+      saveChanges: "حفظ التغييرات",
+      rebuilding: "جاري إعادة بناء الخطة...",
+      estimatedBudget: "الميزانية المتوقعة",
+      aiItinerary: "جدول مولد بالذكاء الاصطناعي",
+      noSummary: "لا يوجد ملخص متاح.",
+      tips: "نصائح",
+      time: "الوقت",
+      estimatedCost: "التكلفة المتوقعة",
+      openingHours: "ساعات العمل",
+      category: "التصنيف",
+      location: "الموقع",
+      area: "المنطقة",
+      mapSearch: "بحث الخريطة",
+      googleMaps: "فتح في خرائط Google",
+      personalizedForYou: "مخصص لك",
+      day: "اليوم",
+      noActivitiesDay: "لا توجد أنشطة متاحة لهذا اليوم.",
+      aiTerminal: "محادثة الرحلة الذكية",
+      aiTerminalSubtitle: "اطلب نصيحة أو تغييرات على هذه الخطة.",
+      online: "متصل",
+      chatEmpty: "اسألني عن هذه الرحلة أو أخبرني بما تريد تغييره.",
+      thinking: "جاري التفكير...",
+      chatPlaceholder: "اطلب نصيحة أو تغييراً...",
+      send: "إرسال",
+      updateFailed: "فشل تحديث الخطة",
+      deleteFailed: "فشل حذف الخطة",
+      unableToConnect: "تعذر الاتصال بالخادم",
+      confirmDelete: "هل أنت متأكد من حذف هذه الخطة؟",
+      allowPopups: "يرجى السماح بالنوافذ المنبثقة لتنزيل الخطة كملف PDF.",
+      aiBusy: "خدمة الذكاء الاصطناعي مشغولة. يرجى المحاولة مرة أخرى.",
+      done: "تم.",
+      daysError: "يجب أن يكون عدد الأيام رقماً صحيحاً من 1 إلى 14.",
+      budgetError:
+        "يجب أن تكون الميزانية مبلغاً موجباً بالدينار مع 3 خانات عشرية كحد أقصى.",
+      peopleError: "يجب أن يكون عدد الأشخاص رقماً صحيحاً من 1 إلى 50.",
+      preferencesError: "اختر تفضيلاً واحداً على الأقل.",
+    },
+  }[lang];
+
+  const fillForm = useCallback((data) => {
+    const planPreferences = parsePlanPreferences(data);
+
+    setForm({
+      title: data.title || "",
+      days: data.days || "",
+      budget: data.budget ?? "",
+      people_count: data.people_count || 1,
+      selected_preferences: planPreferences.selected_preferences,
+      extra_preferences: planPreferences.extra_preferences,
+      constraints: planPreferences.constraints,
+      travel_styles: data.travel_styles || "",
+      place: data.place || "",
+    });
+  }, []);
+
+  const loadPlan = useCallback(async (tokenFromInit = null) => {
+    try {
+      const token = tokenFromInit || (await getAccessToken());
+
+      if (!token) {
+        router.replace("/login");
+        return;
+      }
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/plans/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        router.replace("/dashboard");
+        return;
+      }
+
+      const data = await res.json();
+      setPlan(data);
+      fillForm(data);
+      sessionStorage.setItem(`plan_${id}`, JSON.stringify(data));
+    } catch (error) {
+      console.error("Load plan error:", error);
+      router.replace("/dashboard");
+    } finally {
+      setLoading(false);
+    }
+  }, [fillForm, id, router]);
 
   useEffect(() => {
     async function initPage() {
@@ -395,7 +837,7 @@ export default function PlanDetailsPage() {
     }
 
     initPage();
-  }, [id, router]);
+  }, [fillForm, id, loadPlan, router]);
 
   useEffect(() => {
     async function loadCategories() {
@@ -441,52 +883,59 @@ export default function PlanDetailsPage() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
 
+  const preferenceOptions = categories.map((category) => ({
+    id: category.id,
+    value: category.name,
+    label: category.name.replaceAll("_", " "),
+  }));
+  const selectedPreferenceLabels = form.selected_preferences.map((value) => {
+    const option = preferenceOptions.find((category) => category.value === value);
+    return option?.label || value.replaceAll("_", " ");
+  });
+  const allPreferencesSelected =
+    preferenceOptions.length > 0 &&
+    preferenceOptions.every((category) =>
+      form.selected_preferences.includes(category.value)
+    );
 
+  function updatePreference(value, checked) {
+    setForm((currentForm) => {
+      const current = currentForm.selected_preferences;
+      const selected_preferences = checked
+        ? Array.from(new Set([...current, value]))
+        : current.filter((item) => item !== value);
 
-  async function loadPlan(tokenFromInit = null) {
-    try {
-      const token = tokenFromInit || (await getAccessToken());
-
-      if (!token) {
-        router.replace("/login");
-        return;
-      }
-
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/plans/${id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!res.ok) {
-        router.replace("/dashboard");
-        return;
-      }
-
-      const data = await res.json();
-      setPlan(data);
-      fillForm(data);
-      sessionStorage.setItem(`plan_${id}`, JSON.stringify(data));
-    } catch (error) {
-      console.error("Load plan error:", error);
-      router.replace("/dashboard");
-    } finally {
-      setLoading(false);
-    }
+      return { ...currentForm, selected_preferences };
+    });
   }
 
-  function fillForm(data) {
-    setForm({
-      title: data.title || "",
-      days: data.days || "",
-      budget: data.budget ?? "",
-      people_count: data.people_count || 1,
-      preferences: data.preferences || "",
-      user_interests: data.user_interests || "",
-      travel_styles: data.travel_styles || "",
-      category: data.category || "",
-      place: data.place || "",
-    });
+  function toggleAllPreferences(checked) {
+    setForm((currentForm) => ({
+      ...currentForm,
+      selected_preferences: checked
+        ? preferenceOptions.map((category) => category.value)
+        : [],
+    }));
+  }
+
+  function validateEditForm() {
+    if (!dayPattern.test(String(form.days))) {
+      return ui.daysError;
+    }
+
+    if (form.budget !== "" && !budgetPattern.test(String(form.budget))) {
+      return ui.budgetError;
+    }
+
+    if (!peoplePattern.test(String(form.people_count))) {
+      return ui.peopleError;
+    }
+
+    if (form.selected_preferences.length === 0) {
+      return ui.preferencesError;
+    }
+
+    return "";
   }
 
   async function refreshPlan() {
@@ -513,8 +962,15 @@ export default function PlanDetailsPage() {
 
   async function handleUpdate(e) {
     e.preventDefault();
-    setSaving(true);
     setError("");
+
+    const validationError = validateEditForm();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setSaving(true);
 
     try {
       const token = await getAccessToken();
@@ -523,6 +979,8 @@ export default function PlanDetailsPage() {
         router.replace("/login");
         return;
       }
+
+      const constraintsList = splitCommaList(form.constraints);
 
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/plans/${id}`, {
         method: "PUT",
@@ -535,10 +993,10 @@ export default function PlanDetailsPage() {
             days: Number(form.days),
             budget: form.budget === "" ? null : Number(form.budget),
             people_count: Number(form.people_count),
-            preferences: form.preferences || null,
-            user_interests: form.user_interests || null,
+            preferences: form.selected_preferences,
+            extra_preferences: form.extra_preferences || null,
+            constraints: constraintsList,
             travel_styles: form.travel_styles || null,
-            category: form.category || null,
             place: null,
           }),
         });
@@ -546,7 +1004,7 @@ export default function PlanDetailsPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(getErrorMessage(data.detail, "Failed to update plan"));
+        setError(getErrorMessage(data.detail, ui.updateFailed));
         return;
       }
 
@@ -555,14 +1013,14 @@ export default function PlanDetailsPage() {
       setEditMode(false);
     } catch (error) {
       console.error("Update plan error:", error);
-      setError("Unable to connect to server");
+      setError(ui.unableToConnect);
     } finally {
       setSaving(false);
     }
   }
 
   async function handleDelete() {
-    const confirmed = window.confirm("Are you sure you want to delete this plan?");
+    const confirmed = window.confirm(ui.confirmDelete);
     if (!confirmed) return;
 
     setDeleting(true);
@@ -586,7 +1044,7 @@ export default function PlanDetailsPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(getErrorMessage(data.detail, "Failed to delete plan"));
+        setError(getErrorMessage(data.detail, ui.deleteFailed));
         return;
       }
 
@@ -595,7 +1053,7 @@ export default function PlanDetailsPage() {
       router.replace("/dashboard");
     } catch (error) {
       console.error("Delete plan error:", error);
-      setError("Unable to connect to server");
+      setError(ui.unableToConnect);
     } finally {
       setDeleting(false);
     }
@@ -607,7 +1065,7 @@ export default function PlanDetailsPage() {
     const pdfWindow = window.open("", "_blank");
 
     if (!pdfWindow) {
-      setError("Please allow pop-ups to download this plan as a PDF.");
+      setError(ui.allowPopups);
       return;
     }
 
@@ -658,7 +1116,7 @@ export default function PlanDetailsPage() {
             text:
               typeof data.detail === "string"
                 ? data.detail
-                : "AI service is busy. Please try again.",
+                : ui.aiBusy,
           },
         ]);
         return;
@@ -666,7 +1124,7 @@ export default function PlanDetailsPage() {
 
       setChatMessages((prev) => [
         ...prev,
-        { sender: "assistant", text: data.message || "Done." },
+        { sender: "assistant", text: data.message || ui.done },
       ]);
 
       if (data.updated) {
@@ -677,7 +1135,7 @@ export default function PlanDetailsPage() {
       console.error("Chat error:", error);
       setChatMessages((prev) => [
         ...prev,
-        { sender: "assistant", text: "Unable to connect to server" },
+        { sender: "assistant", text: ui.unableToConnect },
       ]);
     } finally {
       setChatLoading(false);
@@ -685,24 +1143,24 @@ export default function PlanDetailsPage() {
   }
 
   if (loading) {
-    return <div className={styles.emptyState}>Loading...</div>;
+    return <div className={styles.emptyState}>{ui.loading}</div>;
   }
 
   if (!plan) {
-    return <div className={styles.emptyState}>Plan not found</div>;
+    return <div className={styles.emptyState}>{ui.notFound}</div>;
   }
 
   const aiPlan = plan.plan_details_json || null;
 
   return (
-    <div className={styles.pageContent}>
+    <div className={styles.pageContent} dir={dir}>
       <div className={styles.detailsHeader}>
         <div>
           <h1 className={styles.pageTitle}>
-            {plan.title || aiPlan?.title || "Untitled Plan"}
+            {plan.title || aiPlan?.title || ui.untitledPlan}
           </h1>
           <p className={styles.pageSubtitle}>
-            View, edit, and improve your tourism plan with the AI assistant.
+            {ui.subtitle}
           </p>
         </div>
 
@@ -713,14 +1171,14 @@ export default function PlanDetailsPage() {
                 className={styles.secondaryActionButton}
                 onClick={handleDownloadPdf}
               >
-                Download PDF
+                {ui.downloadPdf}
               </button>
 
               <button
                 className={styles.secondaryActionButton}
                 onClick={() => setEditMode(true)}
               >
-                Edit Plan
+                {ui.editPlan}
               </button>
             </>
           )}
@@ -730,7 +1188,7 @@ export default function PlanDetailsPage() {
             onClick={handleDelete}
             disabled={deleting}
           >
-            {deleting ? "Deleting..." : "Delete Plan"}
+            {deleting ? ui.deleting : ui.deletePlan}
           </button>
         </div>
       </div>
@@ -746,122 +1204,180 @@ export default function PlanDetailsPage() {
           {editMode ? (
             <form onSubmit={handleUpdate} className={`${styles.detailsCard} ${styles.editPlanCard}`}>
               <div className={styles.editPlanHeader}>
-                <span className={styles.createBadge}>Editing plan</span>
-                <h2 className={styles.blockTitle}>Plan Details</h2>
+                <span className={styles.createBadge}>{ui.editingPlan}</span>
+                <h2 className={styles.blockTitle}>{ui.planDetails}</h2>
                 <p className={styles.pageSubtitle}>
-                  Update the core trip information, preferences, and travel context.
+                  {ui.editSubtitle}
                 </p>
               </div>
 
               <div className={styles.aiFormGrid}>
                 <div className={styles.aiField}>
-                  <label>Plan Title</label>
+                  <label>{ui.planTitle}</label>
                   <input
                     value={form.title}
-                    placeholder="Relaxed Bahrain Weekend"
+                    placeholder={ui.planTitlePlaceholder}
                     onChange={(e) => setForm({ ...form, title: e.target.value })}
                     required
                   />
                 </div>
 
                 <div className={styles.aiField}>
-                  <label>Number of Days</label>
+                  <label>{ui.numberOfDays}</label>
                   <input
-                    type="number"
-                    min="1"
-                    max="14"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     value={form.days}
                     placeholder="2"
-                    onChange={(e) => setForm({ ...form, days: e.target.value })}
+                    onChange={(e) =>
+                      updateIntegerField(setForm, "days", e.target.value)
+                    }
                     required
                   />
+                  <small>{ui.daysHint}</small>
                 </div>
 
                 <div className={styles.aiField}>
-                  <label>Budget in BHD</label>
+                  <label>{ui.budgetBhd}</label>
                   <input
-                    type="number"
-                    min="0"
+                    type="text"
+                    inputMode="decimal"
                     value={form.budget}
-                    placeholder="35"
-                    onChange={(e) => setForm({ ...form, budget: e.target.value })}
+                    placeholder="195.650"
+                    onChange={(e) => updateBudgetField(setForm, e.target.value)}
                   />
+                  <small>{ui.budgetHint}</small>
                 </div>
 
                 <div className={styles.aiField}>
-                  <label>Number of People</label>
+                  <label>{ui.numberOfPeople}</label>
                   <input
-                    type="number"
-                    min="1"
-                    max="50"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     value={form.people_count}
                     placeholder="2"
                     onChange={(e) =>
-                      setForm({ ...form, people_count: e.target.value })
+                      updateIntegerField(setForm, "people_count", e.target.value)
                     }
                     required
                   />
                 </div>
 
                 <div className={styles.aiField}>
-                  <label>Preferred Category</label>
-                  <select
-                    value={form.category}
-                    onChange={(e) => setForm({ ...form, category: e.target.value })}
-                  >
-                    <option value="">
-                      {loadingCategories ? "Loading categories..." : "Any category"}
-                    </option>
-
-                    {categories.map((category) => (
-                      <option key={category.id} value={category.name}>
-                        {category.name.replaceAll("_", " ")}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className={styles.aiField}>
-                  <label>Travel Style</label>
+                  <label>{ui.travelStyle}</label>
                   <select
                     value={form.travel_styles}
                     onChange={(e) =>
                       setForm({ ...form, travel_styles: e.target.value })
                     }
                   >
-                    <option value="">Select travel style</option>
-                    <option value="relaxed">Relaxed</option>
-                    <option value="adventure">Adventure</option>
-                    <option value="family-friendly">Family-friendly</option>
-                    <option value="cultural">Cultural</option>
-                    <option value="budget-friendly">Budget-friendly</option>
-                    <option value="luxury">Luxury</option>
+                    <option value="">{ui.selectTravelStyle}</option>
+                    <option value="relaxed">{ui.relaxed}</option>
+                    <option value="adventure">{ui.adventure}</option>
+                    <option value="family-friendly">{ui.family}</option>
+                    <option value="friends">{ui.friends}</option>
+                    <option value="solo-travel">{ui.soloTravel}</option>
+                    <option value="cultural">{ui.cultural}</option>
+                    <option value="budget-friendly">{ui.budgetFriendly}</option>
+                    <option value="luxury">{ui.luxury}</option>
                   </select>
                 </div>
               </div>
 
               <div className={styles.aiField}>
-                <label>Interests</label>
-                <input
-                  value={form.user_interests}
-                  placeholder="cafes, museum, beach"
-                  onChange={(e) =>
-                    setForm({ ...form, user_interests: e.target.value })
-                  }
-                  required
-                />
-                <small>Separate interests with commas.</small>
+                <label>{ui.preferences}</label>
+                <div className={styles.preferenceDropdown}>
+                  <button
+                    type="button"
+                    className={styles.preferenceTrigger}
+                    onClick={() => setPreferencesOpen((open) => !open)}
+                    aria-expanded={preferencesOpen}
+                  >
+                    <span>
+                      {selectedPreferenceLabels.length
+                        ? `${selectedPreferenceLabels.length} ${ui.selected}`
+                        : loadingCategories
+                          ? ui.loadingPreferences
+                          : ui.selectPreferences}
+                    </span>
+                    <span className={styles.preferenceChevron}>v</span>
+                  </button>
+
+                  {selectedPreferenceLabels.length > 0 && (
+                    <div className={styles.preferenceChips}>
+                      {selectedPreferenceLabels.map((label) => (
+                        <span key={label}>{label}</span>
+                      ))}
+                    </div>
+                  )}
+
+                  {preferencesOpen && (
+                    <div className={styles.preferencePanel}>
+                      <label className={styles.preferenceOption}>
+                        <input
+                          type="checkbox"
+                          checked={allPreferencesSelected}
+                          onChange={(e) => toggleAllPreferences(e.target.checked)}
+                          disabled={preferenceOptions.length === 0}
+                        />
+                        <span>{ui.selectAllPreferences}</span>
+                      </label>
+
+                      <div className={styles.preferenceDivider} />
+
+                      {preferenceOptions.length === 0 ? (
+                        <p className={styles.preferenceEmpty}>
+                          {loadingCategories
+                            ? ui.loadingPreferences
+                            : ui.noPreferences}
+                        </p>
+                      ) : (
+                        preferenceOptions.map((category) => (
+                          <label
+                            key={category.id}
+                            className={styles.preferenceOption}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={form.selected_preferences.includes(
+                                category.value
+                              )}
+                              onChange={(e) =>
+                                updatePreference(category.value, e.target.checked)
+                              }
+                            />
+                            <span>{category.label}</span>
+                          </label>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className={styles.aiField}>
-                <label>Extra Preferences</label>
+                <label>{ui.extraPreferences}</label>
                 <textarea
-                  value={form.preferences}
-                  placeholder="Example: low walking, indoor preferred, suitable for family"
+                  value={form.extra_preferences}
+                  placeholder={ui.extraPreferencesPlaceholder}
                   onChange={(e) =>
-                    setForm({ ...form, preferences: e.target.value })
+                    setForm({ ...form, extra_preferences: e.target.value })
                   }
                 />
+              </div>
+
+              <div className={styles.aiField}>
+                <label>{ui.constraints}</label>
+                <input
+                  value={form.constraints}
+                  placeholder={ui.constraintsPlaceholder}
+                  onChange={(e) =>
+                    setForm({ ...form, constraints: e.target.value })
+                  }
+                />
+                <small>{ui.constraintsHint}</small>
               </div>
 
               <div className={styles.detailsActions}>
@@ -873,7 +1389,7 @@ export default function PlanDetailsPage() {
                     setEditMode(false);
                   }}
                 >
-                  Cancel
+                  {ui.cancel}
                 </button>
 
                 <button
@@ -881,7 +1397,7 @@ export default function PlanDetailsPage() {
                   className={styles.primaryButton}
                   disabled={saving}
                 >
-                  {saving ? "Rebuilding plan..." : "Save Changes"}
+                  {saving ? ui.rebuilding : ui.saveChanges}
                 </button>
               </div>
             </form>
@@ -890,67 +1406,61 @@ export default function PlanDetailsPage() {
               <div className={styles.detailsCard}>
                 <div className={styles.detailsGrid}>
                   <div className={styles.detailItem}>
-                    <span className={styles.detailLabel}>Days</span>
+                    <span className={styles.detailLabel}>{ui.days}</span>
                     <strong>{plan.days}</strong>
                   </div>
 
                   <div className={styles.detailItem}>
-                    <span className={styles.detailLabel}>Budget</span>
+                    <span className={styles.detailLabel}>{ui.budget}</span>
                     <strong>{plan.budget ?? 0} BHD</strong>
                   </div>
 
                   <div className={styles.detailItem}>
-                    <span className={styles.detailLabel}>People</span>
+                    <span className={styles.detailLabel}>{ui.people}</span>
                     <strong>{plan.people_count || 1}</strong>
-                  </div>
-
-                  <div className={styles.detailItem}>
-                    <span className={styles.detailLabel}>Status</span>
-                    <strong>{plan.status}</strong>
-                  </div>
-
-                  <div className={styles.detailItem}>
-                    <span className={styles.detailLabel}>Generated by AI</span>
-                    <strong>{plan.generated_by_ai ? "Yes" : "No"}</strong>
                   </div>
                 </div>
 
                 <div className={styles.detailBlock}>
-                  <h3 className={styles.blockTitle}>Preferences</h3>
+                  <h3 className={styles.blockTitle}>{ui.preferences}</h3>
                   <p>{plan.preferences || "-"}</p>
                 </div>
 
-                <div className={styles.detailBlock}>
-                  <h3 className={styles.blockTitle}>User Interests</h3>
-                  <p>{plan.user_interests || "-"}</p>
-                </div>
               </div>
 
               {aiPlan && (
                 <div className={styles.detailsCard} style={{ marginTop: "22px" }}>
                   <h2 className={styles.blockTitle}>
-                    {aiPlan.title || "AI Generated Itinerary"}
+                    {aiPlan.title || ui.aiItinerary}
                   </h2>
 
                   <p className={styles.pageSubtitle}>
-                    {aiPlan.summary || "No summary available."}
+                    {aiPlan.summary || ui.noSummary}
                   </p>
 
                   <div className={styles.detailsGrid} style={{ marginTop: "20px" }}>
                     <div className={styles.detailItem}>
-                      <span className={styles.detailLabel}>Estimated Budget</span>
+                      <span className={styles.detailLabel}>{ui.estimatedBudget}</span>
                       <strong>
                         {aiPlan.estimated_total_budget_bhd ?? plan.budget ?? 0} BHD
                       </strong>
                     </div>
 
                     <div className={styles.detailItem}>
-                      <span className={styles.detailLabel}>People</span>
+                      <span className={styles.detailLabel}>{ui.people}</span>
                       <strong>{plan.people_count || 1}</strong>
                     </div>
                   </div>
 
-                  {Array.isArray(aiPlan.days) &&
+                  {Array.isArray(aiPlan.days) && (
+                    <div className={styles.planDayList}>
+                      {aiPlan.days.map((day) => (
+                        <PlanDayCard key={day.day_number} day={day} ui={ui} />
+                      ))}
+                    </div>
+                  )}
+
+                  {false && Array.isArray(aiPlan.days) &&
                     aiPlan.days.map((day) => (
                       <div key={day.day_number} className={styles.detailBlock}>
                         <h3 className={styles.blockTitle}>
@@ -1010,7 +1520,7 @@ export default function PlanDetailsPage() {
 
                   {Array.isArray(aiPlan.tips) && aiPlan.tips.length > 0 && (
                     <div className={styles.detailBlock}>
-                      <h3 className={styles.blockTitle}>Tips</h3>
+                      <h3 className={styles.blockTitle}>{ui.tips}</h3>
                       <ul>
                         {aiPlan.tips.map((tip, index) => (
                           <li key={index}>{tip}</li>
@@ -1033,16 +1543,16 @@ export default function PlanDetailsPage() {
               <span />
             </div>
             <div>
-              <h3>AI Trip Terminal</h3>
-              <p>Ask for advice or request changes to this plan.</p>
+              <h3>{ui.aiTerminal}</h3>
+              <p>{ui.aiTerminalSubtitle}</p>
             </div>
-            <span className={styles.terminalStatus}>online</span>
+            <span className={styles.terminalStatus}>{ui.online}</span>
           </div>
 
           <div className={styles.aiChatMessages}>
             {chatMessages.length === 0 ? (
               <div className={styles.aiChatEmpty}>
-                Ask me about this trip, or tell me what you want to change.
+                {ui.chatEmpty}
               </div>
             ) : (
               chatMessages.map((msg, index) => (
@@ -1060,7 +1570,7 @@ export default function PlanDetailsPage() {
             )}
 
             {chatLoading && (
-              <div className={styles.assistantChatBubble}>Thinking...</div>
+              <div className={styles.assistantChatBubble}>{ui.thinking}</div>
             )}
 
             <div ref={chatEndRef} />
@@ -1071,14 +1581,14 @@ export default function PlanDetailsPage() {
               <span>&gt;</span>
               <textarea
                 value={chatMessage}
-                placeholder="ask for advice or request a change..."
+                placeholder={ui.chatPlaceholder}
                 onChange={(e) => setChatMessage(e.target.value)}
                 disabled={chatLoading}
               />
             </div>
 
             <button type="submit" disabled={chatLoading || !chatMessage.trim()}>
-              Send
+              {ui.send}
             </button>
           </form>
         </aside>

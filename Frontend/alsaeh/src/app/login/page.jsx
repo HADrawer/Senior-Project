@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import styles from "./auth.module.css";
 import { supabase } from "@/lib/supabase";
+import { useLanguage } from "@/lib/i18n";
 
 function getErrorMessage(error, fallback) {
   if (error?.message) return error.message;
@@ -15,7 +16,7 @@ function getErrorMessage(error, fallback) {
 export default function LoginPage() {
   const router = useRouter();
 
-  const [lang, setLang] = useState("en");
+  const { lang, dir, toggleLang } = useLanguage();
   const [mounted, setMounted] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -23,13 +24,15 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState(false);
 
-  const content = {
+  const t = {
     en: {
       brand: "Alsaeh.bh",
       badge: "Bahrain Tourism AI",
       heroTitle: "Welcome Back",
-      heroText: "Continue your Bahrain journey with smart AI-generated travel plans and personalized recommendations.",
+      heroText:
+        "Continue your Bahrain journey with smart AI-generated travel plans and personalized recommendations.",
       formTitle: "Sign In",
       formSubtitle: "Access your travel plans and tourism recommendations.",
       email: "Email Address",
@@ -39,22 +42,26 @@ export default function LoginPage() {
       show: "Show",
       hide: "Hide",
       submit: "Sign In",
-      submitting: "Signing in…",
+      submitting: "Signing in...",
       switchText: "Don't have an account?",
       switchLink: "Create one",
       fallbackError: "Login failed. Please check your credentials.",
+      googleError: "Google sign-in failed. Please try again.",
+      disabledAccount: "This account is disabled. Contact an administrator.",
+      continueWithGoogle: "Continue with Google",
+      orContinueWith: "or continue with",
       langButton: "العربية",
       previewPlan: "AI Trip Plan",
       previewDays: "3-day itinerary",
-      previewBudget: "Budget: 45 BHD",
+      loading: "Loading...",
     },
     ar: {
       brand: "السائح.البحرين",
       badge: "ذكاء اصطناعي للسياحة",
-      heroTitle: "مرحبًا بعودتك",
+      heroTitle: "مرحباً بعودتك",
       heroText: "أكمل رحلتك في البحرين مع خطط سياحية ذكية وتوصيات مخصصة.",
       formTitle: "تسجيل الدخول",
-      formSubtitle: "ادخل لتصل إلى خططك السياحية وتوصياتك المخصصة.",
+      formSubtitle: "ادخل للوصول إلى خططك السياحية وتوصياتك المخصصة.",
       email: "البريد الإلكتروني",
       emailPlaceholder: "example@email.com",
       password: "كلمة المرور",
@@ -62,23 +69,22 @@ export default function LoginPage() {
       show: "إظهار",
       hide: "إخفاء",
       submit: "دخول",
-      submitting: "جاري الدخول…",
+      submitting: "جاري الدخول...",
       switchText: "ليس لديك حساب؟",
       switchLink: "أنشئ حساباً",
       fallbackError: "فشل تسجيل الدخول. تحقق من بيانات الدخول.",
+      googleError: "فشل تسجيل الدخول باستخدام Google. يرجى المحاولة مرة أخرى.",
+      disabledAccount: "هذا الحساب معطل. تواصل مع المسؤول.",
+      continueWithGoogle: "المتابعة باستخدام Google",
+      orContinueWith: "أو تابع باستخدام",
       langButton: "English",
       previewPlan: "خطة سياحية بالذكاء الاصطناعي",
       previewDays: "جدول لمدة 3 أيام",
-      previewBudget: "الميزانية: 45 دينار",
+      loading: "جاري التحميل...",
     },
-  };
-
-  const t = content[lang];
-  const isAr = lang === "ar";
+  }[lang];
 
   useEffect(() => {
-    const savedLang = localStorage.getItem("site_lang");
-    if (savedLang === "ar" || savedLang === "en") setLang(savedLang);
     setMounted(true);
   }, []);
 
@@ -98,17 +104,13 @@ export default function LoginPage() {
         }
 
         await supabase.auth.signOut();
-      } catch {}
-      finally { setCheckingAuth(false); }
+      } catch {
+      } finally {
+        setCheckingAuth(false);
+      }
     }
     checkAuth();
   }, [router]);
-
-  function toggleLanguage() {
-    const newLang = isAr ? "en" : "ar";
-    setLang(newLang);
-    localStorage.setItem("site_lang", newLang);
-  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -139,12 +141,7 @@ export default function LoginPage() {
       if (!res.ok) {
         const result = await res.json().catch(() => ({}));
         await supabase.auth.signOut();
-        setError(
-          getErrorMessage(
-            result.detail,
-            "This account is disabled. Contact an administrator."
-          )
-        );
+        setError(getErrorMessage(result.detail, t.disabledAccount));
         return;
       }
 
@@ -156,20 +153,42 @@ export default function LoginPage() {
     }
   }
 
+  async function handleGoogleSignIn() {
+    setError("");
+    setOauthLoading(true);
+
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (error) {
+        setError(getErrorMessage(error, t.googleError));
+        setOauthLoading(false);
+      }
+    } catch (error) {
+      console.error("Google sign-in error:", error);
+      setError(t.googleError);
+      setOauthLoading(false);
+    }
+  }
+
   if (!mounted || checkingAuth) {
-    return <div className={styles.pageLoading}>Loading…</div>;
+    return <div className={styles.pageLoading}>{t.loading}</div>;
   }
 
   return (
-    <main className={styles.page} dir={isAr ? "rtl" : "ltr"}>
-      {/* ── Brand panel ─────────────────────────────────────── */}
+    <main className={styles.page} dir={dir}>
       <div className={styles.brandPanel}>
         <div className={styles.brandTop}>
           <Link href="/" className={styles.brandLogo}>
             <span className={styles.brandLogoMark} />
             <span className={styles.brandLogoText}>{t.brand}</span>
           </Link>
-          <button className={styles.langBtn} onClick={toggleLanguage}>
+          <button className={styles.langBtn} onClick={toggleLang}>
             {t.langButton}
           </button>
         </div>
@@ -183,7 +202,7 @@ export default function LoginPage() {
         <div className={styles.brandPreview}>
           <div className={styles.previewCard}>
             <div className={styles.previewRow}>
-              <div className={styles.previewIcon}>🗺️</div>
+              <div className={styles.previewIcon}>AI</div>
               <div className={styles.previewInfo}>
                 <div className={styles.previewLabel}>{t.previewPlan}</div>
                 <div className={styles.previewValue}>{t.previewDays}</div>
@@ -195,7 +214,6 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* ── Form panel ──────────────────────────────────────── */}
       <div className={styles.formPanel}>
         <Link href="/" className={styles.mobileHomeLink}>
           <span className={styles.mobileHomeMark} />
@@ -208,8 +226,23 @@ export default function LoginPage() {
             <p className={styles.formSubtitle}>{t.formSubtitle}</p>
           </div>
 
+          <button
+            type="button"
+            className={styles.oauthButton}
+            onClick={handleGoogleSignIn}
+            disabled={oauthLoading || loading}
+          >
+            <span className={styles.oauthIcon} aria-hidden>
+              G
+            </span>
+            {oauthLoading ? t.loading : t.continueWithGoogle}
+          </button>
+
+          <div className={styles.oauthDivider}>
+            <span>{t.orContinueWith}</span>
+          </div>
+
           <form onSubmit={handleSubmit} className={styles.form} noValidate>
-            {/* Email */}
             <div className={styles.field}>
               <label htmlFor="email" className={styles.label}>
                 {t.email} <span className={styles.required}>*</span>
@@ -225,7 +258,6 @@ export default function LoginPage() {
               />
             </div>
 
-            {/* Password */}
             <div className={styles.field}>
               <label htmlFor="password" className={styles.label}>
                 {t.password} <span className={styles.required}>*</span>
@@ -246,34 +278,26 @@ export default function LoginPage() {
                   onClick={() => setShowPassword(!showPassword)}
                   aria-label={showPassword ? t.hide : t.show}
                 >
-                  {showPassword ? (
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
-                      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
-                      <line x1="1" y1="1" x2="23" y2="23"/>
-                    </svg>
-                  ) : (
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                      <circle cx="12" cy="12" r="3"/>
-                    </svg>
-                  )}
+                  {showPassword ? t.hide : t.show}
                 </button>
               </div>
             </div>
 
-            {/* Error */}
             {error && (
               <div className={`${styles.alert} ${styles.alertError}`} role="alert">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
-                  <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 3.5a.75.75 0 0 1 .75.75v3a.75.75 0 0 1-1.5 0v-3A.75.75 0 0 1 8 4.5zm0 7a.875.875 0 1 1 0-1.75.875.875 0 0 1 0 1.75z"/>
-                </svg>
                 {error}
               </div>
             )}
 
             <button type="submit" className={styles.submitBtn} disabled={loading}>
-              {loading ? <><span className={styles.spinner} />{t.submitting}</> : t.submit}
+              {loading ? (
+                <>
+                  <span className={styles.spinner} />
+                  {t.submitting}
+                </>
+              ) : (
+                t.submit
+              )}
             </button>
           </form>
 

@@ -530,15 +530,6 @@
   line-height: 1.8;
 }
 
-/* ── Footer ──────────────────────────────────────────────── */
-.footer {
-  border-top: 1px solid var(--border-soft);
-  padding: 2rem 1.5rem;
-  text-align: center;
-  color: var(--text-muted);
-  font-size: 0.875rem;
-}
-
 /* ── Dark mode nav ────────────────────────────────────────── */
 @media (prefers-color-scheme: dark) {
   html:not([data-theme="light"]) .nav {

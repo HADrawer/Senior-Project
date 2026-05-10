@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import styles from "../login/auth.module.css";
 import { supabase } from "@/lib/supabase";
+import { useLanguage } from "@/lib/i18n";
 
 function getErrorMessage(error, fallback) {
   if (error?.message) return error.message;
@@ -183,7 +184,7 @@ const COUNTRY_CODES = [
 export default function RegisterPage() {
   const router = useRouter();
 
-  const [lang, setLang] = useState("en");
+  const { lang, dir, toggleLang } = useLanguage();
   const [mounted, setMounted] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -199,6 +200,7 @@ export default function RegisterPage() {
   const [success, setSuccess] = useState("");
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState(false);
 
   const content = {
     en: {
@@ -224,9 +226,12 @@ export default function RegisterPage() {
       switchText: "Already have an account?",
       switchLink: "Sign in",
       fallbackError: "Registration failed. Please check your details.",
+      googleError: "Google sign-in failed. Please try again.",
       success:
         "Account created. Please check your email to confirm your account before logging in.",
       langButton: "Arabic",
+      continueWithGoogle: "Continue with Google",
+      orContinueWith: "or continue with",
       previewPlan: "New Trip Plan",
       previewDays: "Personalized itinerary",
     },
@@ -253,9 +258,12 @@ export default function RegisterPage() {
       switchText: "لديك حساب بالفعل؟",
       switchLink: "تسجيل الدخول",
       fallbackError: "فشل إنشاء الحساب. يرجى التحقق من البيانات.",
+      googleError: "فشل تسجيل الدخول باستخدام Google. يرجى المحاولة مرة أخرى.",
       success:
         "تم إنشاء الحساب. يرجى التحقق من بريدك الإلكتروني لتأكيد الحساب قبل تسجيل الدخول.",
       langButton: "English",
+      continueWithGoogle: "المتابعة باستخدام Google",
+      orContinueWith: "أو تابع باستخدام",
       previewPlan: "خطة رحلة جديدة",
       previewDays: "جدول مخصص",
     },
@@ -265,8 +273,6 @@ export default function RegisterPage() {
   const isAr = lang === "ar";
 
   useEffect(() => {
-    const savedLang = localStorage.getItem("site_lang");
-    if (savedLang === "ar" || savedLang === "en") setLang(savedLang);
     setMounted(true);
   }, []);
 
@@ -284,12 +290,6 @@ export default function RegisterPage() {
 
     checkAuth();
   }, [router]);
-
-  function toggleLanguage() {
-    const newLang = isAr ? "en" : "ar";
-    setLang(newLang);
-    localStorage.setItem("site_lang", newLang);
-  }
 
   function handlePhoneChange(e) {
     setForm({ ...form, phone_number: e.target.value.replace(/\D/g, "") });
@@ -340,19 +340,47 @@ export default function RegisterPage() {
     }
   }
 
+  async function handleGoogleSignIn() {
+    setError("");
+    setSuccess("");
+    setOauthLoading(true);
+
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (error) {
+        setError(getErrorMessage(error, t.googleError));
+        setOauthLoading(false);
+      }
+    } catch (error) {
+      console.error("Google sign-in error:", error);
+      setError(t.googleError);
+      setOauthLoading(false);
+    }
+  }
+
   if (!mounted || checkingAuth) {
-    return <div className={styles.pageLoading}>Loading...</div>;
+    return (
+      <div className={styles.pageLoading}>
+        {lang === "ar" ? "جاري التحميل..." : "Loading..."}
+      </div>
+    );
   }
 
   return (
-    <main className={styles.page} dir={isAr ? "rtl" : "ltr"}>
+    <main className={styles.page} dir={dir}>
       <div className={styles.brandPanel}>
         <div className={styles.brandTop}>
           <Link href="/" className={styles.brandLogo}>
             <span className={styles.brandLogoMark} />
             <span className={styles.brandLogoText}>{t.brand}</span>
           </Link>
-          <button className={styles.langBtn} onClick={toggleLanguage}>
+          <button className={styles.langBtn} onClick={toggleLang}>
             {t.langButton}
           </button>
         </div>
@@ -388,6 +416,26 @@ export default function RegisterPage() {
           <div className={styles.formHeader}>
             <h2 className={styles.formTitle}>{t.formTitle}</h2>
             <p className={styles.formSubtitle}>{t.formSubtitle}</p>
+          </div>
+
+          <button
+            type="button"
+            className={styles.oauthButton}
+            onClick={handleGoogleSignIn}
+            disabled={oauthLoading || loading}
+          >
+            <span className={styles.oauthIcon} aria-hidden>
+              G
+            </span>
+            {oauthLoading
+              ? lang === "ar"
+                ? "جاري التحميل..."
+                : "Loading..."
+              : t.continueWithGoogle}
+          </button>
+
+          <div className={styles.oauthDivider}>
+            <span>{t.orContinueWith}</span>
           </div>
 
           <form onSubmit={handleSubmit} className={styles.form} noValidate>
@@ -434,7 +482,7 @@ export default function RegisterPage() {
                   onChange={(e) =>
                     setForm({ ...form, country: e.target.value })
                   }
-                  aria-label="Country code"
+                  aria-label={lang === "ar" ? "رمز الدولة" : "Country code"}
                 >
                   {COUNTRY_CODES.map(({ country, code }) => (
                     <option key={`${country}-${code}`} value={country}>
