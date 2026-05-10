@@ -12,6 +12,7 @@ function getPlanTitle(plan, fallback) {
 }
 
 function getPlanDate(plan) {
+  if (!plan) return null;
   return plan.created_at || plan.updated_at || plan.saved_at || null;
 }
 
