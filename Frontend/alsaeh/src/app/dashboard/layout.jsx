@@ -14,6 +14,7 @@ export default function DashboardLayout({ children }) {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [lang, setLang] = useState("en");
   const [mounted, setMounted] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const content = {
     en: {
@@ -54,6 +55,10 @@ export default function DashboardLayout({ children }) {
     router.prefetch("/dashboard/about");
     router.prefetch("/dashboard/settings");
   }, [router]);
+
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     if (user?.role === "admin") {
@@ -133,6 +138,16 @@ export default function DashboardLayout({ children }) {
     localStorage.setItem("site_lang", newLang);
   }
 
+  function scrollToChatbot() {
+    setSidebarOpen(false);
+
+    window.setTimeout(() => {
+      document
+        .getElementById("plan-chatbot")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 250);
+  }
+
   async function logout() {
     sessionStorage.removeItem("auth_user");
     sessionStorage.removeItem("dashboard_plans");
@@ -154,9 +169,48 @@ export default function DashboardLayout({ children }) {
 
   return (
     <main className={styles.dashboardPage} dir={lang === "ar" ? "rtl" : "ltr"}>
-      <aside className={styles.sidebar}>
+      <header className={styles.mobileTopBar}>
+        <Link href="/" className={styles.mobileBrand}>
+          <span className={styles.logoMark}></span>
+          <span>{t.brand}</span>
+        </Link>
+        <button
+          type="button"
+          className={styles.mobileMenuButton}
+          onClick={() => setSidebarOpen(true)}
+          aria-label="Open navigation menu"
+        >
+          <span aria-hidden="true" className={styles.menuIcon}>
+            <span />
+            <span />
+            <span />
+          </span>
+        </button>
+      </header>
+
+      {sidebarOpen && (
+        <button
+          type="button"
+          className={styles.sidebarOverlay}
+          onClick={() => setSidebarOpen(false)}
+          aria-label="Close navigation menu"
+        />
+      )}
+
+      <aside className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ""}`}>
         <div className={styles.sidebarMain}>
-          <Link href="/" className={styles.brand}>
+          <div className={styles.sidebarMobileHeader}>
+            <span>Navigation</span>
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(false)}
+              aria-label="Close navigation menu"
+            >
+              Close
+            </button>
+          </div>
+
+          <Link href="/" className={styles.brand} onClick={() => setSidebarOpen(false)}>
             <div className={styles.logoMark}></div>
             <span>{t.brand}</span>
           </Link>
@@ -170,6 +224,7 @@ export default function DashboardLayout({ children }) {
           <nav className={styles.nav}>
             <Link
               href="/dashboard"
+              onClick={() => setSidebarOpen(false)}
               className={`${styles.navItem} ${
                 pathname === "/dashboard" ? styles.activeNavItem : ""
               }`}
@@ -179,6 +234,7 @@ export default function DashboardLayout({ children }) {
 
             <Link
               href="/dashboard/create-plan"
+              onClick={() => setSidebarOpen(false)}
               className={`${styles.navItem} ${
                 pathname === "/dashboard/create-plan"
                   ? styles.activeNavItem
@@ -190,6 +246,7 @@ export default function DashboardLayout({ children }) {
 
             <Link
               href="/dashboard/settings"
+              onClick={() => setSidebarOpen(false)}
               className={`${styles.navItem} ${
                 pathname === "/dashboard/settings" ? styles.activeNavItem : ""
               }`}
@@ -199,6 +256,7 @@ export default function DashboardLayout({ children }) {
 
             <Link
               href="/dashboard/about"
+              onClick={() => setSidebarOpen(false)}
               className={`${styles.navItem} ${
                 pathname === "/dashboard/about" ? styles.activeNavItem : ""
               }`}
@@ -206,9 +264,20 @@ export default function DashboardLayout({ children }) {
               {t.about || "About"}
             </Link>
 
+            {pathname?.startsWith("/dashboard/plans/") && (
+              <button
+                type="button"
+                onClick={scrollToChatbot}
+                className={`${styles.navItem} ${styles.mobileOnlyNavItem}`}
+              >
+                Chatbot
+              </button>
+            )}
+
             {user?.role === "admin" && (
               <Link
                 href="/admin"
+                onClick={() => setSidebarOpen(false)}
                 className={`${styles.navItem} ${styles.adminNavItem}`}
               >
                 {t.admin || "Admin"}

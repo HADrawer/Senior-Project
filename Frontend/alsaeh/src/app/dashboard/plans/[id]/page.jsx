@@ -1025,7 +1025,7 @@ export default function PlanDetailsPage() {
         </div>
 
         {!editMode && (
-        <aside className={styles.aiChatPanel}>
+        <aside id="plan-chatbot" className={styles.aiChatPanel}>
           <div className={styles.aiChatHeader}>
             <div className={styles.terminalChrome}>
               <span />

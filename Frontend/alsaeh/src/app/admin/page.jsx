@@ -61,6 +61,7 @@ export default function AdminPage() {
   const [logs, setLogs] = useState([]);
   const [user, setUser] = useState(null);
   const [lang, setLang] = useState("en");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [sectionLoading, setSectionLoading] = useState(false);
@@ -478,6 +479,7 @@ export default function AdminPage() {
   }
 
   async function changeTab(tab) {
+    setSidebarOpen(false);
     setActiveTab(tab);
 
     if (tab === "overview") await loadOverview();
@@ -675,9 +677,56 @@ export default function AdminPage() {
       className={dashboardStyles.dashboardPage}
       dir={lang === "ar" ? "rtl" : "ltr"}
     >
-      <aside className={dashboardStyles.sidebar}>
+      <header className={dashboardStyles.mobileTopBar}>
+        <Link href="/" className={dashboardStyles.mobileBrand}>
+          <span className={dashboardStyles.logoMark}></span>
+          <span>{t.brand}</span>
+        </Link>
+        <button
+          type="button"
+          className={dashboardStyles.mobileMenuButton}
+          onClick={() => setSidebarOpen(true)}
+          aria-label="Open navigation menu"
+        >
+          <span aria-hidden="true" className={dashboardStyles.menuIcon}>
+            <span />
+            <span />
+            <span />
+          </span>
+        </button>
+      </header>
+
+      {sidebarOpen && (
+        <button
+          type="button"
+          className={dashboardStyles.sidebarOverlay}
+          onClick={() => setSidebarOpen(false)}
+          aria-label="Close navigation menu"
+        />
+      )}
+
+      <aside
+        className={`${dashboardStyles.sidebar} ${
+          sidebarOpen ? dashboardStyles.sidebarOpen : ""
+        }`}
+      >
         <div className={dashboardStyles.sidebarMain}>
-          <Link href="/" className={dashboardStyles.brand}>
+          <div className={dashboardStyles.sidebarMobileHeader}>
+            <span>Navigation</span>
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(false)}
+              aria-label="Close navigation menu"
+            >
+              Close
+            </button>
+          </div>
+
+          <Link
+            href="/"
+            className={dashboardStyles.brand}
+            onClick={() => setSidebarOpen(false)}
+          >
             <div className={dashboardStyles.logoMark}></div>
             <span>Alsaeh.bh</span>
           </Link>
@@ -689,21 +738,34 @@ export default function AdminPage() {
           </div>
 
           <nav className={dashboardStyles.nav}>
-            <Link href="/dashboard" className={dashboardStyles.navItem}>
+            <Link
+              href="/dashboard"
+              className={dashboardStyles.navItem}
+              onClick={() => setSidebarOpen(false)}
+            >
               {t.dashboard}
             </Link>
 
-            <Link href="/dashboard/create-plan" className={dashboardStyles.navItem}>
+            <Link
+              href="/dashboard/create-plan"
+              className={dashboardStyles.navItem}
+              onClick={() => setSidebarOpen(false)}
+            >
               {t.createPlan}
             </Link>
 
-            <Link href="/dashboard/settings" className={dashboardStyles.navItem}>
+            <Link
+              href="/dashboard/settings"
+              className={dashboardStyles.navItem}
+              onClick={() => setSidebarOpen(false)}
+            >
               {t.settings}
             </Link>
 
             <Link
               href="/admin"
               className={`${dashboardStyles.navItem} ${dashboardStyles.adminNavItem} ${dashboardStyles.activeNavItem}`}
+              onClick={() => setSidebarOpen(false)}
             >
               {t.admin}
             </Link>
