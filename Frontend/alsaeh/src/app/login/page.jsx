@@ -92,18 +92,9 @@ export default function LoginPage() {
     async function checkAuth() {
       try {
         const { data } = await supabase.auth.getSession();
-        if (!data.session) return;
-
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
-          headers: { Authorization: `Bearer ${data.session.access_token}` },
-        });
-
-        if (res.ok) {
+        if (data.session) {
           router.replace("/dashboard");
-          return;
         }
-
-        await supabase.auth.signOut();
       } catch {
       } finally {
         setCheckingAuth(false);
@@ -144,6 +135,9 @@ export default function LoginPage() {
         setError(getErrorMessage(result.detail, t.disabledAccount));
         return;
       }
+
+      const userData = await res.json();
+      sessionStorage.setItem("auth_user", JSON.stringify(userData));
 
       router.replace("/dashboard");
     } catch {

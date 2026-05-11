@@ -39,15 +39,19 @@ export default function AuthCallbackPage() {
         }
 
         const hasCode = callbackUrl.searchParams.has("code");
+        let session = null;
 
         if (hasCode) {
-          await supabase.auth.exchangeCodeForSession(window.location.href);
+          const { data } = await supabase.auth.exchangeCodeForSession(window.location.href);
+          session = data.session;
         }
 
-        await supabase.auth.refreshSession();
-        const { data } = await supabase.auth.getSession();
+        if (!session) {
+          const { data } = await supabase.auth.getSession();
+          session = data.session;
+        }
 
-        if (data.session) {
+        if (session) {
           sessionStorage.removeItem("settings_profile");
           sessionStorage.removeItem("auth_user");
 
