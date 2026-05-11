@@ -50,9 +50,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 GEMINI_MODELS = [
+    "gemini-2.5-flash-lite",
     "gemini-2.5-flash",
-    "gemini-flash-latest",
-    "gemini-flash-lite-latest",
 ]
 
 PREFERENCE_LABEL_RE = re.compile(
