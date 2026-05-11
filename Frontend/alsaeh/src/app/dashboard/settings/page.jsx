@@ -1,12 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "../dashboard.module.css";
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/lib/i18n";
 
 const SETTINGS_CACHE_KEY = "settings_profile";
+const PROFILE_FIELD_KEYS = ["full_name", "phone_number", "email", "preferred_language"];
+const EMAIL_FIELD_KEYS = ["new_email"];
+const PASSWORD_FIELD_KEYS = ["new_password", "confirm_password"];
+const SIDE_FIELD_KEYS = ["theme", "sessions", "export_data", "delete_confirm", "delete_account"];
+const PROFILE_FEEDBACK_DURATION = 3500;
 const COUNTRY_CODES = [
   { country: "Bahrain", code: "+973" },
   { country: "Afghanistan", code: "+93" },
@@ -161,6 +166,41 @@ function getFullPhoneNumber(profile) {
     : "";
 }
 
+function getChangedProfileFields(currentProfile, savedProfile) {
+  const changedFields = [];
+
+  if ((currentProfile.full_name || "").trim() !== (savedProfile.full_name || "").trim()) {
+    changedFields.push("full_name");
+  }
+
+  if (getFullPhoneNumber(currentProfile) !== getFullPhoneNumber(savedProfile)) {
+    changedFields.push("phone_number");
+  }
+
+  if ((currentProfile.email || "").trim() !== (savedProfile.email || "").trim()) {
+    changedFields.push("email");
+  }
+
+  if (currentProfile.preferred_language !== savedProfile.preferred_language) {
+    changedFields.push("preferred_language");
+  }
+
+  return changedFields;
+}
+
+function mapBackendField(field) {
+  const fieldName = String(field || "");
+
+  if (fieldName.includes("full_name")) return "full_name";
+  if (fieldName.includes("phone")) return "phone_number";
+  if (fieldName.includes("email")) return "email";
+  if (fieldName.includes("preferred_language") || fieldName.includes("language")) {
+    return "preferred_language";
+  }
+
+  return null;
+}
+
 export default function SettingsPage() {
   const router = useRouter();
 
@@ -173,6 +213,7 @@ export default function SettingsPage() {
     phone_number: "",
     preferred_language: "en",
   });
+  const [savedProfile, setSavedProfile] = useState(profile);
 
   const [emailForm, setEmailForm] = useState({ new_email: "" });
   const [passwordForm, setPasswordForm] = useState({
@@ -191,7 +232,15 @@ export default function SettingsPage() {
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [profileFeedback, setProfileFeedback] = useState({});
+  const [emailFeedback, setEmailFeedback] = useState({});
+  const [passwordFeedback, setPasswordFeedback] = useState({});
+  const [sideFeedback, setSideFeedback] = useState({});
   const [authProvider, setAuthProvider] = useState("loading");
+  const profileFeedbackTimer = useRef(null);
+  const emailFeedbackTimer = useRef(null);
+  const passwordFeedbackTimer = useRef(null);
+  const sideFeedbackTimer = useRef(null);
 
   const t = {
     en: {
@@ -266,6 +315,84 @@ export default function SettingsPage() {
         "Alsaeh.bh v1.0، مشروع تخرج جامعة البحرين، نظام توصية سياحي للبحرين.",
       show: "إظهار",
       hide: "إخفاء",
+    },
+  }[lang];
+
+  const profileUi = {
+    en: {
+      updatedSuccessfully: "Updated successfully",
+      noProfileChanges: "No profile changes to save.",
+      fullNameRequired: "Full name is required.",
+      phoneRequired: "Phone number is required.",
+      phoneInvalid: "Enter a valid phone number.",
+      emailInvalid: "Enter a valid email address.",
+      languageRequired: "Choose a language.",
+      backendUpdateError: "Backend update error. Please try again.",
+    },
+    ar: {
+      updatedSuccessfully: "تم التحديث بنجاح",
+      noProfileChanges: "لا توجد تغييرات في الملف الشخصي لحفظها.",
+      fullNameRequired: "الاسم الكامل مطلوب.",
+      phoneRequired: "رقم الهاتف مطلوب.",
+      phoneInvalid: "أدخل رقم هاتف صحيح.",
+      emailInvalid: "أدخل بريدا إلكترونيا صحيحا.",
+      languageRequired: "اختر اللغة.",
+      backendUpdateError: "حدث خطأ في التحديث. يرجى المحاولة مرة أخرى.",
+    },
+  }[lang];
+
+  const emailUi = {
+    en: {
+      emailSent: "Email update request sent. Check your email to confirm.",
+      emailRequired: "New email is required.",
+      emailInvalid: "Enter a valid email address.",
+      googleUnavailable: "Email changes are not available for Google accounts.",
+      backendUpdateError: "Backend update error. Please try again.",
+    },
+    ar: {
+      emailSent: "تم إرسال طلب تحديث البريد. تحقق من بريدك للتأكيد.",
+      emailRequired: "البريد الإلكتروني الجديد مطلوب.",
+      emailInvalid: "أدخل بريدا إلكترونيا صحيحا.",
+      googleUnavailable: "تغيير البريد الإلكتروني غير متاح لحسابات Google.",
+      backendUpdateError: "حدث خطأ في التحديث. يرجى المحاولة مرة أخرى.",
+    },
+  }[lang];
+
+  const passwordUi = {
+    en: {
+      updatedSuccessfully: "Updated successfully",
+      passwordRequired: "New password is required.",
+      confirmPasswordRequired: "Confirm your new password.",
+      passwordsDoNotMatch: "New password and confirmation do not match.",
+      passwordTooShort: "Password must be at least 6 characters.",
+      backendUpdateError: "Backend update error. Please try again.",
+    },
+    ar: {
+      updatedSuccessfully: "تم التحديث بنجاح",
+      passwordRequired: "كلمة المرور الجديدة مطلوبة.",
+      confirmPasswordRequired: "أكد كلمة المرور الجديدة.",
+      passwordsDoNotMatch: "كلمة المرور الجديدة والتأكيد غير متطابقين.",
+      passwordTooShort: "يجب أن تتكون كلمة المرور من 6 أحرف على الأقل.",
+      backendUpdateError: "حدث خطأ في التحديث. يرجى المحاولة مرة أخرى.",
+    },
+  }[lang];
+
+  const sideUi = {
+    en: {
+      updatedSuccessfully: "Updated successfully",
+      themeUpdated: "Theme updated successfully",
+      sessionsLoggedOut: "Other sessions logged out successfully",
+      exportReady: "Export ready",
+      typeDelete: "Type DELETE to confirm account deletion.",
+      backendUpdateError: "Backend update error. Please try again.",
+    },
+    ar: {
+      updatedSuccessfully: "تم التحديث بنجاح",
+      themeUpdated: "تم تحديث المظهر بنجاح",
+      sessionsLoggedOut: "تم تسجيل الخروج من الجلسات الأخرى بنجاح",
+      exportReady: "ملف التصدير جاهز",
+      typeDelete: "اكتب DELETE لتأكيد حذف الحساب.",
+      backendUpdateError: "حدث خطأ في التحديث. يرجى المحاولة مرة أخرى.",
     },
   }[lang];
 
@@ -393,7 +520,9 @@ export default function SettingsPage() {
 
       if (cached) {
         try {
-          setProfile(normalizeProfile(JSON.parse(cached)));
+          const cachedProfile = normalizeProfile(JSON.parse(cached));
+          setProfile(cachedProfile);
+          setSavedProfile(cachedProfile);
           setLoading(false);
         } catch {
           sessionStorage.removeItem(SETTINGS_CACHE_KEY);
@@ -436,6 +565,7 @@ export default function SettingsPage() {
           preferred_language: data.preferred_language || "en",
         };
         setProfile(nextProfile);
+        setSavedProfile(nextProfile);
         sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(nextProfile));
 
         const params = new URLSearchParams(window.location.search);
@@ -460,18 +590,375 @@ export default function SettingsPage() {
     loadSettings();
   }, [router]);
 
+  useEffect(() => {
+    return () => {
+      if (profileFeedbackTimer.current) {
+        clearTimeout(profileFeedbackTimer.current);
+      }
+      if (emailFeedbackTimer.current) {
+        clearTimeout(emailFeedbackTimer.current);
+      }
+      if (passwordFeedbackTimer.current) {
+        clearTimeout(passwordFeedbackTimer.current);
+      }
+      if (sideFeedbackTimer.current) {
+        clearTimeout(sideFeedbackTimer.current);
+      }
+    };
+  }, []);
+
   function resetMessages() {
     setError("");
     setSuccess("");
   }
 
+  function clearProfileFeedback(fields = PROFILE_FIELD_KEYS) {
+    setProfileFeedback((current) => {
+      const nextFeedback = { ...current };
+      fields.forEach((field) => {
+        delete nextFeedback[field];
+      });
+      return nextFeedback;
+    });
+  }
+
+  function showProfileFeedback(nextFeedback) {
+    if (profileFeedbackTimer.current) {
+      clearTimeout(profileFeedbackTimer.current);
+    }
+
+    setProfileFeedback(nextFeedback);
+    profileFeedbackTimer.current = setTimeout(() => {
+      setProfileFeedback({});
+      profileFeedbackTimer.current = null;
+    }, PROFILE_FEEDBACK_DURATION);
+  }
+
+  function getProfileFieldClass(field) {
+    const status = profileFeedback[field]?.status;
+
+    if (status === "success") return styles.profileFieldSuccess;
+    if (status === "error") return styles.profileFieldError;
+
+    return "";
+  }
+
+  function getProfileFieldMessage(field) {
+    const feedback = profileFeedback[field];
+    if (!feedback) return null;
+
+    return (
+      <p
+        className={`${styles.profileFieldMessage} ${
+          feedback.status === "success"
+            ? styles.profileFieldMessageSuccess
+            : styles.profileFieldMessageError
+        }`}
+      >
+        {feedback.message}
+      </p>
+    );
+  }
+
+  function validateProfileChanges(changedFields) {
+    const nextFeedback = {};
+
+    if (changedFields.includes("full_name") && !profile.full_name.trim()) {
+      nextFeedback.full_name = {
+        status: "error",
+        message: profileUi.fullNameRequired,
+      };
+    }
+
+    if (changedFields.includes("phone_number")) {
+      if (!profile.phone_number.trim()) {
+        nextFeedback.phone_number = {
+          status: "error",
+          message: profileUi.phoneRequired,
+        };
+      } else if (!/^\d{5,20}$/.test(profile.phone_number)) {
+        nextFeedback.phone_number = {
+          status: "error",
+          message: profileUi.phoneInvalid,
+        };
+      }
+    }
+
+    if (
+      changedFields.includes("email") &&
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email.trim())
+    ) {
+      nextFeedback.email = {
+        status: "error",
+        message: profileUi.emailInvalid,
+      };
+    }
+
+    if (
+      changedFields.includes("preferred_language") &&
+      !["en", "ar"].includes(profile.preferred_language)
+    ) {
+      nextFeedback.preferred_language = {
+        status: "error",
+        message: profileUi.languageRequired,
+      };
+    }
+
+    return nextFeedback;
+  }
+
+  function getBackendProfileFeedback(detail, changedFields) {
+    const nextFeedback = {};
+
+    if (Array.isArray(detail)) {
+      detail.forEach((item) => {
+        const location = Array.isArray(item?.loc) ? item.loc.join(".") : item?.loc;
+        const field = mapBackendField(location || item?.field || "");
+        if (!field) return;
+
+        nextFeedback[field] = {
+          status: "error",
+          message: item?.msg || profileUi.backendUpdateError,
+        };
+      });
+    }
+
+    if (Object.keys(nextFeedback).length > 0) {
+      return nextFeedback;
+    }
+
+    const message = getErrorMessage(detail, profileUi.backendUpdateError);
+    changedFields.forEach((field) => {
+      nextFeedback[field] = {
+        status: "error",
+        message,
+      };
+    });
+
+    return nextFeedback;
+  }
+
+  function clearEmailFeedback(fields = EMAIL_FIELD_KEYS) {
+    setEmailFeedback((current) => {
+      const nextFeedback = { ...current };
+      fields.forEach((field) => {
+        delete nextFeedback[field];
+      });
+      return nextFeedback;
+    });
+  }
+
+  function showEmailFeedback(nextFeedback) {
+    if (emailFeedbackTimer.current) {
+      clearTimeout(emailFeedbackTimer.current);
+    }
+
+    setEmailFeedback(nextFeedback);
+    emailFeedbackTimer.current = setTimeout(() => {
+      setEmailFeedback({});
+      emailFeedbackTimer.current = null;
+    }, PROFILE_FEEDBACK_DURATION);
+  }
+
+  function getEmailFieldClass(field) {
+    const status = emailFeedback[field]?.status;
+
+    if (status === "success") return styles.profileFieldSuccess;
+    if (status === "error") return styles.profileFieldError;
+
+    return "";
+  }
+
+  function getEmailFieldMessage(field) {
+    const feedback = emailFeedback[field];
+    if (!feedback) return null;
+
+    return (
+      <p
+        className={`${styles.profileFieldMessage} ${
+          feedback.status === "success"
+            ? styles.profileFieldMessageSuccess
+            : styles.profileFieldMessageError
+        }`}
+      >
+        {feedback.message}
+      </p>
+    );
+  }
+
+  function validateEmailForm() {
+    const nextEmail = emailForm.new_email.trim();
+
+    if (!nextEmail) {
+      return {
+        new_email: {
+          status: "error",
+          message: emailUi.emailRequired,
+        },
+      };
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nextEmail)) {
+      return {
+        new_email: {
+          status: "error",
+          message: emailUi.emailInvalid,
+        },
+      };
+    }
+
+    return {};
+  }
+
+  function clearPasswordFeedback(fields = PASSWORD_FIELD_KEYS) {
+    setPasswordFeedback((current) => {
+      const nextFeedback = { ...current };
+      fields.forEach((field) => {
+        delete nextFeedback[field];
+      });
+      return nextFeedback;
+    });
+  }
+
+  function showPasswordFeedback(nextFeedback) {
+    if (passwordFeedbackTimer.current) {
+      clearTimeout(passwordFeedbackTimer.current);
+    }
+
+    setPasswordFeedback(nextFeedback);
+    passwordFeedbackTimer.current = setTimeout(() => {
+      setPasswordFeedback({});
+      passwordFeedbackTimer.current = null;
+    }, PROFILE_FEEDBACK_DURATION);
+  }
+
+  function getPasswordFieldClass(field) {
+    const status = passwordFeedback[field]?.status;
+
+    if (status === "success") return styles.profileFieldSuccess;
+    if (status === "error") return styles.profileFieldError;
+
+    return "";
+  }
+
+  function getPasswordFieldMessage(field) {
+    const feedback = passwordFeedback[field];
+    if (!feedback) return null;
+
+    return (
+      <p
+        className={`${styles.profileFieldMessage} ${
+          feedback.status === "success"
+            ? styles.profileFieldMessageSuccess
+            : styles.profileFieldMessageError
+        }`}
+      >
+        {feedback.message}
+      </p>
+    );
+  }
+
+  function validatePasswordForm() {
+    const nextFeedback = {};
+
+    if (!passwordForm.new_password) {
+      nextFeedback.new_password = {
+        status: "error",
+        message: passwordUi.passwordRequired,
+      };
+    } else if (passwordForm.new_password.length < 6) {
+      nextFeedback.new_password = {
+        status: "error",
+        message: passwordUi.passwordTooShort,
+      };
+    }
+
+    if (!passwordForm.confirm_password) {
+      nextFeedback.confirm_password = {
+        status: "error",
+        message: passwordUi.confirmPasswordRequired,
+      };
+    } else if (passwordForm.new_password !== passwordForm.confirm_password) {
+      nextFeedback.confirm_password = {
+        status: "error",
+        message: passwordUi.passwordsDoNotMatch,
+      };
+    }
+
+    return nextFeedback;
+  }
+
+  function getPasswordBackendFeedback(message) {
+    return PASSWORD_FIELD_KEYS.reduce((feedback, field) => {
+      feedback[field] = {
+        status: "error",
+        message,
+      };
+      return feedback;
+    }, {});
+  }
+
+  function clearSideFeedback(fields = SIDE_FIELD_KEYS) {
+    setSideFeedback((current) => {
+      const nextFeedback = { ...current };
+      fields.forEach((field) => {
+        delete nextFeedback[field];
+      });
+      return nextFeedback;
+    });
+  }
+
+  function showSideFeedback(field, status, message) {
+    if (sideFeedbackTimer.current) {
+      clearTimeout(sideFeedbackTimer.current);
+    }
+
+    setSideFeedback({
+      [field]: { status, message },
+    });
+    sideFeedbackTimer.current = setTimeout(() => {
+      setSideFeedback({});
+      sideFeedbackTimer.current = null;
+    }, PROFILE_FEEDBACK_DURATION);
+  }
+
+  function getSideFieldClass(field) {
+    const status = sideFeedback[field]?.status;
+
+    if (status === "success") return styles.profileFieldSuccess;
+    if (status === "error") return styles.profileFieldError;
+
+    return "";
+  }
+
+  function getSideFieldMessage(field) {
+    const feedback = sideFeedback[field];
+    if (!feedback) return null;
+
+    return (
+      <p
+        className={`${styles.profileFieldMessage} ${
+          feedback.status === "success"
+            ? styles.profileFieldMessageSuccess
+            : styles.profileFieldMessageError
+        }`}
+      >
+        {feedback.message}
+      </p>
+    );
+  }
+
   function handleThemeChange(value) {
+    resetMessages();
+    clearSideFeedback();
     setTheme(value);
     localStorage.setItem("theme", value);
     document.documentElement.setAttribute("data-theme", value);
+    showSideFeedback("theme", "success", sideUi.themeUpdated);
   }
 
   function handlePhoneChange(e) {
+    clearProfileFeedback(["phone_number"]);
     setProfile({
       ...profile,
       phone_number: e.target.value.replace(/\D/g, ""),
@@ -480,6 +967,7 @@ export default function SettingsPage() {
 
   function handleLanguageChange(e) {
     const nextLanguage = e.target.value;
+    clearProfileFeedback(["preferred_language"]);
     setProfile({ ...profile, preferred_language: nextLanguage });
     setLang(nextLanguage);
   }
@@ -487,6 +975,21 @@ export default function SettingsPage() {
   async function handleProfileSubmit(e) {
     e.preventDefault();
     resetMessages();
+    clearProfileFeedback();
+
+    const changedFields = getChangedProfileFields(profile, savedProfile);
+
+    if (changedFields.length === 0) {
+      return;
+    }
+
+    const validationFeedback = validateProfileChanges(changedFields);
+
+    if (Object.keys(validationFeedback).length > 0) {
+      showProfileFeedback(validationFeedback);
+      return;
+    }
+
     setSavingProfile(true);
 
     try {
@@ -517,7 +1020,7 @@ export default function SettingsPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(getErrorMessage(data.detail, ui.failedUpdateProfile));
+        showProfileFeedback(getBackendProfileFeedback(data.detail, changedFields));
         return;
       }
 
@@ -530,15 +1033,36 @@ export default function SettingsPage() {
           }
         : profile;
 
+      const confirmedChangedFields = getChangedProfileFields(nextProfile, savedProfile);
+      const successFields =
+        confirmedChangedFields.length > 0 ? confirmedChangedFields : changedFields;
+      const successFeedback = successFields.reduce((feedback, field) => {
+        feedback[field] = {
+          status: "success",
+          message: profileUi.updatedSuccessfully,
+        };
+        return feedback;
+      }, {});
+
       setProfile(nextProfile);
+      setSavedProfile(nextProfile);
       localStorage.setItem("site_lang", nextProfile.preferred_language);
       setLang(nextProfile.preferred_language);
       sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(nextProfile));
       sessionStorage.removeItem("auth_user");
-      setSuccess(ui.profileUpdated);
+      showProfileFeedback(successFeedback);
     } catch (error) {
       console.error(error);
-      setError(ui.unableToConnect);
+      const message = ui.unableToConnect || profileUi.backendUpdateError;
+      showProfileFeedback(
+        changedFields.reduce((feedback, field) => {
+          feedback[field] = {
+            status: "error",
+            message,
+          };
+          return feedback;
+        }, {})
+      );
     } finally {
       setSavingProfile(false);
     }
@@ -547,9 +1071,22 @@ export default function SettingsPage() {
   async function handleEmailSubmit(e) {
     e.preventDefault();
     resetMessages();
+    clearEmailFeedback();
 
     if (authProvider === "google") {
-      setError(ui.googleEmailChangeUnavailable);
+      showEmailFeedback({
+        new_email: {
+          status: "error",
+          message: emailUi.googleUnavailable,
+        },
+      });
+      return;
+    }
+
+    const validationFeedback = validateEmailForm();
+
+    if (Object.keys(validationFeedback).length > 0) {
+      showEmailFeedback(validationFeedback);
       return;
     }
 
@@ -565,15 +1102,30 @@ export default function SettingsPage() {
       );
 
       if (error) {
-        setError(error.message || ui.failedChangeEmail);
+        showEmailFeedback({
+          new_email: {
+            status: "error",
+            message: error.message || emailUi.backendUpdateError,
+          },
+        });
         return;
       }
 
       setEmailForm({ new_email: "" });
-      setSuccess(ui.emailSent);
+      showEmailFeedback({
+        new_email: {
+          status: "success",
+          message: emailUi.emailSent,
+        },
+      });
     } catch (error) {
       console.error(error);
-      setError(ui.unableToUpdateEmail);
+      showEmailFeedback({
+        new_email: {
+          status: "error",
+          message: ui.unableToUpdateEmail || emailUi.backendUpdateError,
+        },
+      });
     } finally {
       setSavingEmail(false);
     }
@@ -582,9 +1134,12 @@ export default function SettingsPage() {
   async function handlePasswordSubmit(e) {
     e.preventDefault();
     resetMessages();
+    clearPasswordFeedback();
 
-    if (passwordForm.new_password !== passwordForm.confirm_password) {
-      setError(t.passwordsDoNotMatch);
+    const validationFeedback = validatePasswordForm();
+
+    if (Object.keys(validationFeedback).length > 0) {
+      showPasswordFeedback(validationFeedback);
       return;
     }
 
@@ -596,15 +1151,27 @@ export default function SettingsPage() {
       });
 
       if (error) {
-        setError(error.message || ui.failedChangePassword);
+        showPasswordFeedback(
+          getPasswordBackendFeedback(error.message || passwordUi.backendUpdateError)
+        );
         return;
       }
 
       setPasswordForm({ new_password: "", confirm_password: "" });
-      setSuccess(ui.passwordChanged);
+      showPasswordFeedback(
+        PASSWORD_FIELD_KEYS.reduce((feedback, field) => {
+          feedback[field] = {
+            status: "success",
+            message: passwordUi.updatedSuccessfully,
+          };
+          return feedback;
+        }, {})
+      );
     } catch (error) {
       console.error(error);
-      setError(ui.unableToUpdatePassword);
+      showPasswordFeedback(
+        getPasswordBackendFeedback(ui.unableToUpdatePassword || passwordUi.backendUpdateError)
+      );
     } finally {
       setSavingPassword(false);
     }
@@ -612,20 +1179,29 @@ export default function SettingsPage() {
 
   async function handleLogoutOtherSessions() {
     resetMessages();
+    clearSideFeedback();
     setLoggingOutOtherSessions(true);
 
     try {
       const { error } = await supabase.auth.signOut({ scope: "others" });
 
       if (error) {
-        setError(error.message || ui.unableToLogoutSessions);
+        showSideFeedback(
+          "sessions",
+          "error",
+          error.message || ui.unableToLogoutSessions || sideUi.backendUpdateError
+        );
         return;
       }
 
-      setSuccess(ui.otherSessionsLoggedOut);
+      showSideFeedback("sessions", "success", sideUi.sessionsLoggedOut);
     } catch (error) {
       console.error(error);
-      setError(ui.unableToLogoutSessions);
+      showSideFeedback(
+        "sessions",
+        "error",
+        ui.unableToLogoutSessions || sideUi.backendUpdateError
+      );
     } finally {
       setLoggingOutOtherSessions(false);
     }
@@ -633,6 +1209,7 @@ export default function SettingsPage() {
 
   async function handleExportData() {
     resetMessages();
+    clearSideFeedback();
     setExporting(true);
 
     try {
@@ -649,7 +1226,11 @@ export default function SettingsPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(getErrorMessage(data.detail, ui.failedExport));
+        showSideFeedback(
+          "export_data",
+          "error",
+          getErrorMessage(data.detail, ui.failedExport || sideUi.backendUpdateError)
+        );
         return;
       }
 
@@ -662,10 +1243,14 @@ export default function SettingsPage() {
       a.download = "alsaeh-my-data.json";
       a.click();
       URL.revokeObjectURL(url);
-      setSuccess(ui.exportReady);
+      showSideFeedback("export_data", "success", sideUi.exportReady);
     } catch (error) {
       console.error(error);
-      setError(ui.unableToExport);
+      showSideFeedback(
+        "export_data",
+        "error",
+        ui.unableToExport || sideUi.backendUpdateError
+      );
     } finally {
       setExporting(false);
     }
@@ -673,9 +1258,10 @@ export default function SettingsPage() {
 
   async function handleDeleteAccount() {
     resetMessages();
+    clearSideFeedback();
 
     if (deleteText !== "DELETE") {
-      setError(ui.typeDelete);
+      showSideFeedback("delete_confirm", "error", sideUi.typeDelete);
       return;
     }
 
@@ -699,7 +1285,11 @@ export default function SettingsPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(getErrorMessage(data.detail, ui.failedDelete));
+        showSideFeedback(
+          "delete_account",
+          "error",
+          getErrorMessage(data.detail, ui.failedDelete || sideUi.backendUpdateError)
+        );
         return;
       }
 
@@ -708,7 +1298,11 @@ export default function SettingsPage() {
       router.replace("/");
     } catch (error) {
       console.error(error);
-      setError(ui.unableToConnect);
+      showSideFeedback(
+        "delete_account",
+        "error",
+        ui.unableToConnect || sideUi.backendUpdateError
+      );
     } finally {
       setDeleting(false);
     }
@@ -756,7 +1350,11 @@ export default function SettingsPage() {
 
       <div className={styles.settingsLayout}>
         <main className={styles.settingsMainColumn}>
-          <form onSubmit={handleProfileSubmit} className={styles.settingsSection}>
+          <form
+            onSubmit={handleProfileSubmit}
+            className={styles.settingsSection}
+            noValidate
+          >
             <div className={styles.settingsSectionHeader}>
               <span className={styles.settingsSectionIcon}>P</span>
               <div>
@@ -770,20 +1368,30 @@ export default function SettingsPage() {
                 <label>{t.fullName}</label>
                 <input
                   value={profile.full_name}
-                  onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
+                  onChange={(e) => {
+                    clearProfileFeedback(["full_name"]);
+                    setProfile({ ...profile, full_name: e.target.value });
+                  }}
+                  className={getProfileFieldClass("full_name")}
                   required
                 />
+                {getProfileFieldMessage("full_name")}
               </div>
 
               <div className={styles.aiField}>
                 <label>{t.phone}</label>
-                <div className={styles.phoneGroup}>
+                <div
+                  className={`${styles.phoneGroup} ${getProfileFieldClass(
+                    "phone_number"
+                  )}`}
+                >
                   <select
                     className={styles.countrySelect}
                     value={profile.country}
-                    onChange={(e) =>
-                      setProfile({ ...profile, country: e.target.value })
-                    }
+                    onChange={(e) => {
+                      clearProfileFeedback(["phone_number"]);
+                      setProfile({ ...profile, country: e.target.value });
+                    }}
                     aria-label={ui.countryCode}
                   >
                     {COUNTRY_CODES.map(({ country, code }) => (
@@ -805,11 +1413,17 @@ export default function SettingsPage() {
                     required
                   />
                 </div>
+                {getProfileFieldMessage("phone_number")}
               </div>
 
               <div className={styles.aiField}>
                 <label>{t.email}</label>
-                <input value={profile.email} disabled />
+                <input
+                  value={profile.email}
+                  className={getProfileFieldClass("email")}
+                  disabled
+                />
+                {getProfileFieldMessage("email")}
               </div>
 
               <div className={styles.aiField}>
@@ -817,15 +1431,22 @@ export default function SettingsPage() {
                 <select
                   value={profile.preferred_language}
                   onChange={handleLanguageChange}
+                  className={getProfileFieldClass("preferred_language")}
                 >
                   <option value="en">{ui.english}</option>
                   <option value="ar">{ui.arabic}</option>
                 </select>
+                {getProfileFieldMessage("preferred_language")}
               </div>
             </div>
 
             <div className={styles.settingsActions}>
-              <button className={styles.aiGenerateButton} disabled={savingProfile}>
+              <button
+                type="submit"
+                className={styles.aiGenerateButton}
+                disabled={savingProfile}
+                aria-busy={savingProfile}
+              >
                 {savingProfile ? ui.saving : t.save}
               </button>
             </div>
@@ -848,7 +1469,11 @@ export default function SettingsPage() {
                 </p>
               </div>
             ) : authProvider === "password" ? (
-              <form onSubmit={handleEmailSubmit} className={styles.settingsSubForm}>
+              <form
+                onSubmit={handleEmailSubmit}
+                className={styles.settingsSubForm}
+                noValidate
+              >
                 <h3>{t.changeEmail}</h3>
 
                 <div className={styles.aiFormGrid}>
@@ -857,21 +1482,35 @@ export default function SettingsPage() {
                     <input
                       type="email"
                       value={emailForm.new_email}
-                      onChange={(e) => setEmailForm({ new_email: e.target.value })}
+                      onChange={(e) => {
+                        clearEmailFeedback(["new_email"]);
+                        setEmailForm({ new_email: e.target.value });
+                      }}
+                      className={getEmailFieldClass("new_email")}
                       required
                     />
+                    {getEmailFieldMessage("new_email")}
                   </div>
                 </div>
 
                 <div className={styles.settingsActions}>
-                  <button className={styles.aiGenerateButton} disabled={savingEmail}>
+                  <button
+                    type="submit"
+                    className={styles.aiGenerateButton}
+                    disabled={savingEmail}
+                    aria-busy={savingEmail}
+                  >
                     {savingEmail ? ui.saving : t.changeEmail}
                   </button>
                 </div>
               </form>
             ) : null}
 
-            <form onSubmit={handlePasswordSubmit} className={styles.settingsSubForm}>
+            <form
+              onSubmit={handlePasswordSubmit}
+              className={styles.settingsSubForm}
+              noValidate
+            >
               <div className={styles.passwordHeader}>
                 <h3>{t.changePassword}</h3>
               </div>
@@ -883,9 +1522,11 @@ export default function SettingsPage() {
                     <input
                       type={showPasswords ? "text" : "password"}
                       value={passwordForm.new_password}
-                      onChange={(e) =>
-                        setPasswordForm({ ...passwordForm, new_password: e.target.value })
-                      }
+                      onChange={(e) => {
+                        clearPasswordFeedback(["new_password", "confirm_password"]);
+                        setPasswordForm({ ...passwordForm, new_password: e.target.value });
+                      }}
+                      className={getPasswordFieldClass("new_password")}
                       required
                     />
                     <button
@@ -897,6 +1538,7 @@ export default function SettingsPage() {
                       <PasswordVisibilityIcon visible={showPasswords} />
                     </button>
                   </div>
+                  {getPasswordFieldMessage("new_password")}
                 </div>
 
                 <div className={styles.aiField}>
@@ -905,12 +1547,14 @@ export default function SettingsPage() {
                     <input
                       type={showPasswords ? "text" : "password"}
                       value={passwordForm.confirm_password}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        clearPasswordFeedback(["confirm_password"]);
                         setPasswordForm({
                           ...passwordForm,
                           confirm_password: e.target.value,
-                        })
-                      }
+                        });
+                      }}
+                      className={getPasswordFieldClass("confirm_password")}
                       required
                     />
                     <button
@@ -922,6 +1566,7 @@ export default function SettingsPage() {
                       <PasswordVisibilityIcon visible={showPasswords} />
                     </button>
                   </div>
+                  {getPasswordFieldMessage("confirm_password")}
                 </div>
               </div>
 
@@ -948,7 +1593,12 @@ export default function SettingsPage() {
               )}
 
               <div className={styles.settingsActions}>
-                <button className={styles.aiGenerateButton} disabled={savingPassword}>
+                <button
+                  type="submit"
+                  className={styles.aiGenerateButton}
+                  disabled={savingPassword}
+                  aria-busy={savingPassword}
+                >
                   {savingPassword ? ui.saving : t.changePassword}
                 </button>
               </div>
@@ -968,11 +1618,16 @@ export default function SettingsPage() {
 
             <div className={styles.aiField}>
               <label>{t.theme}</label>
-              <select value={theme} onChange={(e) => handleThemeChange(e.target.value)}>
+              <select
+                value={theme}
+                onChange={(e) => handleThemeChange(e.target.value)}
+                className={getSideFieldClass("theme")}
+              >
                 <option value="light">{t.light}</option>
                 <option value="dark">{t.dark}</option>
                 <option value="system">{t.system}</option>
               </select>
+              {getSideFieldMessage("theme")}
             </div>
           </section>
 
@@ -986,13 +1641,17 @@ export default function SettingsPage() {
             </div>
 
             <button
-              className={styles.secondaryActionButton}
+              className={`${styles.secondaryActionButton} ${getSideFieldClass(
+                "sessions"
+              )}`}
               type="button"
               onClick={handleLogoutOtherSessions}
               disabled={loggingOutOtherSessions}
+              aria-busy={loggingOutOtherSessions}
             >
               {loggingOutOtherSessions ? ui.working : t.logoutOtherSessions}
             </button>
+            {getSideFieldMessage("sessions")}
           </section>
 
           <section className={`${styles.settingsSection} ${styles.dataPrivacySection}`}>
@@ -1005,33 +1664,45 @@ export default function SettingsPage() {
             </div>
 
             <button
-              className={styles.secondaryActionButton}
+              className={`${styles.secondaryActionButton} ${getSideFieldClass(
+                "export_data"
+              )}`}
               type="button"
               onClick={handleExportData}
               disabled={exporting}
+              aria-busy={exporting}
             >
               {exporting ? ui.exporting : t.exportData}
             </button>
+            {getSideFieldMessage("export_data")}
 
             <div className={styles.deleteAccountBox}>
               <h3>{t.deleteAccount}</h3>
               <p>{t.deleteWarning}</p>
 
               <input
-                className={styles.input}
+                className={`${styles.input} ${getSideFieldClass("delete_confirm")}`}
                 value={deleteText}
                 placeholder="DELETE"
-                onChange={(e) => setDeleteText(e.target.value)}
+                onChange={(e) => {
+                  clearSideFeedback(["delete_confirm", "delete_account"]);
+                  setDeleteText(e.target.value);
+                }}
               />
+              {getSideFieldMessage("delete_confirm")}
 
               <button
-                className={styles.deleteButton}
+                className={`${styles.deleteButton} ${getSideFieldClass(
+                  "delete_account"
+                )}`}
                 type="button"
                 onClick={handleDeleteAccount}
                 disabled={deleting}
+                aria-busy={deleting}
               >
                 {deleting ? ui.deleting : t.deleteAccount}
               </button>
+              {getSideFieldMessage("delete_account")}
             </div>
           </section>
 

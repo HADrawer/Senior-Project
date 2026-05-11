@@ -119,6 +119,7 @@ export default function AdminPage() {
 
   const [loading, setLoading] = useState(true);
   const [sectionLoading, setSectionLoading] = useState(false);
+  const [deletingPlanId, setDeletingPlanId] = useState(null);
   const [error, setError] = useState("");
 
   const content = {
@@ -207,6 +208,7 @@ export default function AdminPage() {
       budget: "Budget",
       people: "People",
       delete: "Delete",
+      deleting: "Deleting...",
       untitled: "Untitled",
       yes: "Yes",
       no: "No",
@@ -318,6 +320,7 @@ export default function AdminPage() {
       budget: "الميزانية",
       people: "الأشخاص",
       delete: "حذف",
+      deleting: "جاري الحذف...",
       untitled: "بدون عنوان",
       yes: "نعم",
       no: "لا",
@@ -688,8 +691,13 @@ export default function AdminPage() {
   }
 
   async function deletePlan(planId) {
+    if (deletingPlanId === planId) return;
+
     const confirmed = window.confirm(t.confirmDeletePlan);
     if (!confirmed) return;
+
+    setError("");
+    setDeletingPlanId(planId);
 
     try {
       const token = await getAdminToken();
@@ -708,16 +716,21 @@ export default function AdminPage() {
       const result = await safeJson(res);
 
       if (!res.ok) {
-        alert(getErrorMessage(result.detail, t.failedDeletePlan));
+        setError(getErrorMessage(result.detail, t.failedDeletePlan));
         return;
       }
 
-      sessionStorage.removeItem(ADMIN_CACHE_KEYS.plans);
+      setPlans((currentPlans) => {
+        const nextPlans = currentPlans.filter((plan) => plan.id !== planId);
+        writeAdminCache(ADMIN_CACHE_KEYS.plans, nextPlans);
+        return nextPlans;
+      });
       sessionStorage.removeItem(ADMIN_CACHE_KEYS.overview);
-      await loadPlans();
     } catch (error) {
       console.error(error);
-      alert(t.unableToConnect);
+      setError(t.unableToConnect);
+    } finally {
+      setDeletingPlanId(null);
     }
   }
 
@@ -908,6 +921,7 @@ export default function AdminPage() {
             <PlansSection
               plans={plans}
               onDeletePlan={deletePlan}
+              deletingPlanId={deletingPlanId}
               t={t}
             />
           )}
@@ -1190,7 +1204,7 @@ function UserRow({ user, onToggleUserStatus, onDeleteUser, t }) {
   );
 }
 
-function PlansSection({ plans, onDeletePlan, t }) {
+function PlansSection({ plans, onDeletePlan, deletingPlanId, t }) {
   const [search, setSearch] = useState("");
   const filteredPlans = useMemo(
     () =>
@@ -1234,6 +1248,7 @@ function PlansSection({ plans, onDeletePlan, t }) {
                   key={plan.id}
                   plan={plan}
                   onDeletePlan={onDeletePlan}
+                  isDeleting={deletingPlanId === plan.id}
                   t={t}
                 />
               ))}
@@ -1245,7 +1260,7 @@ function PlansSection({ plans, onDeletePlan, t }) {
   );
 }
 
-function PlanRow({ plan, onDeletePlan, t }) {
+function PlanRow({ plan, onDeletePlan, isDeleting, t }) {
   return (
     <tr>
       <td>{plan.title || t.untitled}</td>
@@ -1264,8 +1279,10 @@ function PlanRow({ plan, onDeletePlan, t }) {
           <button
             className={styles.smallDanger}
             onClick={() => onDeletePlan(plan.id)}
+            disabled={isDeleting}
+            aria-busy={isDeleting}
           >
-            {t.delete}
+            {isDeleting ? t.deleting : t.delete}
           </button>
         </div>
       </td>
