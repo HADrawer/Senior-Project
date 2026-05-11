@@ -242,49 +242,87 @@
 
 .oauthButton {
   width: 100%;
-  min-height: 50px;
+  min-height: 46px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.75rem;
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--bg-card);
-  color: var(--text-main);
+  gap: 0.7rem;
+  border: 1px solid #dadce0;
+  border-radius: 9px;
+  background: #fff;
+  color: #3c4043;
   font-family: var(--font-body);
   font-size: 0.95rem;
-  font-weight: 800;
+  font-weight: 500;
   cursor: pointer;
-  transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition), background var(--transition);
+  transition: background var(--transition), box-shadow var(--transition), border-color var(--transition);
   margin-bottom: 1rem;
 }
 
 .oauthButton:hover:not(:disabled) {
-  transform: translateY(-1px);
-  border-color: var(--primary-mid);
-  background: var(--bg-hover);
-  box-shadow: var(--shadow-sm);
+  border-color: #c6c8cc;
+  background: #f8fafd;
+  box-shadow: 0 1px 3px rgba(60, 64, 67, 0.18);
 }
 
 .oauthButton:disabled {
   opacity: 0.65;
   cursor: not-allowed;
-  transform: none;
   box-shadow: none;
 }
 
 .oauthIcon {
-  width: 26px;
-  height: 26px;
+  width: 20px;
+  height: 20px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.oauthIcon svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+html[data-theme="light"] .oauthButton {
   background: #fff;
-  color: #4285f4;
-  border: 1px solid var(--border-soft);
-  font-weight: 900;
-  font-family: Arial, sans-serif;
+  border-color: #dadce0;
+  color: #202124;
+}
+
+html[data-theme="light"] .oauthButton:hover:not(:disabled) {
+  background: #f8fafd;
+  border-color: #c6c8cc;
+}
+
+html[data-theme="dark"] .oauthButton {
+  background: #0f0f0f;
+  border-color: #3c4043;
+  color: #f8fafd;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.24);
+}
+
+html[data-theme="dark"] .oauthButton:hover:not(:disabled) {
+  background: #181818;
+  border-color: #5f6368;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.32);
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) .oauthButton {
+    background: #0f0f0f;
+    border-color: #3c4043;
+    color: #f8fafd;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.24);
+  }
+
+  html:not([data-theme="light"]) .oauthButton:hover:not(:disabled) {
+    background: #181818;
+    border-color: #5f6368;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.32);
+  }
 }
 
 .oauthDivider {
@@ -340,15 +378,14 @@
 }
 
 .countrySelect {
-  flex-shrink: 0;
-  width: 110px;
+  flex: 0 0 150px;
+  width: 150px;
   border: none !important;
   border-right: 1.5px solid var(--border) !important;
   border-radius: 0 !important;
   background: var(--bg-muted) !important;
   box-shadow: none !important;
   font-size: 0.875rem;
-  padding-right: 1.75rem;
 }
 
 .countrySelect:focus {

@@ -1270,6 +1270,47 @@ html[data-theme="dark"] .planDayEmpty {
   background: var(--bg-card);
 }
 
+.settingsPasswordWrapper {
+  position: relative;
+}
+
+.settingsPasswordWrapper input {
+  padding-right: 48px;
+}
+
+[dir="rtl"] .settingsPasswordWrapper input {
+  padding-right: 16px;
+  padding-left: 48px;
+}
+
+.passwordToggleButton {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color var(--transition);
+}
+
+[dir="rtl"] .passwordToggleButton {
+  right: auto;
+  left: 14px;
+}
+
+.passwordToggleButton:hover,
+.passwordToggleButton:focus-visible {
+  color: var(--text-main);
+}
+
 .passwordStrength {
   display: flex;
   flex-direction: column;
@@ -1473,11 +1514,48 @@ html[data-theme="dark"] .planDayEmpty {
   padding: 22px;
 }
 
+.settingsSideColumn .dataPrivacySection {
+  gap: 14px;
+}
+
 .settingsSideColumn .settingsSection .secondaryActionButton,
 .settingsSideColumn .settingsSection .deleteButton,
 .settingsSideColumn .settingsSection .supportLink {
   width: 100%;
   justify-content: center;
+}
+
+.dataPrivacySection .secondaryActionButton {
+  min-height: 42px;
+  padding: 10px 14px;
+}
+
+.dataPrivacySection .deleteAccountBox {
+  gap: 8px;
+  margin-top: 0;
+  padding: 12px;
+  border-radius: 14px;
+}
+
+.dataPrivacySection .deleteAccountBox h3 {
+  font-size: 0.98rem;
+  line-height: 1.25;
+}
+
+.dataPrivacySection .deleteAccountBox p {
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.dataPrivacySection .deleteAccountBox input {
+  height: 42px;
+  padding: 0 12px;
+  font-size: 0.92rem;
+}
+
+.dataPrivacySection .deleteButton {
+  min-height: 42px;
+  padding: 10px 14px;
 }
 
 .aboutDashboardHero,

@@ -2,6 +2,8 @@ import os
 import json
 import time
 import httpx
+import re
+from collections import Counter
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -52,6 +54,25 @@ GEMINI_MODELS = [
     "gemini-flash-latest",
     "gemini-flash-lite-latest",
 ]
+
+PREFERENCE_LABEL_RE = re.compile(
+    r"\b(?:preferences|extra preferences|constraints)\s*:",
+    re.IGNORECASE,
+)
+PREFERENCE_SECTION_RE = re.compile(
+    r"\bpreferences\s*:\s*([\s\S]*?)(?=\.\s*(?:extra preferences|constraints)\s*:|$)",
+    re.IGNORECASE,
+)
+VALID_TRAVEL_STYLES = {
+    "relaxed",
+    "adventure",
+    "family-friendly",
+    "friends",
+    "solo-travel",
+    "cultural",
+    "budget-friendly",
+    "luxury",
+}
 
 def generate_with_retry(prompt: str):
     last_error = None
@@ -1090,6 +1111,135 @@ def add_google_maps_links(plan_json):
     return plan_json
 
 
+def parse_preference_tokens(preferences, valid_preferences):
+    if not preferences:
+        return []
+
+    text = str(preferences)
+    match = PREFERENCE_SECTION_RE.search(text)
+    selected_text = match.group(1) if match else text
+    cleaned = PREFERENCE_LABEL_RE.sub("", selected_text)
+    valid_lookup = {item.casefold(): item for item in valid_preferences}
+    tokens = []
+
+    for token in cleaned.split(","):
+        normalized = token.strip()
+        if not normalized or len(normalized) > 80:
+            continue
+
+        canonical = valid_lookup.get(normalized.casefold())
+        if canonical:
+            tokens.append(canonical)
+
+    return tokens
+
+
+def normalize_travel_style(value):
+    if not value:
+        return None
+
+    normalized = str(value).strip()
+    return normalized if normalized in VALID_TRAVEL_STYLES else None
+
+
+def get_auth_provider_counts_from_db():
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                    COUNT(*) FILTER (
+                        WHERE COALESCE(u.raw_app_meta_data->>'provider', '') = 'google'
+                           OR u.raw_app_meta_data->'providers' ? 'google'
+                    ) AS google_auth_users,
+                    COUNT(*) FILTER (
+                        WHERE COALESCE(u.raw_app_meta_data->>'provider', '') = 'email'
+                           OR u.raw_app_meta_data->'providers' ? 'email'
+                    ) AS password_auth_users
+                FROM profiles p
+                JOIN auth.users u ON u.id = p.id::uuid
+                """
+            )
+            counts = cur.fetchone()
+
+    return {
+        "google_auth_users": counts["google_auth_users"] or 0,
+        "password_auth_users": counts["password_auth_users"] or 0,
+    }
+
+
+def get_auth_provider_counts_from_supabase():
+    supabase_url = os.getenv("SUPABASE_URL")
+    service_role_key = (
+        os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+        or os.getenv("SUPABASE_SECRET_KEY")
+    )
+
+    if not supabase_url or not service_role_key:
+        return {"google_auth_users": 0, "password_auth_users": 0}
+
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id FROM profiles")
+            profile_ids = {str(row["id"]) for row in cur.fetchall()}
+
+    counts = Counter()
+    page = 1
+    per_page = 1000
+
+    while True:
+        response = httpx.get(
+            f"{supabase_url.rstrip('/')}/auth/v1/admin/users",
+            params={"page": page, "per_page": per_page},
+            headers={
+                "Authorization": f"Bearer {service_role_key}",
+                "apikey": service_role_key,
+            },
+            timeout=15,
+        )
+
+        if response.status_code != 200:
+            return {"google_auth_users": 0, "password_auth_users": 0}
+
+        payload = response.json()
+        users = payload if isinstance(payload, list) else payload.get("users", [])
+
+        if not users:
+            break
+
+        for auth_user in users:
+            if str(auth_user.get("id")) not in profile_ids:
+                continue
+
+            app_metadata = auth_user.get("app_metadata") or {}
+            providers = app_metadata.get("providers") or []
+            provider = app_metadata.get("provider")
+
+            user_providers = set(providers)
+            if provider:
+                user_providers.add(provider)
+
+            for item in user_providers:
+                counts[item] += 1
+
+        if len(users) < per_page:
+            break
+
+        page += 1
+
+    return {
+        "google_auth_users": counts["google"],
+        "password_auth_users": counts["email"],
+    }
+
+
+def get_auth_provider_counts():
+    try:
+        return get_auth_provider_counts_from_db()
+    except Exception:
+        return get_auth_provider_counts_from_supabase()
+
+
 @app.get("/admin/overview")
 def admin_overview(current_user=Depends(get_current_user)):
     require_admin(current_user)
@@ -1116,16 +1266,46 @@ def admin_overview(current_user=Depends(get_current_user)):
             cur.execute("SELECT COUNT(*) AS total FROM usage_logs")
             total_logs = cur.fetchone()["total"]
 
-            cur.execute("""
-                SELECT category, COUNT(*) AS total
+            cur.execute(
+                """
+                SELECT name
+                FROM place_categories
+                ORDER BY name
+                """
+            )
+            valid_preferences = {row["name"] for row in cur.fetchall()}
+
+            cur.execute(
+                """
+                SELECT preferences, travel_styles
                 FROM plans
-                WHERE category IS NOT NULL
-                  AND status != 'deleted'
-                GROUP BY category
-                ORDER BY total DESC
-                LIMIT 5
-            """)
-            popular_categories = cur.fetchall()
+                WHERE status != 'deleted'
+                """
+            )
+            analytics_rows = cur.fetchall()
+
+    preference_counts = Counter()
+    travel_style_counts = Counter()
+
+    for row in analytics_rows:
+        preference_counts.update(
+            parse_preference_tokens(row["preferences"], valid_preferences)
+        )
+
+        travel_style = normalize_travel_style(row["travel_styles"])
+        if travel_style:
+            travel_style_counts[travel_style] += 1
+
+    popular_preferences = [
+        {"preference": preference, "total": total}
+        for preference, total in preference_counts.most_common(8)
+    ]
+    popular_travel_styles = [
+        {"travel_style": travel_style, "total": total}
+        for travel_style, total in travel_style_counts.most_common()
+    ]
+
+    auth_counts = get_auth_provider_counts()
 
     return {
         "total_users": total_users,
@@ -1133,7 +1313,10 @@ def admin_overview(current_user=Depends(get_current_user)):
         "ai_plans": ai_plans,
         "total_messages": total_messages,
         "total_logs": total_logs,
-        "popular_categories": popular_categories,
+        "popular_preferences": popular_preferences,
+        "popular_travel_styles": popular_travel_styles,
+        "google_auth_users": auth_counts["google_auth_users"],
+        "password_auth_users": auth_counts["password_auth_users"],
     }
 
 def require_admin(current_user):
@@ -1167,13 +1350,10 @@ def admin_get_users(current_user=Depends(get_current_user)):
 
     return users
 
-@app.put("/admin/users/{user_id}")
-def admin_update_user(user_id: str, data: dict, current_user=Depends(get_current_user)):
+def update_admin_user_status(user_id: str, is_active: bool, current_user):
     require_admin(current_user)
 
-    requested_active = data.get("is_active")
-
-    if user_id == current_user["id"] and requested_active is False:
+    if user_id == current_user["id"] and is_active is False:
         raise HTTPException(status_code=400, detail="Admin cannot disable own account")
 
     with get_conn() as conn:
@@ -1181,21 +1361,11 @@ def admin_update_user(user_id: str, data: dict, current_user=Depends(get_current
             cur.execute(
                 """
                 UPDATE profiles
-                SET
-                    full_name = COALESCE(%s, full_name),
-                    phone_number = COALESCE(%s, phone_number),
-                    preferred_language = COALESCE(%s, preferred_language),
-                    is_active = COALESCE(%s, is_active)
+                SET is_active = %s
                 WHERE id = %s
                 RETURNING id
                 """,
-                (
-                    data.get("full_name"),
-                    data.get("phone_number"),
-                    data.get("preferred_language"),
-                    requested_active,
-                    user_id,
-                )
+                (is_active, user_id)
             )
 
             updated = cur.fetchone()
@@ -1205,18 +1375,36 @@ def admin_update_user(user_id: str, data: dict, current_user=Depends(get_current
 
             conn.commit()
 
-    if requested_active is not None:
-        invalidate_auth_cache_for_user(user_id)
+    invalidate_auth_cache_for_user(user_id)
 
     create_log(
         user_id=current_user["id"],
-        action_type="admin_update_user",
+        action_type="admin_toggle_user_status",
         entity_type="user",
         entity_id=user_id,
-        metadata={"message": "Admin updated user information"},
+        metadata={
+            "message": "Admin toggled user status",
+            "is_active": is_active,
+        },
     )
 
     return {"message": "User updated successfully"}
+
+
+@app.put("/admin/users/{user_id}/toggle-status")
+def admin_toggle_user_status(user_id: str, data: dict, current_user=Depends(get_current_user)):
+    if set(data.keys()) != {"is_active"} or not isinstance(data.get("is_active"), bool):
+        raise HTTPException(status_code=422, detail="Only is_active boolean is allowed")
+
+    return update_admin_user_status(user_id, data["is_active"], current_user)
+
+
+@app.put("/admin/users/{user_id}")
+def admin_update_user(user_id: str, data: dict, current_user=Depends(get_current_user)):
+    if set(data.keys()) != {"is_active"} or not isinstance(data.get("is_active"), bool):
+        raise HTTPException(status_code=422, detail="Only is_active boolean is allowed")
+
+    return update_admin_user_status(user_id, data["is_active"], current_user)
 
 
 @app.delete("/admin/users/{user_id}")
@@ -1382,7 +1570,6 @@ def admin_get_logs(current_user=Depends(get_current_user)):
                 FROM usage_logs l
                 LEFT JOIN profiles p ON p.id = l.user_id
                 ORDER BY l.created_at DESC
-                LIMIT 200
                 """
             )
             logs = cur.fetchall()

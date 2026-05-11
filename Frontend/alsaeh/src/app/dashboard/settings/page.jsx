@@ -72,6 +72,52 @@ function getPasswordStrength(password) {
   return { label: "Strong", className: "strong" };
 }
 
+function getAuthProvider(user) {
+  const identities = user?.identities || [];
+  const hasGoogleIdentity = identities.some(
+    (identity) => identity.provider === "google"
+  );
+
+  if (hasGoogleIdentity || user?.app_metadata?.provider === "google") {
+    return "google";
+  }
+
+  return "password";
+}
+
+function PasswordVisibilityIcon({ visible }) {
+  if (visible) {
+    return (
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.75"
+      >
+        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+        <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+        <line x1="1" y1="1" x2="23" y2="23" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+    >
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
 async function getAccessToken() {
   const { data } = await supabase.auth.getSession();
   return data.session?.access_token || null;
@@ -145,6 +191,7 @@ export default function SettingsPage() {
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [authProvider, setAuthProvider] = useState("loading");
 
   const t = {
     en: {
@@ -239,6 +286,10 @@ export default function SettingsPage() {
       saving: "Saving...",
       profileUpdated: "Profile updated successfully.",
       emailSent: "Email update request sent. Check your email to confirm.",
+      emailConfirmed: "Email changed successfully.",
+      googleEmailChangeUnavailable:
+        "Email changes are not available for Google accounts.",
+      emailChangeFailed: "Email change confirmation failed. Please try again.",
       passwordChanged: "Password changed successfully.",
       otherSessionsLoggedOut: "Other sessions have been logged out.",
       exportReady: "Your data export is ready.",
@@ -286,6 +337,10 @@ export default function SettingsPage() {
       saving: "جاري الحفظ...",
       profileUpdated: "تم تحديث الملف الشخصي بنجاح.",
       emailSent: "تم إرسال طلب تحديث البريد. تحقق من بريدك للتأكيد.",
+      emailConfirmed: "تم تغيير البريد الإلكتروني بنجاح.",
+      googleEmailChangeUnavailable:
+        "Email changes are not available for Google accounts.",
+      emailChangeFailed: "فشل تأكيد تغيير البريد. يرجى المحاولة مرة أخرى.",
       passwordChanged: "تم تغيير كلمة المرور بنجاح.",
       otherSessionsLoggedOut: "تم تسجيل الخروج من الجلسات الأخرى.",
       exportReady: "ملف بياناتك جاهز للتنزيل.",
@@ -353,6 +408,15 @@ export default function SettingsPage() {
           return;
         }
 
+        const { data: authData, error: authError } = await supabase.auth.getUser();
+
+        if (authError) {
+          setError(authError.message || "Failed to load settings");
+          return;
+        }
+
+        setAuthProvider(getAuthProvider(authData.user));
+
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/settings/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -373,6 +437,18 @@ export default function SettingsPage() {
         };
         setProfile(nextProfile);
         sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(nextProfile));
+
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("email_change") === "success") {
+          setSuccess("Email changed successfully.");
+          window.history.replaceState(null, "", window.location.pathname);
+        } else if (params.get("email_change") === "error") {
+          setError(
+            params.get("message") ||
+              "Email change confirmation failed. Please try again."
+          );
+          window.history.replaceState(null, "", window.location.pathname);
+        }
       } catch (error) {
         console.error(error);
         if (!cached) setError(ui.failedLoad);
@@ -400,6 +476,12 @@ export default function SettingsPage() {
       ...profile,
       phone_number: e.target.value.replace(/\D/g, ""),
     });
+  }
+
+  function handleLanguageChange(e) {
+    const nextLanguage = e.target.value;
+    setProfile({ ...profile, preferred_language: nextLanguage });
+    setLang(nextLanguage);
   }
 
   async function handleProfileSubmit(e) {
@@ -465,19 +547,28 @@ export default function SettingsPage() {
   async function handleEmailSubmit(e) {
     e.preventDefault();
     resetMessages();
+
+    if (authProvider === "google") {
+      setError(ui.googleEmailChangeUnavailable);
+      return;
+    }
+
     setSavingEmail(true);
 
     try {
-      const { error } = await supabase.auth.updateUser({ email: emailForm.new_email });
+      const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(
+        "/dashboard/settings"
+      )}&type=email_change`;
+      const { error } = await supabase.auth.updateUser(
+        { email: emailForm.new_email },
+        { emailRedirectTo: redirectTo }
+      );
 
       if (error) {
         setError(error.message || ui.failedChangeEmail);
         return;
       }
 
-      const nextProfile = { ...profile, email: emailForm.new_email };
-      setProfile(nextProfile);
-      sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(nextProfile));
       setEmailForm({ new_email: "" });
       setSuccess(ui.emailSent);
     } catch (error) {
@@ -725,9 +816,7 @@ export default function SettingsPage() {
                 <label>{t.language}</label>
                 <select
                   value={profile.preferred_language}
-                  onChange={(e) =>
-                    setProfile({ ...profile, preferred_language: e.target.value })
-                  }
+                  onChange={handleLanguageChange}
                 >
                   <option value="en">{ui.english}</option>
                   <option value="ar">{ui.arabic}</option>
@@ -751,66 +840,88 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <form onSubmit={handleEmailSubmit} className={styles.settingsSubForm}>
-              <h3>{t.changeEmail}</h3>
+            {authProvider === "google" ? (
+              <div className={styles.settingsSubForm}>
+                <h3>{t.changeEmail}</h3>
+                <p className={styles.settingsText}>
+                  {ui.googleEmailChangeUnavailable}
+                </p>
+              </div>
+            ) : authProvider === "password" ? (
+              <form onSubmit={handleEmailSubmit} className={styles.settingsSubForm}>
+                <h3>{t.changeEmail}</h3>
 
-              <div className={styles.aiFormGrid}>
-                <div className={styles.aiField}>
-                  <label>{t.newEmail}</label>
-                  <input
-                    type="email"
-                    value={emailForm.new_email}
-                    onChange={(e) => setEmailForm({ new_email: e.target.value })}
-                    required
-                  />
+                <div className={styles.aiFormGrid}>
+                  <div className={styles.aiField}>
+                    <label>{t.newEmail}</label>
+                    <input
+                      type="email"
+                      value={emailForm.new_email}
+                      onChange={(e) => setEmailForm({ new_email: e.target.value })}
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div className={styles.settingsActions}>
-                <button className={styles.aiGenerateButton} disabled={savingEmail}>
-                  {savingEmail ? ui.saving : t.changeEmail}
-                </button>
-              </div>
-            </form>
+                <div className={styles.settingsActions}>
+                  <button className={styles.aiGenerateButton} disabled={savingEmail}>
+                    {savingEmail ? ui.saving : t.changeEmail}
+                  </button>
+                </div>
+              </form>
+            ) : null}
 
             <form onSubmit={handlePasswordSubmit} className={styles.settingsSubForm}>
               <div className={styles.passwordHeader}>
                 <h3>{t.changePassword}</h3>
-                <button
-                  type="button"
-                  className={styles.smallSecondary}
-                  onClick={() => setShowPasswords(!showPasswords)}
-                >
-                  {showPasswords ? t.hide : t.show}
-                </button>
               </div>
 
               <div className={styles.aiFormGrid}>
                 <div className={styles.aiField}>
                   <label>{t.newPassword}</label>
-                  <input
-                    type={showPasswords ? "text" : "password"}
-                    value={passwordForm.new_password}
-                    onChange={(e) =>
-                      setPasswordForm({ ...passwordForm, new_password: e.target.value })
-                    }
-                    required
-                  />
+                  <div className={styles.settingsPasswordWrapper}>
+                    <input
+                      type={showPasswords ? "text" : "password"}
+                      value={passwordForm.new_password}
+                      onChange={(e) =>
+                        setPasswordForm({ ...passwordForm, new_password: e.target.value })
+                      }
+                      required
+                    />
+                    <button
+                      type="button"
+                      className={styles.passwordToggleButton}
+                      onClick={() => setShowPasswords(!showPasswords)}
+                      aria-label={showPasswords ? t.hide : t.show}
+                    >
+                      <PasswordVisibilityIcon visible={showPasswords} />
+                    </button>
+                  </div>
                 </div>
 
                 <div className={styles.aiField}>
                   <label>{t.confirmPassword}</label>
-                  <input
-                    type={showPasswords ? "text" : "password"}
-                    value={passwordForm.confirm_password}
-                    onChange={(e) =>
-                      setPasswordForm({
-                        ...passwordForm,
-                        confirm_password: e.target.value,
-                      })
-                    }
-                    required
-                  />
+                  <div className={styles.settingsPasswordWrapper}>
+                    <input
+                      type={showPasswords ? "text" : "password"}
+                      value={passwordForm.confirm_password}
+                      onChange={(e) =>
+                        setPasswordForm({
+                          ...passwordForm,
+                          confirm_password: e.target.value,
+                        })
+                      }
+                      required
+                    />
+                    <button
+                      type="button"
+                      className={styles.passwordToggleButton}
+                      onClick={() => setShowPasswords(!showPasswords)}
+                      aria-label={showPasswords ? t.hide : t.show}
+                    >
+                      <PasswordVisibilityIcon visible={showPasswords} />
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -884,7 +995,7 @@ export default function SettingsPage() {
             </button>
           </section>
 
-          <section className={styles.settingsSection}>
+          <section className={`${styles.settingsSection} ${styles.dataPrivacySection}`}>
             <div className={styles.settingsSectionHeader}>
               <span className={styles.settingsSectionIcon}>R</span>
               <div>
@@ -924,33 +1035,9 @@ export default function SettingsPage() {
             </div>
           </section>
 
-          <section className={styles.settingsSection}>
-            <div className={styles.settingsSectionHeader}>
-              <span className={styles.settingsSectionIcon}>?</span>
-              <div>
-                <h2>{t.support}</h2>
-                <p>{ui.supportDescription}</p>
-              </div>
-            </div>
-
-            <p className={styles.settingsText}>{t.supportText}</p>
-            <a href="mailto:info@alsaeh.net" className={styles.supportLink}>
-              info@alsaeh.net
-            </a>
-          </section>
-
-          <section className={styles.settingsSection}>
-            <div className={styles.settingsSectionHeader}>
-              <span className={styles.settingsSectionIcon}>i</span>
-              <div>
-                <h2>{t.about}</h2>
-                <p>{ui.version}</p>
-              </div>
-            </div>
-            <p className={styles.settingsText}>{t.aboutText}</p>
-          </section>
         </aside>
       </div>
+
     </div>
   );
 }

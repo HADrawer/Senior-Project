@@ -78,9 +78,12 @@ export default function DashboardLayout({ children }) {
   useEffect(() => {
     async function loadUser() {
       const cached = sessionStorage.getItem("auth_user");
+      let cachedUser = null;
+
       if (cached) {
         try {
-          setUser(JSON.parse(cached));
+          cachedUser = JSON.parse(cached);
+          setUser(cachedUser);
         } catch {
           sessionStorage.removeItem("auth_user");
         }
@@ -91,6 +94,10 @@ export default function DashboardLayout({ children }) {
         if (!data.session) {
           router.replace("/login");
           return;
+        }
+
+        if (cachedUser) {
+          setCheckingAuth(false);
         }
 
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {

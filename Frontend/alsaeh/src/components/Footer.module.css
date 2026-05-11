@@ -11,16 +11,16 @@
 .inner {
   width: min(1180px, calc(100% - 48px));
   margin: 0 auto;
-  padding: 34px 0 26px;
+  padding: 36px 0 28px;
   display: grid;
-  grid-template-columns: minmax(240px, 1.25fr) minmax(260px, 1fr) minmax(220px, 0.8fr);
-  gap: 32px;
+  grid-template-columns: minmax(240px, 1fr) minmax(260px, 0.9fr) minmax(280px, 1fr);
+  gap: 44px;
   align-items: start;
 }
 
 .brandSection {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .brand {
@@ -45,6 +45,7 @@
 }
 
 .brandSection p,
+.support p,
 .project span,
 .bottom p {
   color: var(--text-muted);
@@ -52,20 +53,24 @@
 
 .brandSection p {
   max-width: 430px;
+  margin: 0;
   font-size: 0.95rem;
-  line-height: 1.75;
+  line-height: 1.65;
 }
 
 .nav {
   display: grid;
   gap: 14px;
+  justify-self: center;
 }
 
-.nav h2 {
+.nav h2,
+.support h2 {
   color: var(--text-main);
   font-size: 0.92rem;
   font-weight: 800;
   letter-spacing: 0;
+  margin: 0;
 }
 
 .linkGrid {
@@ -88,24 +93,40 @@
   transform: translateY(-1px);
 }
 
+.metaColumn {
+  display: grid;
+  gap: 18px;
+}
+
+.support,
 .project {
   display: grid;
   gap: 8px;
-  padding: 16px;
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--bg-card) 78%, transparent);
 }
 
+.support h2,
 .project p {
   color: var(--text-main);
   font-weight: 800;
   line-height: 1.45;
+  margin: 0;
 }
 
+.support p,
 .project span {
+  margin: 0;
   font-size: 0.9rem;
   line-height: 1.6;
+}
+
+.support a {
+  color: var(--primary);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.support a:hover {
+  text-decoration: underline;
 }
 
 .bottom {
@@ -116,24 +137,35 @@
 }
 
 .bottom p {
+  margin: 0;
   font-size: 0.86rem;
 }
 
 [dir="rtl"] .brand,
 [dir="rtl"] .brandSection,
 [dir="rtl"] .nav,
+[dir="rtl"] .metaColumn,
 [dir="rtl"] .project,
 [dir="rtl"] .bottom {
   text-align: right;
 }
 
+[dir="rtl"] .nav {
+  justify-self: center;
+}
+
 @media (max-width: 920px) {
   .inner {
     grid-template-columns: 1fr 1fr;
+    gap: 28px;
   }
 
   .brandSection {
     grid-column: 1 / -1;
+  }
+
+  .nav {
+    justify-self: start;
   }
 }
 
@@ -147,6 +179,10 @@
     grid-template-columns: 1fr;
     gap: 24px;
     padding-top: 28px;
+  }
+
+  .nav {
+    justify-self: stretch;
   }
 
   .linkGrid {
