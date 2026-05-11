@@ -7,9 +7,11 @@ import styles from "./Footer.module.css";
 const footerContent = {
   en: {
     brand: "Alsaeh.bh",
-    description:
-      "A Bahrain tourism planning platform for personalized itineraries, smarter recommendations, and easier trip organization.",
+    description: "AI-powered tourism planning for Bahrain.",
     navigation: "Navigation",
+    support: "Support",
+    supportText: "For questions or assistance, contact us at",
+    supportEmail: "info@alsaeh.net",
     links: [
       { label: "Home", href: "/" },
       { label: "Dashboard", href: "/dashboard" },
@@ -24,9 +26,11 @@ const footerContent = {
   },
   ar: {
     brand: "السائح.البحرين",
-    description:
-      "منصة لتخطيط السياحة في البحرين تساعدك على إنشاء جداول مخصصة وتوصيات أذكى وتنظيم أسهل للرحلات.",
+    description: "AI-powered tourism planning for Bahrain.",
     navigation: "التنقل",
+    support: "Support",
+    supportText: "For questions or assistance, contact us at",
+    supportEmail: "info@alsaeh.net",
     links: [
       { label: "الرئيسية", href: "/" },
       { label: "لوحة التحكم", href: "/dashboard" },
@@ -67,10 +71,20 @@ export default function Footer() {
           </div>
         </nav>
 
-        <section className={styles.project}>
-          <p>{t.project}</p>
-          <span>{t.contact}</span>
-        </section>
+        <div className={styles.metaColumn}>
+          <section className={styles.support}>
+            <h2>{t.support}</h2>
+            <p>
+              {t.supportText}{" "}
+              <a href={`mailto:${t.supportEmail}`}>{t.supportEmail}</a>
+            </p>
+          </section>
+
+          <section className={styles.project}>
+            <p>{t.project}</p>
+            <span>{t.contact}</span>
+          </section>
+        </div>
       </div>
 
       <div className={styles.bottom}>

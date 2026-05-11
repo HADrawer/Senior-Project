@@ -164,7 +164,16 @@ async def get_current_user(authorization: str | None = Header(default=None)):
                 if not user.get("is_active", True):
                     raise HTTPException(status_code=403, detail="Account is disabled")
 
-                if not user.get("email") and email:
+                if email and user.get("email") != email:
+                    cur.execute(
+                        """
+                        UPDATE profiles
+                        SET email = %s
+                        WHERE id = %s
+                        """,
+                        (email, user_id),
+                    )
+                    conn.commit()
                     user["email"] = email
 
     except HTTPException:

@@ -17,23 +17,58 @@ export default function AuthCallbackPage() {
 
   useEffect(() => {
     async function finishAuth() {
+      let nextPath = "/dashboard";
+      let callbackType = "";
+
       try {
-        const hasCode =
-          typeof window !== "undefined" &&
-          new URLSearchParams(window.location.search).has("code");
+        const callbackUrl = new URL(window.location.href);
+        const hashParams = new URLSearchParams(callbackUrl.hash.replace(/^#/, ""));
+        const errorDescription =
+          callbackUrl.searchParams.get("error_description") ||
+          hashParams.get("error_description");
+
+        nextPath = callbackUrl.searchParams.get("next") || "/dashboard";
+        callbackType = callbackUrl.searchParams.get("type") || hashParams.get("type") || "";
+
+        if (!nextPath.startsWith("/")) {
+          nextPath = "/dashboard";
+        }
+
+        if (errorDescription) {
+          throw new Error(errorDescription);
+        }
+
+        const hasCode = callbackUrl.searchParams.has("code");
 
         if (hasCode) {
           await supabase.auth.exchangeCodeForSession(window.location.href);
         }
 
+        await supabase.auth.refreshSession();
         const { data } = await supabase.auth.getSession();
 
         if (data.session) {
-          router.replace("/dashboard");
+          sessionStorage.removeItem("settings_profile");
+          sessionStorage.removeItem("auth_user");
+
+          if (callbackType === "email_change") {
+            router.replace("/dashboard/settings?email_change=success");
+            return;
+          }
+
+          router.replace(nextPath);
           return;
         }
       } catch (error) {
         console.error("Auth callback error:", error);
+
+        if (callbackType === "email_change") {
+          const message = encodeURIComponent(
+            error?.message || "Email change confirmation failed."
+          );
+          router.replace(`/dashboard/settings?email_change=error&message=${message}`);
+          return;
+        }
       }
 
       router.replace("/login");
