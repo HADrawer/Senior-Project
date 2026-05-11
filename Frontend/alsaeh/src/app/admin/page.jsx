@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./admin.module.css";
 import dashboardStyles from "../dashboard/dashboard.module.css";
@@ -52,6 +52,59 @@ function isFreshCache(cache) {
   return cache && Date.now() - cache.savedAt < ADMIN_CACHE_TTL_MS;
 }
 
+function matchesSearch(values, query) {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) return true;
+  return values
+    .filter(Boolean)
+    .some((value) => String(value).toLowerCase().includes(normalizedQuery));
+}
+
+function downloadBlob(content, filename, type) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function csvEscape(value) {
+  const text = value == null ? "" : String(value);
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function serializeLogsToCsv(logs) {
+  const headers = [
+    "id",
+    "action_type",
+    "user_name",
+    "user_email",
+    "entity_type",
+    "entity_id",
+    "created_at",
+    "metadata",
+  ];
+  const rows = logs.map((log) => [
+    log.id,
+    log.action_type,
+    log.user_name,
+    log.user_email,
+    log.entity_type,
+    log.entity_id,
+    log.created_at,
+    JSON.stringify(log.metadata_json || {}),
+  ]);
+  return [headers, ...rows].map((row) => row.map(csvEscape).join(",")).join("\n");
+}
+
+function getDownloadDate() {
+  return new Date().toISOString().replace(/[:.]/g, "-");
+}
+
 export default function AdminPage() {
   const router = useRouter();
 
@@ -95,8 +148,42 @@ export default function AdminPage() {
       aiGeneratedPlans: "AI Generated Plans",
       chatMessages: "Chat Messages",
       usageLogs: "Usage Logs",
-      popularCategories: "Popular Categories",
-      noCategoryData: "No category data yet.",
+      popularPreferences: "Popular Preferences",
+      noPreferenceData: "No preference data yet.",
+      travelStyles: "Travel Styles",
+      noTravelStyleData: "No travel style data yet.",
+      authMethods: "Auth Methods",
+      noAuthMethodData: "No auth method data yet.",
+      totalLabel: "Total",
+      googleAuthUsers: "Google Sign In",
+      passwordAuthUsers: "Email/Password",
+      analyticsLabels: {
+        attraction: "Attraction",
+        restaurant: "Restaurant",
+        cafe: "Cafe",
+        activity: "Activity",
+        beach: "Beach",
+        shopping: "Shopping",
+        historical_site: "Historical Site",
+        museum: "Museum",
+        relaxed: "Relaxed",
+        adventure: "Adventure",
+        "family-friendly": "Family Friendly",
+        friends: "Friends",
+        "solo-travel": "Solo Travel",
+        cultural: "Cultural",
+        "budget-friendly": "Budget Friendly",
+        luxury: "Luxury",
+      },
+      searchUsers: "Search users",
+      searchPlans: "Search plans",
+      searchLogs: "Search logs",
+      noUsersMatch: "No users match your search.",
+      noPlansMatch: "No plans match your search.",
+      noLogsMatch: "No logs match your search.",
+      downloadLogs: "Download Logs",
+      downloadJson: "Download JSON",
+      downloadCsv: "Download as CSV",
       unknown: "Unknown",
       noUsers: "No users found.",
       name: "Name",
@@ -172,8 +259,42 @@ export default function AdminPage() {
       aiGeneratedPlans: "خطط مولدة بالذكاء الاصطناعي",
       chatMessages: "رسائل المحادثة",
       usageLogs: "سجلات الاستخدام",
-      popularCategories: "الفئات الشائعة",
-      noCategoryData: "لا توجد بيانات فئات بعد.",
+      popularPreferences: "التفضيلات الشائعة",
+      noPreferenceData: "لا توجد بيانات تفضيلات بعد.",
+      travelStyles: "أنماط الرحلات",
+      noTravelStyleData: "لا توجد بيانات أنماط رحلات بعد.",
+      authMethods: "طرق تسجيل الدخول",
+      noAuthMethodData: "لا توجد بيانات طرق تسجيل دخول بعد.",
+      totalLabel: "الإجمالي",
+      googleAuthUsers: "تسجيل الدخول عبر Google",
+      passwordAuthUsers: "البريد وكلمة المرور",
+      analyticsLabels: {
+        attraction: "معالم سياحية",
+        restaurant: "مطاعم",
+        cafe: "مقاهي",
+        activity: "أنشطة",
+        beach: "شواطئ",
+        shopping: "تسوق",
+        historical_site: "مواقع تاريخية",
+        museum: "متاحف",
+        relaxed: "هادئ",
+        adventure: "مغامرة",
+        "family-friendly": "مناسب للعائلة",
+        friends: "الأصدقاء",
+        "solo-travel": "رحلة فردية",
+        cultural: "ثقافي",
+        "budget-friendly": "اقتصادي",
+        luxury: "فاخر",
+      },
+      searchUsers: "البحث في المستخدمين",
+      searchPlans: "البحث في الخطط",
+      searchLogs: "البحث في السجلات",
+      noUsersMatch: "لا يوجد مستخدمون يطابقون البحث.",
+      noPlansMatch: "لا توجد خطط تطابق البحث.",
+      noLogsMatch: "لا توجد سجلات تطابق البحث.",
+      downloadLogs: "تنزيل السجلات",
+      downloadJson: "تنزيل JSON",
+      downloadCsv: "تنزيل كملف CSV",
       unknown: "غير معروف",
       noUsers: "لا يوجد مستخدمون.",
       name: "الاسم",
@@ -485,38 +606,6 @@ export default function AdminPage() {
     if (tab === "logs") await loadLogs();
   }
 
-  async function updateUser(userId, payload) {
-    try {
-      const token = await getAdminToken();
-      if (!token) {
-        router.replace("/login");
-        return;
-      }
-
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/users/${userId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const result = await safeJson(res);
-
-      if (!res.ok) {
-        alert(getErrorMessage(result.detail, t.failedUpdateUser));
-        return;
-      }
-
-      sessionStorage.removeItem(ADMIN_CACHE_KEYS.users);
-      await loadUsers();
-    } catch (error) {
-      console.error(error);
-      alert(t.unableToConnect);
-    }
-  }
-
   async function toggleUserStatus(user) {
     const userId = user.id;
     const nextIsActive = !user.is_active;
@@ -532,7 +621,7 @@ export default function AdminPage() {
         return;
       }
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/users/${userId}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/users/${userId}/toggle-status`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -592,39 +681,6 @@ export default function AdminPage() {
       sessionStorage.removeItem(ADMIN_CACHE_KEYS.plans);
       sessionStorage.removeItem(ADMIN_CACHE_KEYS.logs);
       await loadUsers();
-    } catch (error) {
-      console.error(error);
-      alert(t.unableToConnect);
-    }
-  }
-
-  async function updatePlan(planId, payload) {
-    try {
-      const token = await getAdminToken();
-      if (!token) {
-        router.replace("/login");
-        return;
-      }
-
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/plans/${planId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const result = await safeJson(res);
-
-      if (!res.ok) {
-        alert(getErrorMessage(result.detail, t.failedUpdatePlan));
-        return;
-      }
-
-      sessionStorage.removeItem(ADMIN_CACHE_KEYS.plans);
-      sessionStorage.removeItem(ADMIN_CACHE_KEYS.overview);
-      await loadPlans();
     } catch (error) {
       console.error(error);
       alert(t.unableToConnect);
@@ -842,7 +898,6 @@ export default function AdminPage() {
           {!sectionLoading && activeTab === "users" && (
             <UsersSection
               users={users}
-              onUpdateUser={updateUser}
               onToggleUserStatus={toggleUserStatus}
               onDeleteUser={deleteUser}
               t={t}
@@ -852,7 +907,6 @@ export default function AdminPage() {
           {!sectionLoading && activeTab === "plans" && (
             <PlansSection
               plans={plans}
-              onUpdatePlan={updatePlan}
               onDeletePlan={deletePlan}
               t={t}
             />
@@ -886,402 +940,333 @@ function OverviewSection({ data, t }) {
         <StatCard title={t.usageLogs} value={data.total_logs} />
       </section>
 
-      <section className={styles.panel}>
-        <h2>{t.popularCategories}</h2>
-
-        {!data.popular_categories || data.popular_categories.length === 0 ? (
-          <p className={styles.empty}>{t.noCategoryData}</p>
-        ) : (
-          <div className={styles.categoryList}>
-            {data.popular_categories.map((item, index) => (
-              <div key={index} className={styles.categoryItem}>
-                <span>{item.category || t.unknown}</span>
-                <strong>{item.total}</strong>
-              </div>
-            ))}
-          </div>
-        )}
+      <section className={styles.analyticsGrid}>
+        <AnalyticsChartCard
+          title={t.popularPreferences}
+          emptyText={t.noPreferenceData}
+          items={data.popular_preferences}
+          labelKey="preference"
+          ariaLabel={t.popularPreferences}
+          t={t}
+        />
+        <AnalyticsChartCard
+          title={t.travelStyles}
+          emptyText={t.noTravelStyleData}
+          items={data.popular_travel_styles}
+          labelKey="travel_style"
+          ariaLabel={t.travelStyles}
+          t={t}
+        />
+        <AnalyticsChartCard
+          title={t.authMethods}
+          emptyText={t.noAuthMethodData}
+          items={[
+            { auth_method: t.googleAuthUsers, total: data.google_auth_users || 0 },
+            { auth_method: t.passwordAuthUsers, total: data.password_auth_users || 0 },
+          ].filter((item) => item.total > 0)}
+          labelKey="auth_method"
+          ariaLabel={t.authMethods}
+          t={t}
+        />
       </section>
     </>
   );
 }
 
-function UsersSection({ users, onUpdateUser, onToggleUserStatus, onDeleteUser, t }) {
-  if (!users.length) {
-    return (
-      <section className={styles.panel}>
-        <h2>{t.users}</h2>
-        <p className={styles.empty}>{t.noUsers}</p>
-      </section>
-    );
+function AnalyticsChartCard({ title, emptyText, items, labelKey, ariaLabel, t }) {
+  return (
+    <div className={styles.chartCard}>
+      <h2>{title}</h2>
+      {!items || items.length === 0 ? (
+        <p className={styles.empty}>{emptyText}</p>
+      ) : (
+        <AnalyticsPieChart
+          items={items}
+          labelKey={labelKey}
+          ariaLabel={ariaLabel}
+          t={t}
+        />
+      )}
+    </div>
+  );
+}
+
+function AnalyticsPieChart({ items, labelKey, ariaLabel, t }) {
+  const [hoveredIndex, setHoveredIndex] = useState(null);
+  const total = items.reduce((sum, item) => sum + Number(item.total || 0), 0);
+  const slices = items.reduce(
+    (acc, item, index) => {
+      const value = Number(item.total || 0);
+      const start = total > 0 ? acc.runningTotal / total : 0;
+      const nextTotal = acc.runningTotal + value;
+      const end = total > 0 ? nextTotal / total : 0;
+      const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+
+      return {
+        runningTotal: nextTotal,
+        items: [
+          ...acc.items,
+          {
+            ...item,
+            value,
+            path: describeSlice(100, 100, 78, start, end),
+            colorClass: styles[`pieSlice${(index % 8) + 1}`],
+            label: item[labelKey] || t.unknown,
+            percentage,
+          },
+        ],
+      };
+    },
+    { runningTotal: 0, items: [] }
+  ).items;
+
+  return (
+    <div className={styles.pieChartWrap}>
+      <svg className={styles.pieChart} viewBox="0 0 200 200" role="img" aria-label={ariaLabel}>
+        {slices.map((slice, index) => (
+          <path
+            key={`${slice.label}-${index}`}
+            className={`${styles.pieSlice} ${slice.colorClass}`}
+            d={slice.path}
+            onMouseEnter={() => setHoveredIndex(index)}
+            onMouseLeave={() => setHoveredIndex(null)}
+            onFocus={() => setHoveredIndex(index)}
+            onBlur={() => setHoveredIndex(null)}
+            tabIndex={0}
+          >
+            <title>{`${formatAnalyticsLabel(slice.label, t)}: ${slice.total} (${slice.percentage}%)`}</title>
+          </path>
+        ))}
+        <circle cx="100" cy="100" r="42" className={styles.pieCenter} />
+        <text x="100" y="96" textAnchor="middle" className={styles.pieCenterValue}>
+          {total}
+        </text>
+        <text x="100" y="114" textAnchor="middle" className={styles.pieCenterLabel}>
+          {t.totalLabel}
+        </text>
+      </svg>
+
+      <div className={styles.pieLegend}>
+        {slices.map((slice, index) => (
+          <div
+            key={`${slice.label}-legend-${index}`}
+            className={`${styles.pieLegendItem} ${hoveredIndex === index ? styles.activeLegendItem : ""} ${slice.colorClass}`}
+            title={`${formatAnalyticsLabel(slice.label, t)}: ${slice.total} (${slice.percentage}%)`}
+          >
+            <span className={`${styles.pieLegendSwatch} ${slice.colorClass}`} />
+            <strong>{formatAnalyticsLabel(slice.label, t)}</strong>
+            <span>{slice.total}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function formatAnalyticsLabel(value, t) {
+  const rawValue = String(value || "");
+  if (t.analyticsLabels?.[rawValue]) return t.analyticsLabels[rawValue];
+
+  return rawValue
+    .replaceAll("_", " ")
+    .replaceAll("-", " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function polarToCartesian(centerX, centerY, radius, fraction) {
+  const angle = fraction * 360 - 90;
+  const radians = (angle * Math.PI) / 180;
+  return {
+    x: centerX + radius * Math.cos(radians),
+    y: centerY + radius * Math.sin(radians),
+  };
+}
+
+function describeSlice(x, y, radius, startFraction, endFraction) {
+  if (endFraction - startFraction >= 0.9999) {
+    return [
+      `M ${x} ${y}`,
+      `m 0 -${radius}`,
+      `a ${radius} ${radius} 0 1 1 0 ${radius * 2}`,
+      `a ${radius} ${radius} 0 1 1 0 -${radius * 2}`,
+      "Z",
+    ].join(" ");
   }
+
+  const start = polarToCartesian(x, y, radius, endFraction);
+  const end = polarToCartesian(x, y, radius, startFraction);
+  const largeArcFlag = endFraction - startFraction <= 0.5 ? "0" : "1";
+
+  return [
+    `M ${x} ${y}`,
+    `L ${start.x} ${start.y}`,
+    `A ${radius} ${radius} 0 ${largeArcFlag} 0 ${end.x} ${end.y}`,
+    "Z",
+  ].join(" ");
+}
+
+function UsersSection({ users, onToggleUserStatus, onDeleteUser, t }) {
+  const [search, setSearch] = useState("");
+  const filteredUsers = useMemo(
+    () =>
+      users.filter((user) =>
+        matchesSearch([user.full_name, user.email, user.role], search)
+      ),
+    [users, search]
+  );
 
   return (
     <section className={styles.panel}>
-      <h2>{t.users}</h2>
-
-      <div className={styles.tableWrap}>
-        <table className={styles.adminTable}>
-          <thead>
-            <tr>
-              <th>{t.name}</th>
-              <th>{t.email}</th>
-              <th>{t.phone}</th>
-              <th>{t.role}</th>
-              <th>{t.language}</th>
-              <th>{t.status}</th>
-              <th>{t.actions}</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {users.map((user) => (
-              <UserRow
-                key={user.id}
-                user={user}
-                onUpdateUser={onUpdateUser}
-                onToggleUserStatus={onToggleUserStatus}
-                onDeleteUser={onDeleteUser}
-                t={t}
-              />
-            ))}
-          </tbody>
-        </table>
+      <div className={styles.sectionHeader}>
+        <h2>{t.users}</h2>
       </div>
+
+      <SearchInput value={search} onChange={setSearch} placeholder={t.searchUsers} />
+
+      {!users.length ? (
+        <p className={styles.empty}>{t.noUsers}</p>
+      ) : !filteredUsers.length ? (
+        <p className={styles.empty}>{t.noUsersMatch}</p>
+      ) : (
+        <div className={styles.tableWrap}>
+          <table className={styles.adminTable}>
+            <thead>
+              <tr>
+                <th>{t.name}</th>
+                <th>{t.email}</th>
+                <th>{t.phone}</th>
+                <th>{t.role}</th>
+                <th>{t.language}</th>
+                <th>{t.status}</th>
+                <th>{t.actions}</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {filteredUsers.map((user) => (
+                <UserRow
+                  key={user.id}
+                  user={user}
+                  onToggleUserStatus={onToggleUserStatus}
+                  onDeleteUser={onDeleteUser}
+                  t={t}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </section>
   );
 }
 
-function UserRow({ user, onUpdateUser, onToggleUserStatus, onDeleteUser, t }) {
-  const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({
-    full_name: user.full_name || "",
-    phone_number: user.phone_number || "",
-    preferred_language: user.preferred_language || "en",
-    is_active: user.is_active,
-  });
-
+function UserRow({ user, onToggleUserStatus, onDeleteUser, t }) {
   return (
     <tr>
-      <td>
-        {editing ? (
-          <input
-            className={styles.inlineInput}
-            value={form.full_name}
-            onChange={(e) => setForm({ ...form, full_name: e.target.value })}
-          />
-        ) : (
-          user.full_name
-        )}
-      </td>
-
+      <td>{user.full_name || "-"}</td>
       <td>{user.email}</td>
-
-      <td>
-        {editing ? (
-          <input
-            className={styles.inlineInput}
-            value={form.phone_number}
-            onChange={(e) => setForm({ ...form, phone_number: e.target.value })}
-          />
-        ) : (
-          user.phone_number || "-"
-        )}
-      </td>
-
+      <td>{user.phone_number || "-"}</td>
       <td>{user.role}</td>
-
-      <td>
-        {editing ? (
-          <select
-            className={styles.inlineInput}
-            value={form.preferred_language}
-            onChange={(e) =>
-              setForm({ ...form, preferred_language: e.target.value })
-            }
-          >
-            <option value="en">en</option>
-            <option value="ar">ar</option>
-          </select>
-        ) : (
-          user.preferred_language
-        )}
-      </td>
-
-      <td>
-        {editing ? (
-          <select
-            className={styles.inlineInput}
-            value={String(form.is_active)}
-            onChange={(e) =>
-              setForm({ ...form, is_active: e.target.value === "true" })
-            }
-          >
-            <option value="true">{t.active}</option>
-            <option value="false">{t.disabled}</option>
-          </select>
-        ) : user.is_active ? (
-          t.active
-        ) : (
-          t.disabled
-        )}
-      </td>
-
+      <td>{user.preferred_language}</td>
+      <td>{user.is_active ? t.active : t.disabled}</td>
       <td>
         <div className={styles.rowActions}>
-          {editing ? (
-            <>
-              <button
-                className={styles.smallPrimary}
-                onClick={() => {
-                  onUpdateUser(user.id, form);
-                  setEditing(false);
-                }}
-              >
-                {t.save}
-              </button>
+          <button
+            className={user.is_active ? styles.smallWarning : styles.smallPrimary}
+            onClick={() => onToggleUserStatus(user)}
+          >
+            {user.is_active ? t.disable : t.enable}
+          </button>
 
-              <button
-                className={styles.smallSecondary}
-                onClick={() => {
-                  setForm({
-                    full_name: user.full_name || "",
-                    phone_number: user.phone_number || "",
-                    preferred_language: user.preferred_language || "en",
-                    is_active: user.is_active,
-                  });
-                  setEditing(false);
-                }}
-              >
-                {t.cancel}
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                className={styles.smallSecondary}
-                onClick={() => setEditing(true)}
-              >
-                {t.edit}
-              </button>
-
-              <button
-                className={styles.smallDanger}
-                onClick={() => onToggleUserStatus(user)}
-              >
-                {user.is_active ? t.disable : t.enable}
-              </button>
-
-              <button
-                className={styles.smallDanger}
-                onClick={() => onDeleteUser(user.id)}
-              >
-                {t.delete}
-              </button>
-            </>
-          )}
+          <button
+            className={styles.smallDanger}
+            onClick={() => onDeleteUser(user.id)}
+          >
+            {t.delete}
+          </button>
         </div>
       </td>
     </tr>
   );
 }
 
-function PlansSection({ plans, onUpdatePlan, onDeletePlan, t }) {
-  if (!plans.length) {
-    return (
-      <section className={styles.panel}>
-        <h2>{t.plans}</h2>
-        <p className={styles.empty}>{t.noPlans}</p>
-      </section>
-    );
-  }
+function PlansSection({ plans, onDeletePlan, t }) {
+  const [search, setSearch] = useState("");
+  const filteredPlans = useMemo(
+    () =>
+      plans.filter((plan) =>
+        matchesSearch([plan.title || t.untitled, plan.user_name, plan.user_email], search)
+      ),
+    [plans, search, t.untitled]
+  );
 
   return (
     <section className={styles.panel}>
-      <h2>{t.plans}</h2>
-
-      <div className={styles.tableWrap}>
-        <table className={styles.adminTable}>
-          <thead>
-            <tr>
-              <th>{t.planTitle}</th>
-              <th>{t.user}</th>
-              <th>{t.days}</th>
-              <th>{t.budget}</th>
-              <th>{t.people}</th>
-              <th>{t.status}</th>
-              <th>{t.ai || "AI"}</th>
-              <th>{t.actions}</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {plans.map((plan) => (
-              <PlanRow
-                key={plan.id}
-                plan={plan}
-                onUpdatePlan={onUpdatePlan}
-                onDeletePlan={onDeletePlan}
-                t={t}
-              />
-            ))}
-          </tbody>
-        </table>
+      <div className={styles.sectionHeader}>
+        <h2>{t.plans}</h2>
       </div>
+
+      <SearchInput value={search} onChange={setSearch} placeholder={t.searchPlans} />
+
+      {!plans.length ? (
+        <p className={styles.empty}>{t.noPlans}</p>
+      ) : !filteredPlans.length ? (
+        <p className={styles.empty}>{t.noPlansMatch}</p>
+      ) : (
+        <div className={styles.tableWrap}>
+          <table className={styles.adminTable}>
+            <thead>
+              <tr>
+                <th>{t.planTitle}</th>
+                <th>{t.user}</th>
+                <th>{t.days}</th>
+                <th>{t.budget}</th>
+                <th>{t.people}</th>
+                <th>{t.status}</th>
+                <th>{t.ai || "AI"}</th>
+                <th>{t.actions}</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {filteredPlans.map((plan) => (
+                <PlanRow
+                  key={plan.id}
+                  plan={plan}
+                  onDeletePlan={onDeletePlan}
+                  t={t}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </section>
   );
 }
 
-function PlanRow({ plan, onUpdatePlan, onDeletePlan, t }) {
-  const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({
-    title: plan.title || "",
-    days: plan.days || 1,
-    budget: plan.budget ?? "",
-    people_count: plan.people_count || 1,
-    status: plan.status || "saved",
-  });
-
+function PlanRow({ plan, onDeletePlan, t }) {
   return (
     <tr>
-      <td>
-        {editing ? (
-          <input
-            className={styles.inlineInput}
-            value={form.title}
-            onChange={(e) => setForm({ ...form, title: e.target.value })}
-          />
-        ) : (
-          plan.title || t.untitled
-        )}
-      </td>
-
+      <td>{plan.title || t.untitled}</td>
       <td>
         <strong>{plan.user_name || t.unknown}</strong>
         <br />
         <small>{plan.user_email || "-"}</small>
       </td>
-
-      <td>
-        {editing ? (
-          <input
-            type="number"
-            min="1"
-            className={styles.inlineInput}
-            value={form.days}
-            onChange={(e) => setForm({ ...form, days: Number(e.target.value) })}
-          />
-        ) : (
-          plan.days
-        )}
-      </td>
-
-      <td>
-        {editing ? (
-          <input
-            type="number"
-            min="0"
-            className={styles.inlineInput}
-            value={form.budget}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                budget: e.target.value === "" ? "" : Number(e.target.value),
-              })
-            }
-          />
-        ) : (
-          `${plan.budget ?? 0} BHD`
-        )}
-      </td>
-
-      <td>
-        {editing ? (
-          <input
-            type="number"
-            min="1"
-            className={styles.inlineInput}
-            value={form.people_count}
-            onChange={(e) =>
-              setForm({ ...form, people_count: Number(e.target.value) })
-            }
-          />
-        ) : (
-          plan.people_count || 1
-        )}
-      </td>
-
-      <td>
-        {editing ? (
-          <select
-            className={styles.inlineInput}
-            value={form.status}
-            onChange={(e) => setForm({ ...form, status: e.target.value })}
-          >
-            <option value="draft">draft</option>
-            <option value="saved">saved</option>
-            <option value="deleted">deleted</option>
-          </select>
-        ) : (
-          plan.status
-        )}
-      </td>
-
+      <td>{plan.days}</td>
+      <td>{`${plan.budget ?? 0} BHD`}</td>
+      <td>{plan.people_count || 1}</td>
+      <td>{plan.status}</td>
       <td>{plan.generated_by_ai ? t.yes : t.no}</td>
-
       <td>
         <div className={styles.rowActions}>
-          {editing ? (
-            <>
-              <button
-                className={styles.smallPrimary}
-                onClick={() => {
-                  onUpdatePlan(plan.id, {
-                    title: form.title,
-                    days: form.days,
-                    budget: form.budget === "" ? null : form.budget,
-                    people_count: form.people_count,
-                    status: form.status,
-                  });
-                  setEditing(false);
-                }}
-              >
-                {t.save}
-              </button>
-
-              <button
-                className={styles.smallSecondary}
-                onClick={() => {
-                  setForm({
-                    title: plan.title || "",
-                    days: plan.days || 1,
-                    budget: plan.budget ?? "",
-                    people_count: plan.people_count || 1,
-                    status: plan.status || "saved",
-                  });
-                  setEditing(false);
-                }}
-              >
-                {t.cancel}
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                className={styles.smallSecondary}
-                onClick={() => setEditing(true)}
-              >
-                {t.edit}
-              </button>
-
-              <button
-                className={styles.smallDanger}
-                onClick={() => onDeletePlan(plan.id)}
-              >
-                {t.delete}
-              </button>
-            </>
-          )}
+          <button
+            className={styles.smallDanger}
+            onClick={() => onDeletePlan(plan.id)}
+          >
+            {t.delete}
+          </button>
         </div>
       </td>
     </tr>
@@ -1289,59 +1274,107 @@ function PlanRow({ plan, onUpdatePlan, onDeletePlan, t }) {
 }
 
 function LogsSection({ logs, t }) {
-  if (!logs.length) {
-    return (
-      <section className={styles.panel}>
-        <h2>{t.logs}</h2>
-        <p className={styles.empty}>{t.noLogs}</p>
-      </section>
+  const [search, setSearch] = useState("");
+  const filteredLogs = useMemo(
+    () =>
+      logs.filter((log) =>
+        matchesSearch([log.user_email, log.user_name, log.action_type], search)
+      ),
+    [logs, search]
+  );
+
+  function downloadJson() {
+    downloadBlob(
+      JSON.stringify(logs, null, 2),
+      `alsaeh-system-logs-${getDownloadDate()}.json`,
+      "application/json"
+    );
+  }
+
+  function downloadCsv() {
+    downloadBlob(
+      serializeLogsToCsv(logs),
+      `alsaeh-system-logs-${getDownloadDate()}.csv`,
+      "text/csv;charset=utf-8"
     );
   }
 
   return (
     <section className={styles.panel}>
-      <h2>{t.usageLogs}</h2>
-
-      <div className={styles.tableWrap}>
-        <table className={styles.adminTable}>
-          <thead>
-            <tr>
-              <th>{t.action}</th>
-              <th>{t.user}</th>
-              <th>{t.entity}</th>
-              <th>{t.metadata}</th>
-              <th>{t.date}</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {logs.map((log) => (
-              <tr key={log.id}>
-                <td>{log.action_type}</td>
-
-                <td>
-                  <strong>{log.user_name || t.unknown}</strong>
-                  <br />
-                  <small>{log.user_email || "-"}</small>
-                </td>
-
-                <td>
-                  {log.entity_type || "-"} #{log.entity_id || "-"}
-                </td>
-
-                <td>
-                  <pre className={styles.metadataBox}>
-                    {JSON.stringify(log.metadata_json || {}, null, 2)}
-                  </pre>
-                </td>
-
-                <td>{new Date(log.created_at).toLocaleString()}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className={styles.sectionHeader}>
+        <h2>{t.usageLogs}</h2>
+        <div className={styles.downloadActions}>
+          <button className={styles.smallPrimary} onClick={downloadJson} disabled={!logs.length}>
+            {t.downloadLogs}
+          </button>
+          <button className={styles.smallSecondary} onClick={downloadCsv} disabled={!logs.length}>
+            {t.downloadCsv}
+          </button>
+        </div>
       </div>
+
+      <SearchInput value={search} onChange={setSearch} placeholder={t.searchLogs} />
+
+      {!logs.length ? (
+        <p className={styles.empty}>{t.noLogs}</p>
+      ) : !filteredLogs.length ? (
+        <p className={styles.empty}>{t.noLogsMatch}</p>
+      ) : (
+        <div className={styles.tableWrap}>
+          <table className={styles.adminTable}>
+            <thead>
+              <tr>
+                <th>{t.action}</th>
+                <th>{t.user}</th>
+                <th>{t.entity}</th>
+                <th>{t.metadata}</th>
+                <th>{t.date}</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {filteredLogs.map((log) => (
+                <tr key={log.id}>
+                  <td>{log.action_type}</td>
+
+                  <td>
+                    <strong>{log.user_name || t.unknown}</strong>
+                    <br />
+                    <small>{log.user_email || "-"}</small>
+                  </td>
+
+                  <td>
+                    {log.entity_type || "-"} #{log.entity_id || "-"}
+                  </td>
+
+                  <td>
+                    <pre className={styles.metadataBox}>
+                      {JSON.stringify(log.metadata_json || {}, null, 2)}
+                    </pre>
+                  </td>
+
+                  <td>{new Date(log.created_at).toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </section>
+  );
+}
+
+function SearchInput({ value, onChange, placeholder }) {
+  return (
+    <label className={styles.searchBox}>
+      <span>{placeholder}</span>
+      <input
+        type="search"
+        value={value}
+        placeholder={placeholder}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </label>
   );
 }
 
