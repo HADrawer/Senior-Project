@@ -14,7 +14,7 @@ from google.genai import errors
 from urllib.parse import quote_plus
 
 from app.dependencies import get_current_user, invalidate_auth_cache_for_user
-from app.db import get_conn
+from app.db import close_pool, get_conn
 from app.schemas import (
     UpdatePlanRequest,
     CreatePlanRequest,
@@ -49,6 +49,13 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
 )
+
+
+@app.on_event("shutdown")
+def shutdown_db_pool():
+    close_pool()
+
+
 GEMINI_MODELS = [
     "gemini-2.5-flash-lite",
     "gemini-2.5-flash",
@@ -241,6 +248,10 @@ COOKIE_NAME = "session_token"
 
 @app.get("/auth/me")
 def me(current_user=Depends(get_current_user)):
+    return serialize_current_user(current_user)
+
+
+def serialize_current_user(current_user):
     return {
         "id": current_user["id"],
         "full_name": current_user["full_name"],
@@ -250,27 +261,8 @@ def me(current_user=Depends(get_current_user)):
         "role": current_user["role"],
     }
 
-# @app.post("/auth/logout")
-# def logout(response: Response, session_token: str | None = Cookie(default=None, alias=COOKIE_NAME)):
-#     if session_token:
-#         with get_conn() as conn:
-#             with conn.cursor() as cur:
-#                 cur.execute(
-#                     """
-#                     UPDATE user_sessions
-#                     SET is_active = FALSE
-#                     WHERE session_token = %s
-#                     """,
-#                     (session_token,)
-#                 )
-#                 conn.commit()
 
-#     response.delete_cookie(key=COOKIE_NAME, path="/")
-#     return {"message": "Logged out successfully"}
-
-
-@app.get("/plans/my-plans")
-def get_my_plans(current_user = Depends(get_current_user)):
+def fetch_user_plans(user_id):
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -294,11 +286,41 @@ def get_my_plans(current_user = Depends(get_current_user)):
                   AND status != 'deleted'
                 ORDER BY created_at DESC
                 """,
-                (current_user["id"],)
+                (user_id,)
             )
-            plans = cur.fetchall()
+            return cur.fetchall()
 
-    return plans
+
+@app.get("/dashboard/init")
+def dashboard_init(current_user=Depends(get_current_user)):
+    return {
+        "user": serialize_current_user(current_user),
+        "plans": fetch_user_plans(current_user["id"]),
+    }
+
+
+# @app.post("/auth/logout")
+# def logout(response: Response, session_token: str | None = Cookie(default=None, alias=COOKIE_NAME)):
+#     if session_token:
+#         with get_conn() as conn:
+#             with conn.cursor() as cur:
+#                 cur.execute(
+#                     """
+#                     UPDATE user_sessions
+#                     SET is_active = FALSE
+#                     WHERE session_token = %s
+#                     """,
+#                     (session_token,)
+#                 )
+#                 conn.commit()
+
+#     response.delete_cookie(key=COOKIE_NAME, path="/")
+#     return {"message": "Logged out successfully"}
+
+
+@app.get("/plans/my-plans")
+def get_my_plans(current_user = Depends(get_current_user)):
+    return fetch_user_plans(current_user["id"])
 
 @app.post("/plans")
 def create_plan(data: CreatePlanRequest, current_user = Depends(get_current_user)):
@@ -618,7 +640,7 @@ def update_plan(plan_id: int, data: UpdatePlanRequest, current_user = Depends(ge
                     updated_at = NOW()
                 WHERE id = %s
                   AND user_id = %s
-                RETURNING id
+                RETURNING *
                 """,
                 (
                     data.title,
@@ -636,21 +658,23 @@ def update_plan(plan_id: int, data: UpdatePlanRequest, current_user = Depends(ge
                 )
             )
             updated_plan = cur.fetchone()
+            create_log(
+                user_id=current_user["id"],
+                action_type="edit_plan",
+                entity_type="plan",
+                entity_id=plan_id,
+                metadata={
+                    "message": "User edited a plan"
+                },
+                conn=conn,
+            )
             conn.commit()
 
-    create_log(
-        user_id=current_user["id"],
-        action_type="edit_plan",
-        entity_type="plan",
-        entity_id=plan_id,
-        metadata={
-            "message": "User edited a plan"
-        },
-    )
     return {
         "message": "Plan updated successfully",
         "plan_id": updated_plan["id"],
         "regenerated": generated_plan_details is not None,
+        "plan": updated_plan,
     }
 
 
@@ -684,18 +708,17 @@ def delete_plan(plan_id: int, current_user = Depends(get_current_user)):
                 """,
                 (plan_id, current_user["id"])
             )
+            create_log(
+                user_id=current_user["id"],
+                action_type="delete_plan",
+                entity_type="plan",
+                entity_id=plan_id,
+                metadata={
+                    "message": "User deleted a plan"
+                },
+                conn=conn,
+            )
             conn.commit()
-    
-
-    create_log(
-        user_id=current_user["id"],
-        action_type="delete_plan",
-        entity_type="plan",
-        entity_id=plan_id,
-        metadata={
-            "message": "User deleted a plan"
-        },
-    )
 
     return {"message": "Plan deleted successfully"}
 
@@ -1055,6 +1078,7 @@ def plan_chat(data: PlanChatRequest, current_user=Depends(get_current_user)):
                 WHERE id = %s
                   AND user_id = %s
                   AND status != 'deleted'
+                RETURNING *
                 """,
                 (
                     new_title,
@@ -1071,23 +1095,29 @@ def plan_chat(data: PlanChatRequest, current_user=Depends(get_current_user)):
                     current_user["id"],
                 )
             )
-            conn.commit()
+            updated_plan = cur.fetchone()
 
-    create_log(
-        user_id=current_user["id"],
-        action_type="ai_plan_chat",
-        entity_type="plan",
-        entity_id=data.plan_id,
-        metadata={
-            "message": data.message,
-            "updated_plan": True
-        },
-    )
+            if not updated_plan:
+                raise HTTPException(status_code=404, detail="Plan not found")
+
+            create_log(
+                user_id=current_user["id"],
+                action_type="ai_plan_chat",
+                entity_type="plan",
+                entity_id=data.plan_id,
+                metadata={
+                    "message": data.message,
+                    "updated_plan": True
+                },
+                conn=conn,
+            )
+            conn.commit()
 
     return {
         "message": ai_result.get("reply", "Plan updated successfully."),
         "updated": True,
         "plan_id": data.plan_id,
+        "plan": updated_plan,
     }
 
 
@@ -1372,20 +1402,20 @@ def update_admin_user_status(user_id: str, is_active: bool, current_user):
             if not updated:
                 raise HTTPException(status_code=404, detail="User not found")
 
+            create_log(
+                user_id=current_user["id"],
+                action_type="admin_toggle_user_status",
+                entity_type="user",
+                entity_id=user_id,
+                metadata={
+                    "message": "Admin toggled user status",
+                    "is_active": is_active,
+                },
+                conn=conn,
+            )
             conn.commit()
 
     invalidate_auth_cache_for_user(user_id)
-
-    create_log(
-        user_id=current_user["id"],
-        action_type="admin_toggle_user_status",
-        entity_type="user",
-        entity_id=user_id,
-        metadata={
-            "message": "Admin toggled user status",
-            "is_active": is_active,
-        },
-    )
 
     return {"message": "User updated successfully"}
 
@@ -1424,14 +1454,16 @@ def admin_delete_user(user_id: str, current_user=Depends(get_current_user)):
             detail="Supabase admin credentials are not configured."
         )
 
-    delete_user_account_data(user_id, service_role_key)
-
-    create_log(
-        user_id=current_user["id"],
-        action_type="admin_delete_user",
-        entity_type="user",
-        entity_id=user_id,
-        metadata={"message": "Admin permanently deleted user account"},
+    delete_user_account_data(
+        user_id,
+        service_role_key,
+        audit_log={
+            "user_id": current_user["id"],
+            "action_type": "admin_delete_user",
+            "entity_type": "user",
+            "entity_id": user_id,
+            "metadata": {"message": "Admin permanently deleted user account"},
+        },
     )
 
     return {"message": "User deleted successfully"}
@@ -1499,17 +1531,17 @@ def admin_update_plan(plan_id: int, data: dict, current_user=Depends(get_current
             if not updated:
                 raise HTTPException(status_code=404, detail="Plan not found")
 
+            create_log(
+                user_id=current_user["id"],
+                action_type="admin_update_plan",
+                entity_type="plan",
+                entity_id=plan_id,
+                metadata={
+                    "message": "Admin updated plan"
+                },
+                conn=conn,
+            )
             conn.commit()
-
-    create_log(
-        user_id=current_user["id"],
-        action_type="admin_update_plan",
-        entity_type="plan",
-        entity_id=plan_id,
-        metadata={
-            "message": "Admin updated plan"
-        },
-    )
 
     return {"message": "Plan updated successfully"}
 
@@ -1534,17 +1566,17 @@ def admin_delete_plan(plan_id: int, current_user=Depends(get_current_user)):
             if not deleted:
                 raise HTTPException(status_code=404, detail="Plan not found")
 
+            create_log(
+                user_id=current_user["id"],
+                action_type="admin_delete_plan",
+                entity_type="plan",
+                entity_id=plan_id,
+                metadata={
+                    "message": "Admin deleted plan"
+                },
+                conn=conn,
+            )
             conn.commit()
-
-    create_log(
-        user_id=current_user["id"],
-        action_type="admin_delete_plan",
-        entity_type="plan",
-        entity_id=plan_id,
-        metadata={
-            "message": "Admin deleted plan"
-        },
-    )
 
     return {"message": "Plan deleted successfully"}
 
@@ -1609,19 +1641,19 @@ def update_my_settings(data: UpdateSettingsRequest, current_user=Depends(get_cur
             )
 
             user = cur.fetchone()
+            create_log(
+                user_id=current_user["id"],
+                action_type="update_profile",
+                entity_type="user",
+                entity_id=current_user["id"],
+                metadata={
+                    "full_name": data.full_name,
+                    "phone_number": data.phone_number,
+                    "preferred_language": data.preferred_language,
+                },
+                conn=conn,
+            )
             conn.commit()
-
-    create_log(
-        user_id=current_user["id"],
-        action_type="update_profile",
-        entity_type="user",
-        entity_id=current_user["id"],
-        metadata={
-            "full_name": data.full_name,
-            "phone_number": data.phone_number,
-            "preferred_language": data.preferred_language,
-        },
-    )
 
     return {"message": "Settings updated successfully", "user": user}
 
@@ -1734,14 +1766,15 @@ def export_my_data(current_user=Depends(get_current_user)):
                 (current_user["id"],)
             )
             plans = cur.fetchall()
-
-    create_log(
-        user_id=current_user["id"],
-        action_type="export_data",
-        entity_type="user",
-        entity_id=current_user["id"],
-        metadata={"message": "User exported account data"},
-    )
+            create_log(
+                user_id=current_user["id"],
+                action_type="export_data",
+                entity_type="user",
+                entity_id=current_user["id"],
+                metadata={"message": "User exported account data"},
+                conn=conn,
+            )
+            conn.commit()
 
     return {
         "user": user,
@@ -1780,7 +1813,7 @@ def delete_auth_user_from_supabase(user_id: str, service_role_key: str):
         )
 
 
-def delete_user_account_data(user_id: str, service_role_key: str):
+def delete_user_account_data(user_id: str, service_role_key: str, audit_log=None):
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -1849,6 +1882,9 @@ def delete_user_account_data(user_id: str, service_role_key: str):
             )
 
             delete_auth_user_from_supabase(user_id, service_role_key)
+
+            if audit_log:
+                create_log(conn=conn, **audit_log)
 
             conn.commit()
 

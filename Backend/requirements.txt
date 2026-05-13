@@ -6,4 +6,4 @@ httpx
 pydantic
 email-validator
 pwdlib
-psycopg[binary]
+psycopg[binary,pool]
