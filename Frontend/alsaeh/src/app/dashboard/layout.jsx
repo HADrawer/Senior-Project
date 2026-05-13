@@ -2,20 +2,28 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import styles from "./dashboard.module.css";
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/lib/i18n";
+import { DashboardProvider } from "./DashboardContext";
+
+const ACCOUNT_STATUS_CHECK_INTERVAL_MS = 5 * 60 * 1000;
 
 export default function DashboardLayout({ children }) {
   const pathname = usePathname();
   const router = useRouter();
 
   const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
+  const [dashboardPlans, setDashboardPlans] = useState(null);
+  const [dashboardInitLoaded, setDashboardInitLoaded] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const { lang, dir, toggleLang } = useLanguage();
   const [mounted, setMounted] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const authStarted = useRef(false);
+  const lastAccountStatusCheck = useRef(Date.now());
 
   const t = {
     en: {
@@ -77,6 +85,9 @@ export default function DashboardLayout({ children }) {
 
   useEffect(() => {
     async function loadUser() {
+      if (authStarted.current) return;
+      authStarted.current = true;
+
       const cached = sessionStorage.getItem("auth_user");
       let cachedUser = null;
 
@@ -96,12 +107,18 @@ export default function DashboardLayout({ children }) {
           return;
         }
 
-        if (cachedUser) {
+        if (cachedUser && pathname !== "/dashboard") {
           setCheckingAuth(false);
         }
 
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
-          headers: { Authorization: `Bearer ${data.session.access_token}` },
+        const accessToken = data.session.access_token;
+        setToken(accessToken);
+
+        const endpoint =
+          pathname === "/dashboard" ? "/dashboard/init" : "/auth/me";
+
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${endpoint}`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
         });
 
         if (!res.ok) {
@@ -111,7 +128,15 @@ export default function DashboardLayout({ children }) {
           return;
         }
 
-        const userData = await res.json();
+        const result = await res.json();
+        const userData = result.user || result;
+
+        if (Array.isArray(result.plans)) {
+          setDashboardPlans(result.plans);
+          sessionStorage.setItem("dashboard_plans", JSON.stringify(result.plans));
+          setDashboardInitLoaded(true);
+        }
+
         sessionStorage.setItem("auth_user", JSON.stringify(userData));
         setUser(userData);
       } catch {
@@ -122,16 +147,55 @@ export default function DashboardLayout({ children }) {
     }
 
     loadUser();
-  }, [router]);
+  }, [pathname, router]);
+
+  useEffect(() => {
+    async function loadDashboardPlans() {
+      if (pathname !== "/dashboard" || !token || dashboardPlans) return;
+
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/dashboard/init`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (!res.ok) return;
+
+        const result = await res.json();
+        const userData = result.user || user;
+
+        if (userData) {
+          sessionStorage.setItem("auth_user", JSON.stringify(userData));
+          setUser(userData);
+        }
+
+        if (Array.isArray(result.plans)) {
+          setDashboardPlans(result.plans);
+          sessionStorage.setItem("dashboard_plans", JSON.stringify(result.plans));
+        }
+      } catch {
+        return;
+      } finally {
+        setDashboardInitLoaded(true);
+      }
+    }
+
+    loadDashboardPlans();
+  }, [dashboardPlans, pathname, token, user]);
 
   useEffect(() => {
     async function verifyAccountStatus() {
-      try {
-        const { data } = await supabase.auth.getSession();
-        if (!data.session) return;
+      if (!token) return;
 
+      const now = Date.now();
+      if (now - lastAccountStatusCheck.current < ACCOUNT_STATUS_CHECK_INTERVAL_MS) {
+        return;
+      }
+
+      lastAccountStatusCheck.current = now;
+
+      try {
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
-          headers: { Authorization: `Bearer ${data.session.access_token}` },
+          headers: { Authorization: `Bearer ${token}` },
         });
 
         if (!res.ok) {
@@ -144,9 +208,20 @@ export default function DashboardLayout({ children }) {
       }
     }
 
-    const intervalId = window.setInterval(verifyAccountStatus, 15000);
-    return () => window.clearInterval(intervalId);
-  }, [router]);
+    function verifyWhenVisible() {
+      if (document.visibilityState === "visible") {
+        verifyAccountStatus();
+      }
+    }
+
+    window.addEventListener("focus", verifyAccountStatus);
+    document.addEventListener("visibilitychange", verifyWhenVisible);
+
+    return () => {
+      window.removeEventListener("focus", verifyAccountStatus);
+      document.removeEventListener("visibilitychange", verifyWhenVisible);
+    };
+  }, [router, token]);
 
   function scrollToChatbot() {
     setSidebarOpen(false);
@@ -178,6 +253,15 @@ export default function DashboardLayout({ children }) {
   }
 
   return (
+    <DashboardProvider
+      value={{
+        user,
+        token,
+        plans: dashboardPlans,
+        setPlans: setDashboardPlans,
+        initLoaded: dashboardInitLoaded,
+      }}
+    >
     <main className={styles.dashboardPage} dir={dir}>
       <header className={styles.mobileTopBar}>
         <Link href="/" className={styles.mobileBrand}>
@@ -309,5 +393,6 @@ export default function DashboardLayout({ children }) {
 
       <section className={styles.contentArea}>{children}</section>
     </main>
+    </DashboardProvider>
   );
 }

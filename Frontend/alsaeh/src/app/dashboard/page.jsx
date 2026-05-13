@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import styles from "./dashboard.module.css";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/lib/i18n";
+import { useDashboard } from "./DashboardContext";
 
 const PLANS_CACHE_KEY = "dashboard_plans";
 function getPlanTitle(plan, fallback) {
@@ -85,6 +85,13 @@ function planMatchesSearch(plan, query, fallbackTitle) {
 
 export default function DashboardHomePage() {
   const router = useRouter();
+  const {
+    user: dashboardUser,
+    token,
+    plans: dashboardPlans,
+    setPlans: setDashboardPlans,
+    initLoaded: dashboardInitLoaded,
+  } = useDashboard();
 
   const { lang, dir } = useLanguage();
   const [plans, setPlans] = useState([]);
@@ -179,6 +186,16 @@ export default function DashboardHomePage() {
       const cached = sessionStorage.getItem(PLANS_CACHE_KEY);
       const cachedUser = sessionStorage.getItem("auth_user");
 
+      if (dashboardUser) {
+        setUser(dashboardUser);
+      }
+
+      if (Array.isArray(dashboardPlans)) {
+        setPlans(dashboardPlans);
+        setLoading(false);
+        return;
+      }
+
       if (cachedUser) {
         try {
           setUser(JSON.parse(cachedUser));
@@ -196,16 +213,11 @@ export default function DashboardHomePage() {
         }
       }
 
+      if (!token || !dashboardInitLoaded) {
+        return;
+      }
+
       try {
-        const { data } = await supabase.auth.getSession();
-
-        if (!data.session) {
-          router.replace("/login");
-          return;
-        }
-
-        const token = data.session.access_token;
-
         const res = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/plans/my-plans`,
           {
@@ -222,6 +234,7 @@ export default function DashboardHomePage() {
 
         const result = await res.json();
         setPlans(result);
+        setDashboardPlans(result);
         sessionStorage.setItem(PLANS_CACHE_KEY, JSON.stringify(result));
       } catch (error) {
         console.error("Dashboard error:", error);
@@ -232,7 +245,15 @@ export default function DashboardHomePage() {
     }
 
     initDashboard();
-  }, [router, t.serverError]);
+  }, [
+    dashboardInitLoaded,
+    dashboardPlans,
+    dashboardUser,
+    router,
+    setDashboardPlans,
+    t.serverError,
+    token,
+  ]);
 
   if (loading) {
     return (

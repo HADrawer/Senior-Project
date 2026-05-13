@@ -938,26 +938,12 @@ export default function PlanDetailsPage() {
     return "";
   }
 
-  async function refreshPlan() {
-    const token = await getAccessToken();
+  function applyUpdatedPlan(updatedPlan) {
+    if (!updatedPlan) return;
 
-    if (!token) {
-      router.replace("/login");
-      return;
-    }
-
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/plans/${id}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (res.ok) {
-      const updatedPlan = await res.json();
-      setPlan(updatedPlan);
-      fillForm(updatedPlan);
-      sessionStorage.setItem(`plan_${id}`, JSON.stringify(updatedPlan));
-    }
+    setPlan(updatedPlan);
+    fillForm(updatedPlan);
+    sessionStorage.setItem(`plan_${id}`, JSON.stringify(updatedPlan));
   }
 
   async function handleUpdate(e) {
@@ -1008,7 +994,7 @@ export default function PlanDetailsPage() {
         return;
       }
 
-      await refreshPlan();
+      applyUpdatedPlan(data.plan);
       sessionStorage.removeItem(PLANS_CACHE_KEY);
       setEditMode(false);
     } catch (error) {
@@ -1128,7 +1114,7 @@ export default function PlanDetailsPage() {
       ]);
 
       if (data.updated) {
-        await refreshPlan();
+        applyUpdatedPlan(data.plan);
         sessionStorage.removeItem(PLANS_CACHE_KEY);
       }
     } catch (error) {
