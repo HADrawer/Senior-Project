@@ -1,7 +1,7 @@
 "use client";
 
 
-import { useCallback, useEffect ,useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import styles from "../../dashboard.module.css";
 import { supabase } from "@/lib/supabase";
@@ -75,11 +75,11 @@ function buildPlanPdfHtml(plan) {
 
   const days = Array.isArray(aiPlan?.days)
     ? aiPlan.days
-        .map((day) => {
-          const activities = Array.isArray(day.activities)
-            ? day.activities
-                .map(
-                  (activity) => `
+      .map((day) => {
+        const activities = Array.isArray(day.activities)
+          ? day.activities
+            .map(
+              (activity) => `
                     <article class="activity">
                       <div class="activity-head">
                         <h4>${formatPdfValue(activity.name, "Activity")}</h4>
@@ -90,32 +90,31 @@ function buildPlanPdfHtml(plan) {
                         <span>${formatPdfValue(activity.time)}</span>
                         <span>${formatPdfValue(activity.estimated_cost_bhd ?? 0)} BHD</span>
                       </div>
-                      ${
-                        activity.location_area
-                          ? `<p class="location">${formatPdfValue(
-                              activity.location_name || activity.name
-                            )} - ${formatPdfValue(activity.location_area)}</p>`
-                          : ""
-                      }
+                      ${activity.location_area
+                  ? `<p class="location">${formatPdfValue(
+                    activity.location_name || activity.name
+                  )} - ${formatPdfValue(activity.location_area)}</p>`
+                  : ""
+                }
                     </article>
                   `
-                )
-                .join("")
-            : "";
+            )
+            .join("")
+          : "";
 
-          return `
+        return `
             <section class="section">
               <h3>Day ${formatPdfValue(day.day_number)}: ${formatPdfValue(
-                day.theme,
-                "Plan"
-              )}</h3>
+          day.theme,
+          "Plan"
+        )}</h3>
               <div class="activities">
                 ${activities || "<p>No activities for this day.</p>"}
               </div>
             </section>
           `;
-        })
-        .join("")
+      })
+      .join("")
     : "";
 
   const tips = Array.isArray(aiPlan?.tips)
@@ -285,9 +284,8 @@ function buildPlanPdfHtml(plan) {
           <header class="hero">
             <div class="brand">Alsaeh.bh Tourism Plan</div>
             <h1>${formatPdfValue(title)}</h1>
-            <p class="summary">${
-              formatPdfValue(aiPlan?.summary, "Generated tourism plan for Bahrain.")
-            }</p>
+            <p class="summary">${formatPdfValue(aiPlan?.summary, "Generated tourism plan for Bahrain.")
+    }</p>
             <p class="small">Prepared on ${escapeHtml(generatedOn)}</p>
           </header>
 
@@ -300,31 +298,29 @@ function buildPlanPdfHtml(plan) {
             <p><strong>Preferences:</strong> ${formatPdfValue(plan.preferences)}</p>
           </section>
 
-          ${
-            aiPlan
-              ? `
+          ${aiPlan
+      ? `
                 <section class="block">
                   <h2>${formatPdfValue(
-                    aiPlan.title,
-                    "AI Generated Itinerary"
-                  )}</h2>
+        aiPlan.title,
+        "AI Generated Itinerary"
+      )}</h2>
                   <p><strong>Estimated budget:</strong> ${formatPdfValue(
-                    aiPlan.estimated_total_budget_bhd ?? plan.budget ?? 0
-                  )} BHD</p>
+        aiPlan.estimated_total_budget_bhd ?? plan.budget ?? 0
+      )} BHD</p>
                 </section>
                 ${days}
-                ${
-                  tips
-                    ? `<section class="section"><h3>Tips</h3><ul>${tips}</ul></section>`
-                    : ""
-                }
+                ${tips
+        ? `<section class="section"><h3>Tips</h3><ul>${tips}</ul></section>`
+        : ""
+      }
               `
-              : ""
-          }
+      : ""
+    }
 
           <p class="download-note">Use the print dialog to save this plan as ${escapeHtml(
-            fileName
-          )}.</p>
+      fileName
+    )}.</p>
         </main>
         <script>
           window.addEventListener("load", () => {
@@ -880,7 +876,7 @@ export default function PlanDetailsPage() {
 
     loadCategories();
   }, []);
-    useEffect(() => {
+  useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
 
@@ -975,18 +971,18 @@ export default function PlanDetailsPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-          body: JSON.stringify({
-            title: form.title,
-            days: Number(form.days),
-            budget: form.budget === "" ? null : Number(form.budget),
-            people_count: Number(form.people_count),
-            preferences: form.selected_preferences,
-            extra_preferences: form.extra_preferences || null,
-            constraints: constraintsList,
-            travel_styles: form.travel_styles || null,
-            place: null,
-          }),
-        });
+        body: JSON.stringify({
+          title: form.title,
+          days: Number(form.days),
+          budget: form.budget === "" ? null : Number(form.budget),
+          people_count: Number(form.people_count),
+          preferences: form.selected_preferences,
+          extra_preferences: form.extra_preferences || null,
+          constraints: constraintsList,
+          travel_styles: form.travel_styles || null,
+          place: null,
+        }),
+      });
 
       const data = await res.json();
 
@@ -1183,9 +1179,8 @@ export default function PlanDetailsPage() {
       {error && <p className={styles.error}>{error}</p>}
 
       <div
-        className={`${styles.planDetailsLayout} ${
-          editMode ? styles.editPlanLayout : ""
-        }`}
+        className={`${styles.planDetailsLayout} ${editMode ? styles.editPlanLayout : ""
+          }`}
       >
         <div className={styles.planDetailsMain}>
           {editMode ? (
@@ -1455,7 +1450,7 @@ export default function PlanDetailsPage() {
                         </h3>
 
                         {Array.isArray(day.activities) &&
-                        day.activities.length > 0 ? (
+                          day.activities.length > 0 ? (
                           <div className={styles.planGrid}>
                             {day.activities.map((activity, index) => (
                               <div key={index} className={styles.planCard}>
@@ -1522,63 +1517,63 @@ export default function PlanDetailsPage() {
         </div>
 
         {!editMode && (
-        <aside id="plan-chatbot" className={styles.aiChatPanel}>
-          <div className={styles.aiChatHeader}>
-            <div className={styles.terminalChrome}>
-              <span />
-              <span />
-              <span />
-            </div>
-            <div>
-              <h3>{ui.aiTerminal}</h3>
-              <p>{ui.aiTerminalSubtitle}</p>
-            </div>
-            <span className={styles.terminalStatus}>{ui.online}</span>
-          </div>
-
-          <div className={styles.aiChatMessages}>
-            {chatMessages.length === 0 ? (
-              <div className={styles.aiChatEmpty}>
-                {ui.chatEmpty}
+          <aside id="plan-chatbot" className={styles.aiChatPanel}>
+            <div className={styles.aiChatHeader}>
+              <div className={styles.terminalChrome}>
+                <span />
+                <span />
+                <span />
               </div>
-            ) : (
-              chatMessages.map((msg, index) => (
-                <div
-                  key={index}
-                  className={
-                    msg.sender === "user"
-                      ? styles.userChatBubble
-                      : styles.assistantChatBubble
-                  }
-                >
-                  {msg.text}
-                </div>
-              ))
-            )}
-
-            {chatLoading && (
-              <div className={styles.assistantChatBubble}>{ui.thinking}</div>
-            )}
-
-            <div ref={chatEndRef} />
-          </div>
-
-          <form onSubmit={handleChatSubmit} className={styles.aiChatForm}>
-            <div className={styles.terminalPrompt}>
-              <span>&gt;</span>
-              <textarea
-                value={chatMessage}
-                placeholder={ui.chatPlaceholder}
-                onChange={(e) => setChatMessage(e.target.value)}
-                disabled={chatLoading}
-              />
+              <div>
+                <h3>{ui.aiTerminal}</h3>
+                <p>{ui.aiTerminalSubtitle}</p>
+              </div>
+              <span className={styles.terminalStatus}>{ui.online}</span>
             </div>
 
-            <button type="submit" disabled={chatLoading || !chatMessage.trim()}>
-              {ui.send}
-            </button>
-          </form>
-        </aside>
+            <div className={styles.aiChatMessages}>
+              {chatMessages.length === 0 ? (
+                <div className={styles.aiChatEmpty}>
+                  {ui.chatEmpty}
+                </div>
+              ) : (
+                chatMessages.map((msg, index) => (
+                  <div
+                    key={index}
+                    className={
+                      msg.sender === "user"
+                        ? styles.userChatBubble
+                        : styles.assistantChatBubble
+                    }
+                  >
+                    {msg.text}
+                  </div>
+                ))
+              )}
+
+              {chatLoading && (
+                <div className={styles.assistantChatBubble}>{ui.thinking}</div>
+              )}
+
+              <div ref={chatEndRef} />
+            </div>
+
+            <form onSubmit={handleChatSubmit} className={styles.aiChatForm}>
+              <div className={styles.terminalPrompt}>
+                <span>&gt;</span>
+                <textarea
+                  value={chatMessage}
+                  placeholder={ui.chatPlaceholder}
+                  onChange={(e) => setChatMessage(e.target.value)}
+                  disabled={chatLoading}
+                />
+              </div>
+
+              <button type="submit" disabled={chatLoading || !chatMessage.trim()}>
+                {ui.send}
+              </button>
+            </form>
+          </aside>
         )}
       </div>
     </div>

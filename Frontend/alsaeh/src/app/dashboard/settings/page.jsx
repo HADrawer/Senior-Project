@@ -576,7 +576,7 @@ export default function SettingsPage() {
         } else if (params.get("email_change") === "error") {
           setError(
             params.get("message") ||
-              "Email change confirmation failed. Please try again."
+            "Email change confirmation failed. Please try again."
           );
           window.history.replaceState(null, "", window.location.pathname);
         }
@@ -650,11 +650,10 @@ export default function SettingsPage() {
 
     return (
       <p
-        className={`${styles.profileFieldMessage} ${
-          feedback.status === "success"
+        className={`${styles.profileFieldMessage} ${feedback.status === "success"
             ? styles.profileFieldMessageSuccess
             : styles.profileFieldMessageError
-        }`}
+          }`}
       >
         {feedback.message}
       </p>
@@ -776,11 +775,10 @@ export default function SettingsPage() {
 
     return (
       <p
-        className={`${styles.profileFieldMessage} ${
-          feedback.status === "success"
+        className={`${styles.profileFieldMessage} ${feedback.status === "success"
             ? styles.profileFieldMessageSuccess
             : styles.profileFieldMessageError
-        }`}
+          }`}
       >
         {feedback.message}
       </p>
@@ -848,11 +846,10 @@ export default function SettingsPage() {
 
     return (
       <p
-        className={`${styles.profileFieldMessage} ${
-          feedback.status === "success"
+        className={`${styles.profileFieldMessage} ${feedback.status === "success"
             ? styles.profileFieldMessageSuccess
             : styles.profileFieldMessageError
-        }`}
+          }`}
       >
         {feedback.message}
       </p>
@@ -938,11 +935,10 @@ export default function SettingsPage() {
 
     return (
       <p
-        className={`${styles.profileFieldMessage} ${
-          feedback.status === "success"
+        className={`${styles.profileFieldMessage} ${feedback.status === "success"
             ? styles.profileFieldMessageSuccess
             : styles.profileFieldMessageError
-        }`}
+          }`}
       >
         {feedback.message}
       </p>
@@ -1027,11 +1023,11 @@ export default function SettingsPage() {
 
       const nextProfile = data.user
         ? {
-            full_name: data.user.full_name || profile.full_name,
-            email: data.user.email || profile.email,
-            ...splitPhoneNumber(data.user.phone_number || fullPhoneNumber),
-            preferred_language: data.user.preferred_language || profile.preferred_language,
-          }
+          full_name: data.user.full_name || profile.full_name,
+          email: data.user.email || profile.email,
+          ...splitPhoneNumber(data.user.phone_number || fullPhoneNumber),
+          preferred_language: data.user.preferred_language || profile.preferred_language,
+        }
         : profile;
 
       const confirmedChangedFields = getChangedProfileFields(nextProfile, savedProfile);
@@ -1581,13 +1577,12 @@ export default function SettingsPage() {
                   </span>
                   <div className={styles.strengthTrack}>
                     <div
-                      className={`${styles.strengthFill} ${
-                        passwordStrength.className === "weak"
+                      className={`${styles.strengthFill} ${passwordStrength.className === "weak"
                           ? styles.weak
                           : passwordStrength.className === "medium"
-                          ? styles.medium
-                          : styles.strong
-                      }`}
+                            ? styles.medium
+                            : styles.strong
+                        }`}
                     />
                   </div>
                 </div>

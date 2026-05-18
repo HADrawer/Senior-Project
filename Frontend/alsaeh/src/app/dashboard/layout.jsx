@@ -263,137 +263,133 @@ export default function DashboardLayout({ children }) {
         initLoaded: dashboardInitLoaded,
       }}
     >
-    <main className={styles.dashboardPage} dir={dir}>
-      <header className={styles.mobileTopBar}>
-        <Link href="/" className={styles.mobileBrand}>
-          <span className={styles.logoMark}></span>
-          <span>{t.brand}</span>
-        </Link>
-        <button
-          type="button"
-          className={styles.mobileMenuButton}
-          onClick={() => setSidebarOpen(true)}
-          aria-label={t.openNavigation}
-        >
-          <span aria-hidden="true" className={styles.menuIcon}>
-            <span />
-            <span />
-            <span />
-          </span>
-        </button>
-      </header>
-
-      {sidebarOpen && (
-        <button
-          type="button"
-          className={styles.sidebarOverlay}
-          onClick={() => setSidebarOpen(false)}
-          aria-label={t.closeNavigation}
-        />
-      )}
-
-      <aside className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ""}`}>
-        <div className={styles.sidebarMain}>
-          <div className={styles.sidebarMobileHeader}>
-            <span>{t.navigation}</span>
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(false)}
-              aria-label={t.closeNavigation}
-            >
-              {t.close}
-            </button>
-          </div>
-
-          <Link href="/" className={styles.brand} onClick={() => setSidebarOpen(false)}>
-            <div className={styles.logoMark}></div>
+      <main className={styles.dashboardPage} dir={dir}>
+        <header className={styles.mobileTopBar}>
+          <Link href="/" className={styles.mobileBrand}>
+            <span className={styles.logoMark}></span>
             <span>{t.brand}</span>
           </Link>
+          <button
+            type="button"
+            className={styles.mobileMenuButton}
+            onClick={() => setSidebarOpen(true)}
+            aria-label={t.openNavigation}
+          >
+            <span aria-hidden="true" className={styles.menuIcon}>
+              <span />
+              <span />
+              <span />
+            </span>
+          </button>
+        </header>
 
-          <div className={styles.userBox}>
-            <p className={styles.userLabel}>{t.welcome}</p>
-            <h3 className={styles.userName}>{user?.full_name || "-"}</h3>
-            <p className={styles.userEmail}>{user?.email || "-"}</p>
-          </div>
+        {sidebarOpen && (
+          <button
+            type="button"
+            className={styles.sidebarOverlay}
+            onClick={() => setSidebarOpen(false)}
+            aria-label={t.closeNavigation}
+          />
+        )}
 
-          <nav className={styles.nav}>
-            <Link
-              href="/dashboard"
-              onClick={() => setSidebarOpen(false)}
-              className={`${styles.navItem} ${
-                pathname === "/dashboard" ? styles.activeNavItem : ""
-              }`}
-            >
-              {t.dashboard}
-            </Link>
-
-            <Link
-              href="/dashboard/create-plan"
-              onClick={() => setSidebarOpen(false)}
-              className={`${styles.navItem} ${
-                pathname === "/dashboard/create-plan"
-                  ? styles.activeNavItem
-                  : ""
-              }`}
-            >
-              {t.createPlan}
-            </Link>
-
-            <Link
-              href="/dashboard/settings"
-              onClick={() => setSidebarOpen(false)}
-              className={`${styles.navItem} ${
-                pathname === "/dashboard/settings" ? styles.activeNavItem : ""
-              }`}
-            >
-              {t.settings}
-            </Link>
-
-            <Link
-              href="/dashboard/about"
-              onClick={() => setSidebarOpen(false)}
-              className={`${styles.navItem} ${
-                pathname === "/dashboard/about" ? styles.activeNavItem : ""
-              }`}
-            >
-              {t.about}
-            </Link>
-
-            {sidebarOpen && pathname?.startsWith("/dashboard/plans/") && (
+        <aside className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ""}`}>
+          <div className={styles.sidebarMain}>
+            <div className={styles.sidebarMobileHeader}>
+              <span>{t.navigation}</span>
               <button
                 type="button"
-                onClick={scrollToChatbot}
-                className={`${styles.navItem} ${styles.mobileOnlyNavItem}`}
-              >
-                {t.chatbot}
-              </button>
-            )}
-
-            {user?.role === "admin" && (
-              <Link
-                href="/admin"
                 onClick={() => setSidebarOpen(false)}
-                className={`${styles.navItem} ${styles.adminNavItem}`}
+                aria-label={t.closeNavigation}
               >
-                {t.admin}
+                {t.close}
+              </button>
+            </div>
+
+            <Link href="/" className={styles.brand} onClick={() => setSidebarOpen(false)}>
+              <div className={styles.logoMark}></div>
+              <span>{t.brand}</span>
+            </Link>
+
+            <div className={styles.userBox}>
+              <p className={styles.userLabel}>{t.welcome}</p>
+              <h3 className={styles.userName}>{user?.full_name || "-"}</h3>
+              <p className={styles.userEmail}>{user?.email || "-"}</p>
+            </div>
+
+            <nav className={styles.nav}>
+              <Link
+                href="/dashboard"
+                onClick={() => setSidebarOpen(false)}
+                className={`${styles.navItem} ${pathname === "/dashboard" ? styles.activeNavItem : ""
+                  }`}
+              >
+                {t.dashboard}
               </Link>
-            )}
-          </nav>
-        </div>
 
-        <div className={styles.sidebarBottom}>
-          <button className={styles.langBtn} onClick={toggleLang}>
-            {t.langButton}
-          </button>
+              <Link
+                href="/dashboard/create-plan"
+                onClick={() => setSidebarOpen(false)}
+                className={`${styles.navItem} ${pathname === "/dashboard/create-plan"
+                    ? styles.activeNavItem
+                    : ""
+                  }`}
+              >
+                {t.createPlan}
+              </Link>
 
-          <button className={styles.logoutBtn} onClick={logout}>
-            {t.logout}
-          </button>
-        </div>
-      </aside>
+              <Link
+                href="/dashboard/settings"
+                onClick={() => setSidebarOpen(false)}
+                className={`${styles.navItem} ${pathname === "/dashboard/settings" ? styles.activeNavItem : ""
+                  }`}
+              >
+                {t.settings}
+              </Link>
 
-      <section className={styles.contentArea}>{children}</section>
-    </main>
+              <Link
+                href="/dashboard/about"
+                onClick={() => setSidebarOpen(false)}
+                className={`${styles.navItem} ${pathname === "/dashboard/about" ? styles.activeNavItem : ""
+                  }`}
+              >
+                {t.about}
+              </Link>
+
+              {sidebarOpen && pathname?.startsWith("/dashboard/plans/") && (
+                <button
+                  type="button"
+                  onClick={scrollToChatbot}
+                  className={`${styles.navItem} ${styles.mobileOnlyNavItem}`}
+                >
+                  {t.chatbot}
+                </button>
+              )}
+
+              {user?.role === "admin" && (
+                <Link
+                  href="/admin"
+                  onClick={() => setSidebarOpen(false)}
+                  className={`${styles.navItem} ${styles.adminNavItem}`}
+                >
+                  {t.admin}
+                </Link>
+              )}
+            </nav>
+          </div>
+
+          <div className={styles.sidebarBottom}>
+            <button className={styles.langBtn} onClick={toggleLang}>
+              {t.langButton}
+            </button>
+
+            <button className={styles.logoutBtn} onClick={logout}>
+              {t.logout}
+            </button>
+          </div>
+        </aside>
+
+        <section className={styles.contentArea}>{children}</section>
+      </main>
     </DashboardProvider>
   );
 }

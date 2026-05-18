@@ -10,17 +10,17 @@ export default function DashboardError({ reset }) {
   const t =
     lang === "ar"
       ? {
-          title: "خطأ في لوحة التحكم",
-          text: "حدث خطأ أثناء تحميل لوحة التحكم. يرجى المحاولة مرة أخرى.",
-          retry: "حاول مرة أخرى",
-          back: "العودة إلى لوحة التحكم",
-        }
+        title: "خطأ في لوحة التحكم",
+        text: "حدث خطأ أثناء تحميل لوحة التحكم. يرجى المحاولة مرة أخرى.",
+        retry: "حاول مرة أخرى",
+        back: "العودة إلى لوحة التحكم",
+      }
       : {
-          title: "Dashboard Error",
-          text: "Something went wrong while loading the dashboard. Please try again.",
-          retry: "Try Again",
-          back: "Back to Dashboard",
-        };
+        title: "Dashboard Error",
+        text: "Something went wrong while loading the dashboard. Please try again.",
+        retry: "Try Again",
+        back: "Back to Dashboard",
+      };
 
   return (
     <main className={styles.page} dir={dir}>

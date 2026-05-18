@@ -6,7 +6,7 @@ const DashboardContext = createContext({
   user: null,
   token: null,
   plans: null,
-  setPlans: () => {},
+  setPlans: () => { },
   initLoaded: false,
 });
 

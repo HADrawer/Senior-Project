@@ -383,10 +383,10 @@ export default function DashboardHomePage() {
             {filteredPlans.map((plan) => {
               const allPreferences = splitPreferenceText(
                 plan.preferences ||
-                  plan.user_interests ||
-                  plan.category ||
-                  plan.travel_styles ||
-                  ""
+                plan.user_interests ||
+                plan.category ||
+                plan.travel_styles ||
+                ""
               );
               const chips = getPreferenceChips(plan);
               const hiddenChipCount = Math.max(0, allPreferences.length - chips.length);

@@ -10,17 +10,17 @@ export default function DashboardNotFound() {
   const t =
     lang === "ar"
       ? {
-          title: "صفحة لوحة التحكم غير موجودة",
-          text: "تعذر العثور على صفحة لوحة التحكم أو الخطة المطلوبة.",
-          back: "العودة إلى لوحة التحكم",
-          home: "الرئيسية",
-        }
+        title: "صفحة لوحة التحكم غير موجودة",
+        text: "تعذر العثور على صفحة لوحة التحكم أو الخطة المطلوبة.",
+        back: "العودة إلى لوحة التحكم",
+        home: "الرئيسية",
+      }
       : {
-          title: "Dashboard Page Not Found",
-          text: "This dashboard page or plan could not be found.",
-          back: "Back to Dashboard",
-          home: "Go Home",
-        };
+        title: "Dashboard Page Not Found",
+        text: "This dashboard page or plan could not be found.",
+        back: "Back to Dashboard",
+        home: "Go Home",
+      };
 
   return (
     <main className={styles.page} dir={dir}>
