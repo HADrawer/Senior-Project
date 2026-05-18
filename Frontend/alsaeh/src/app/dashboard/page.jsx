@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useLanguage } from "@/lib/i18n";
 import { useDashboard } from "./DashboardContext";
 
+
 const PLANS_CACHE_KEY = "dashboard_plans";
 function getPlanTitle(plan, fallback) {
   return plan.title || plan.plan_details_json?.title || fallback;

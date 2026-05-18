@@ -4,6 +4,7 @@ import Link from "next/link";
 import styles from "./error-pages.module.css";
 import { useLanguage } from "@/lib/i18n";
 
+
 export default function Error({ reset }) {
   const { lang, dir } = useLanguage();
   const t =

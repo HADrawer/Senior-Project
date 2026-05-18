@@ -10,6 +10,7 @@
   overflow: hidden;
 }
 
+
 /* Left brand panel */
 .brandPanel {
   background: linear-gradient(160deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 70%, #000) 100%);

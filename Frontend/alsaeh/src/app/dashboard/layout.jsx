@@ -10,6 +10,7 @@ import { DashboardProvider } from "./DashboardContext";
 
 const ACCOUNT_STATUS_CHECK_INTERVAL_MS = 5 * 60 * 1000;
 
+
 export default function DashboardLayout({ children }) {
   const pathname = usePathname();
   const router = useRouter();

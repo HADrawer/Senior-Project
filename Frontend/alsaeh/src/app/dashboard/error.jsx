@@ -1,5 +1,6 @@
 "use client";
 
+
 import Link from "next/link";
 import styles from "../error-pages.module.css";
 import { useLanguage } from "@/lib/i18n";

@@ -10,6 +10,7 @@
   color: var(--text-main);
 }
 
+
 .sidebar {
   border-right: 1px solid var(--border-soft);
   background: var(--bg-card);
